@@ -9,6 +9,7 @@ import { withClient, assertWireValid } from './helpers.js';
 // Every registered tool must be listed here (the count is asserted below).
 const REQUIRED_PROPS = {
   eokg_list_datasets: [],
+  eokg_get_smell: ['id'],
 };
 
 test('exposes the expected tools with strict, $ref-free input schemas', async () => {

@@ -1,0 +1,65 @@
+// Id allowlist for every tool input. Ids are interpolated into SPARQL as `<…>`,
+// so parseId is the injection guard: nothing that fails it may reach a query.
+
+import { EXPLORER_BASE_URL } from '../config.js';
+import { ToolError } from './errors.js';
+
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+export const KG_BASE = 'http://data.odeuropa.eu/';
+// kind → { group, explorer, match? }. `explorer` is the Explorer path segment or null;
+// `match(input) → canonicalUri | null` replaces the uuid matching for non-uuid kinds.
+const KINDS = {
+  smell: { group: 'smell', explorer: 'smells' },
+  source: { group: 'source', explorer: null },
+};
+
+const EXPLORER_RE = new RegExp(`^https?://explorer\\.odeuropa\\.eu/smells/(${UUID})/?$`, 'i');
+
+/**
+ * Normalise a user-supplied id of `kind` to its canonical KG URI, or throw ToolError.
+ * Accepts: the canonical URI; the same with https://; a bare uuid; and for smells
+ * the Explorer permalink. Trims whitespace, lower-cases the uuid.
+ */
+export function parseId(kind, input) {
+  const spec = KINDS[kind];
+  const raw = typeof input === 'string' ? input.trim() : '';
+  let canonical = null;
+  if (spec) {
+    if (spec.match) {
+      canonical = spec.match(raw);
+    } else {
+      const { group, explorer } = spec;
+      const uri = new RegExp(`^https?://data\\.odeuropa\\.eu/${group}/(${UUID})$`, 'i').exec(raw);
+      const bare = new RegExp(`^(${UUID})$`, 'i').exec(raw);
+      const link = explorer ? EXPLORER_RE.exec(raw) : null;
+      const uuid = (uri || bare || link)?.[1];
+      if (uuid) canonical = `${KG_BASE}${group}/${uuid.toLowerCase()}`;
+    }
+  }
+  if (!canonical) {
+    const group = spec?.group ?? kind;
+    throw new ToolError(
+      `Not a valid ${kind} id: "${String(input ?? '').slice(0, 120)}"`,
+      `Pass the id exactly as another eokg tool returned it (a http://data.odeuropa.eu/${group}/<uuid> URI or the bare uuid).`,
+    );
+  }
+  return canonical;
+}
+
+/** Last path segment if it is a uuid, else null. */
+export function uuidOf(uri) {
+  const last = String(uri).split('/').pop();
+  return new RegExp(`^${UUID}$`, 'i').test(last) ? last.toLowerCase() : null;
+}
+
+/** Explorer permalink for smells; null for kinds without one. */
+export function explorerUrl(kind, uri) {
+  const seg = KINDS[kind]?.explorer;
+  const uuid = uuidOf(uri);
+  return seg && uuid ? `${EXPLORER_BASE_URL}/${seg}/${uuid}` : null;
+}
+
+/** False for sameAs twins (wikidata etc.). */
+export function isLocal(uri) {
+  return typeof uri === 'string' && uri.startsWith(KG_BASE);
+}
