@@ -85,3 +85,21 @@ export const EXCERPT_INJECTION_BOUNDARY =
 export const EXCERPT_MAX_CHARS = 4000; // per excerpt
 export const SMELL_MAX_EXCERPTS = 5;
 export const OLFACTORY_OBJECTS_GRAPH = 'http://data.odeuropa.eu/vocabulary/olfactory-objects';
+
+export const SKOSMOS_BASE = process.env.EOKG_SKOSMOS_BASE?.trim() || 'https://vocab.odeuropa.eu/rest/v1/';
+// [model-facing name, Skosmos id, what it is linked to in the KG]. The tool schema enum is built
+// from this table: an unknown id makes Skosmos answer HTTP 200 with an HTML PHP fatal error.
+export const VOCABS = Object.freeze([
+  ['olfactory-objects', 'olfactory_objects', 'smells'], ['fragrant-spaces', 'fragrant-spaces', 'places'],
+  ['dhsv-sw', 'dhsv-sw', null], ['dravnieks', 'dravnieks', null], ['dravnieks-odorants', 'dravnieks-odorants', null],
+  ['drom', 'drom', null], ['edward_wheel', 'edward_wheel', null], ['expert-taxonomy', 'expert-taxonomy', null],
+  ['expert-taxonomy-chemical', 'expert-taxonomy-chemical', null], ['expert-taxonomy-quality', 'expert-taxonomy-quality', null],
+  ['flavornet-odorants', 'flavornet-odorants', null], ['flavornet-odors', 'flavornet-odors', null],
+  ['historic-book', 'historic-book', null], ['historical-scent', 'historical-scent', null], ['noses', 'noses', null],
+  ['olfactory-gestures', 'olfactory-gestures', null], ['plutchik', 'plutchik', null],
+  ['vdi-hedonic', 'vdi-hedonic', null], ['vdi-intensity', 'vdi-intensity', null], ['zwaardemaker', 'zwaardemaker', null],
+].map(([name, skosmos, linked]) => Object.freeze({ name, skosmos, linked })));
+export const VOCAB_NAMES = Object.freeze(VOCABS.map((v) => v.name));
+export const DEFAULT_CONCEPT_VOCABS = Object.freeze(['olfactory-objects', 'fragrant-spaces']);
+export const CONCEPT_MAX_NARROWER = 100;
+export const FIND_CONCEPTS_MAX_LIMIT = 50;

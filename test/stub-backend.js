@@ -13,6 +13,9 @@
 // tests use installFetchStub, which matches by shape, not host. Subprocess tests
 // use startStubServer and pass EOKG_SPARQL_ENDPOINT in the child's env.
 //
+// A request with no `query` form field whose URL path ends in `/search` (a Skosmos GET) goes to
+// `routes.skosmos_search(fullUrl)` and is recorded as `{ label: 'skosmos_search', url }`.
+//
 // Unrouted requests are a hard failure, never a silent empty result: a test that
 // accidentally reaches the real network must break loudly.
 
@@ -34,7 +37,13 @@ const LABEL_RE = /^# eokg:([a-z][a-z0-9_]*)/;
 
 export function makeRouter(routes) {
   const calls = [];
-  async function handle(query) {
+  async function handle(query, url) {
+    if (query == null && /\/search$/.test(new URL(url ?? 'http://stub/').pathname)) {
+      calls.push({ label: 'skosmos_search', url: String(url) });
+      if (!routes.skosmos_search) throw new Error('stub-backend: unrouted Skosmos search');
+      const { status = 200, body } = await routes.skosmos_search(String(url));
+      return { status, body: typeof body === 'string' ? body : JSON.stringify(body) };
+    }
     const label = LABEL_RE.exec(query ?? '')?.[1];
     calls.push({ label, query });
     const route = label && routes[label];
@@ -51,11 +60,11 @@ const failResponse = (err) => ({ status: 599, body: String(err.message) });
 export function installFetchStub(routes) {
   const router = makeRouter(routes);
   const original = globalThis.fetch;
-  globalThis.fetch = async (_url, init = {}) => {
+  globalThis.fetch = async (url, init = {}) => {
     const query = new URLSearchParams(String(init.body ?? '')).get('query');
     const signal = init.signal;
     if (signal?.aborted) throw signal.reason ?? Object.assign(new Error('aborted'), { name: 'AbortError' });
-    const pending = router.handle(query);
+    const pending = router.handle(query, String(url));
     const aborted = new Promise((_, reject) => {
       signal?.addEventListener('abort', () => {
         reject(signal.reason instanceof Error ? signal.reason : Object.assign(new Error('aborted'), { name: 'AbortError' }));
@@ -75,7 +84,7 @@ export async function startStubServer(routes) {
     for await (const c of req) chunks.push(c);
     const query = new URLSearchParams(Buffer.concat(chunks).toString()).get('query');
     let out;
-    try { out = await router.handle(query); } catch (err) { out = failResponse(err); }
+    try { out = await router.handle(query, `http://${req.headers.host}${req.url}`); } catch (err) { out = failResponse(err); }
     res.writeHead(out.status, { 'content-type': 'application/json' });
     res.end(out.body);
   });

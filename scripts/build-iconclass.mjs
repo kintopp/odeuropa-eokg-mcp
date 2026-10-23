@@ -7,7 +7,7 @@ import { parseCsv } from '../src/lib/csv.js';
 
 const COMMIT = 'aa586b1e74864c8befbf614c21bf0ffa6e8b4608';
 const SCHEMES = ['olfactory-objects', 'fragrant-spaces'];
-const CODE_RE = /^[0-9][0-9A-Z()+.\-]*$/;
+const CODE_RE = /^[0-9][0-9A-Z()+.-]*$/;
 const OUT = fileURLToPath(new URL('../src/data/iconclass.json', import.meta.url));
 
 async function build(scheme) {

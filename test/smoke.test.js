@@ -10,6 +10,8 @@ import { withClient, assertWireValid } from './helpers.js';
 const REQUIRED_PROPS = {
   eokg_list_datasets: [],
   eokg_get_smell: ['id'],
+  eokg_find_concepts: [],
+  eokg_get_concept: ['id'],
 };
 
 test('exposes the expected tools with strict, $ref-free input schemas', async () => {

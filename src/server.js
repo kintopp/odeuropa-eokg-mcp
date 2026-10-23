@@ -7,6 +7,8 @@ import { McpServer } from '@modelcontextprotocol/server';
 import { SERVER_NAME, SERVER_VERSION, SERVER_INSTRUCTIONS, CACHE_HINTS } from './config.js';
 import { registerListDatasetsTool } from './tools/list_datasets.js';
 import { registerGetSmellTool } from './tools/get_smell.js';
+import { registerFindConceptsTool } from './tools/find_concepts.js';
+import { registerGetConceptTool } from './tools/get_concept.js';
 
 export function createServer() {
   // `listChanged` must be an explicit false: the SDK fills an absent value with
@@ -25,5 +27,7 @@ export function createServer() {
   );
   registerListDatasetsTool(server);
   registerGetSmellTool(server);
+  registerFindConceptsTool(server);
+  registerGetConceptTool(server);
   return server;
 }
