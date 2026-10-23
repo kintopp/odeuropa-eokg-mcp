@@ -9,6 +9,7 @@ import { registerListDatasetsTool } from './tools/list_datasets.js';
 import { registerGetSmellTool } from './tools/get_smell.js';
 import { registerFindConceptsTool } from './tools/find_concepts.js';
 import { registerGetConceptTool } from './tools/get_concept.js';
+import { registerSearchSmellsTool } from './tools/search_smells.js';
 
 export function createServer() {
   // `listChanged` must be an explicit false: the SDK fills an absent value with
@@ -29,5 +30,6 @@ export function createServer() {
   registerGetSmellTool(server);
   registerFindConceptsTool(server);
   registerGetConceptTool(server);
+  registerSearchSmellsTool(server);
   return server;
 }

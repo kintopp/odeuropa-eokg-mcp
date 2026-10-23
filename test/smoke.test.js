@@ -12,6 +12,7 @@ const REQUIRED_PROPS = {
   eokg_get_smell: ['id'],
   eokg_find_concepts: [],
   eokg_get_concept: ['id'],
+  eokg_search_smells: ['text'],
 };
 
 test('exposes the expected tools with strict, $ref-free input schemas', async () => {
