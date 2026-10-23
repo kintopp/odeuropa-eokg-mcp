@@ -7,7 +7,7 @@ export default defineRailway(() => {
   const mcp = service("odeuropa-eokg-mcp", {
     start: "node src/http.js",
     healthcheck: "/health",
-    replicas: 1,
+    replicas: { "europe-west4-drams3a": 1 },
   });
   return project("endearing-warmth", { resources: [mcp] });
 });
