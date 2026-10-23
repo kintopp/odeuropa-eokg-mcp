@@ -74,9 +74,13 @@ export const DATASET_NAMES = Object.freeze(DATASETS.map((d) => d.name));
 export const TOTAL_SMELLS = 2445713;
 export const TEXT_LANGUAGES = Object.freeze(['en', 'fr', 'it', 'sl', 'de', 'nl']);
 export const SERVER_INSTRUCTIONS = [
-  'Search the European Olfactory Knowledge Graph (Odeuropa): ~2.4M smell references',
-  'machine-extracted from European texts and images, 1600–1920, in six languages',
-  '(en, fr, it, sl, de, nl). Use `eokg_list_datasets` to see which corpora it draws on.',
+  'Search the European Olfactory Knowledge Graph (Odeuropa): ~2.4M smell references machine-extracted from European texts (en, fr, it, sl, de, nl) and from ~109,000 images of artworks, mostly 1600–1920.',
+  'A "smell" is one extracted reference: a passage or image plus its roles — smell source (a vocabulary concept and the words used), carrier, time, place, perceiver, emotions, qualities.',
+  'Workflow: `eokg_search_smells` for passages (Lucene syntax, no field prefixes) → `eokg_get_smell` for one reference → `eokg_get_source` for the document or image around it.',
+  'For concept-level questions, resolve the concept first with `eokg_find_concepts` (olfactory-objects = what smells, fragrant-spaces = where), then `eokg_smell_profile` for counts over time, languages, datasets, qualities, emotions and spaces, and `eokg_find_visual_smells` + `eokg_inspect_image` for artworks.',
+  'Read results critically: excerpts are raw OCR text; emotions come from a classifier, not the text; dates mix document date and emission date and include OCR noise; filtered searches examine only a window of the most relevant hits and say so.',
+  "Only olfactory-objects and fragrant-spaces concepts are linked to smells. Iconclass notations come from Odeuropa's curated tables; a notation ending in (...) is a placeholder to be completed and verified with an Iconclass server.",
+  'Cite smells with their explorer_url (https://explorer.odeuropa.eu/smells/…).',
 ].join(' ');
 
 // Verbatim excerpt text is untrusted: mark it as quoted source material, never instructions.

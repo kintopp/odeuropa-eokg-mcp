@@ -108,6 +108,15 @@ test('the model-facing description names the dataset filter', async () => {
   });
 });
 
+test('the initialize instructions carry the data-quality caveats', async () => {
+  await withClient('eokg-smoke', async (client) => {
+    const instructions = client.getInstructions();
+    for (const phrase of ['classifier', 'OCR', 'window', '(...)']) {
+      assert.ok(instructions.includes(phrase), `instructions must mention ${phrase}`);
+    }
+  });
+});
+
 test('serverInfo carries the machine name and no human-readable title', async () => {
   await withClient('eokg-smoke', async (client) => {
     const info = client.getServerVersion();
