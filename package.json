@@ -11,6 +11,7 @@
   "files": ["src/"],
   "scripts": {
     "start": "node src/index.js",
+    "serve": "node src/http.js",
     "test": "node --test \"test/*.test.js\"",
     "test:live": "EOKG_LIVE=1 node --test \"test/*.test.js\"",
     "build:docs": "node scripts/build-docs.mjs",

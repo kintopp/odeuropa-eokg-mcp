@@ -144,3 +144,12 @@ export const TIMELINE_MAX_YEAR = 2100;
 export const VISUAL_DEFAULT_LIMIT = 10;
 export const VISUAL_MAX_LIMIT = 50;
 export const FRAGRANT_SPACES_BASE = 'http://data.odeuropa.eu/vocabulary/fragrant-spaces/';
+
+// Streamable HTTP entry (src/http.js). PORT is set by Railway.
+export const HTTP_PORT = posIntEnv('PORT', 3000, { min: 0, max: 65535 });
+export const HTTP_MAX_BODY_BYTES = 1_048_576;
+// Wall-clock guard per POST: above every legitimate call (PROFILE_CALL_DEADLINE_MS), below claude.ai's 240 s.
+export const HTTP_RESPONSE_TIMEOUT_MS = posIntEnv('EOKG_HTTP_RESPONSE_TIMEOUT_MS', 120000, { min: 100, max: 600000 });
+export const HTTP_MAX_INFLIGHT = posIntEnv('EOKG_HTTP_MAX_INFLIGHT', 16, { min: 1, max: 10000 });
+export const MCP_ALLOWED_ORIGINS = process.env.MCP_ALLOWED_ORIGINS;
+export const MCP_ALLOWED_HOSTS = process.env.MCP_ALLOWED_HOSTS;

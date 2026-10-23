@@ -25,6 +25,9 @@ const LOG_ENV = 'EOKG_LOG';
 // debug line; the full value still reaches the backend.
 const INPUT_LOG_MAX = 300;
 
+// Input is user content (search text): omitted on the hosted HTTP entry unless asked for.
+const logInput = () => process.env.EOKG_ENTRY_POINT !== 'http' || process.env.EOKG_LOG_INPUT === '1';
+
 function summariseInput(args) {
   if (!args || typeof args !== 'object' || !Object.keys(args).length) return undefined;
   const s = JSON.stringify(args);
@@ -63,7 +66,7 @@ export function withTool(name, label, handler) {
     // Build and emit the line only when logging is on — no serialization otherwise.
     if (process.env[LOG_ENV] === '1') {
       const ms = Math.round(performance.now() - start);
-      const input = summariseInput(callArgs[0]);
+      const input = logInput() ? summariseInput(callArgs[0]) : undefined;
       const outputBytes = byteLengthOfText(result);
       const structuredBytes = byteLengthOfStructured(result);
       console.error(JSON.stringify({
