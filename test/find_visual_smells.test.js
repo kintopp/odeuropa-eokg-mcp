@@ -1,0 +1,106 @@
+import { test, afterEach } from 'node:test';
+import assert from 'node:assert/strict';
+import { outputSchema } from '../src/tools/find_visual_smells.js';
+import { startStubServer, bindings } from './stub-backend.js';
+import { withClient, assertWireValid, LIVE } from './helpers.js';
+
+const KG = 'http://data.odeuropa.eu/';
+const ROSE = 'olfactory-objects/138';
+const en = (value) => ({ type: 'literal', value, 'xml:lang': 'en' });
+const uri = (value) => ({ type: 'uri', value });
+const sid = (n) => `${KG}source/00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+const row = (n, over = {}) => ({
+  source: uri(sid(n)), title: en(`Work ${n}`), image: `https://data.odeuropa.eu/image/img-${n}.jpg`,
+  date: '1618', artist: 'Pieter Lastman', best: '1', boxes: '21', ...over,
+});
+const routes = (rows, total = 4013) => ({
+  visual_count: () => ({ body: bindings([{ n: String(total) }]) }),
+  visual_page: () => ({ body: bindings(rows) }),
+  concept_label: () => ({ body: bindings([{ l: en('Rose') }]) }),
+});
+
+let stub;
+afterEach(async () => { await stub?.close(); stub = null; });
+
+async function call(args, r = routes([row(1)])) {
+  stub = await startStubServer(r);
+  return withClient('visual', (c) => c.callTool({ name: 'eokg_find_visual_smells', arguments: { concept: ROSE, ...args } }),
+    { env: { EOKG_SPARQL_ENDPOINT: stub.url } });
+}
+const queryOf = (label) => stub.router.calls.find((c) => c.label === label).query;
+
+test('page shaping, text and has_more from the extra row', async () => {
+  const res = await call({ limit: 2 }, routes([row(1), row(2), row(3)]));
+  assert.notEqual(res.isError, true, res.content?.[0]?.text);
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.equal(s.total, 4013);
+  assert.equal(s.has_more, true);
+  assert.equal(s.results.length, 2);
+  assert.equal(s.concept.label, 'Rose');
+  assert.deepEqual(s.results[0], {
+    id: sid(1), title: 'Work 1', artist: 'Pieter Lastman', date: '1618',
+    image_url: 'https://data.odeuropa.eu/image/img-1.jpg', best_score: 1, boxes: 21,
+  });
+  const text = res.content[0].text;
+  assert.ok(text.includes('4,013 image sources represent Rose; showing 1–2 (best detection first):'), text);
+  assert.ok(text.includes('1. "Work 1", Pieter Lastman (1618) — best 1.00, 21 boxes — id 00000000-0000-4000-8000-000000000001'));
+});
+
+test('no more rows: has_more false; offset shifts numbering', async () => {
+  const res = await call({ limit: 2, offset: 4 }, routes([row(1)]));
+  assert.equal(res.structuredContent.has_more, false);
+  assert.ok(res.content[0].text.includes('showing 5–5'));
+  assert.ok(queryOf('visual_page').endsWith('LIMIT 3 OFFSET 4'));
+});
+
+test('best_score is null without boxes and the work is flagged catalogued only', async () => {
+  const bare = row(1, { boxes: '0' });
+  delete bare.best;
+  const res = await call({}, routes([bare]));
+  assert.equal(res.structuredContent.results[0].best_score, null);
+  assert.equal(res.structuredContent.results[0].boxes, 0);
+  assert.ok(res.content[0].text.includes('catalogued only'));
+});
+
+test('long artist notes are truncated', async () => {
+  const res = await call({}, routes([row(1, { artist: 'x'.repeat(500) })]));
+  assert.ok(res.structuredContent.results[0].artist.length <= 125);
+});
+
+test('date and image-host filters appear in both the count and page queries', async () => {
+  await call({ year_from: 1600, year_to: 1700 });
+  for (const label of ['visual_count', 'visual_page']) {
+    const q = queryOf(label);
+    assert.ok(q.includes('?vb >= "1600"^^xsd:gYear && ?vb <= "1700"^^xsd:gYear'), label);
+    assert.ok(q.includes('STRSTARTS(STR(?img), "https://data.odeuropa.eu/image/")'), label);
+    assert.ok(q.includes('FROM onto:explicit'), label);
+  }
+});
+
+test('only year_from emits only the lower bound; no years emits no date filter', async () => {
+  await call({ year_from: 1050 });
+  assert.ok(queryOf('visual_count').includes('?vb >= "1050"^^xsd:gYear'));
+  assert.ok(!queryOf('visual_count').includes('?vb <='));
+  await stub.close();
+  await call({});
+  assert.ok(!queryOf('visual_count').includes('?vb'));
+});
+
+test('year_from after year_to and a fragrant-spaces concept fail with zero queries', async () => {
+  let res = await call({ year_from: 1700, year_to: 1600 });
+  assert.equal(res.isError, true);
+  assert.match(res.content[0].text, /year_from is after year_to/);
+  assert.equal(stub.router.calls.length, 0);
+  await stub.close();
+  res = await call({ concept: 'fragrant-spaces/27' });
+  assert.equal(res.isError, true);
+  assert.match(res.content[0].text, /Only olfactory-objects concepts have images/);
+  assert.equal(stub.router.calls.length, 0);
+});
+
+test('live: Rose images', { skip: !LIVE }, async () => {
+  const res = await withClient('visual-live', (c) => c.callTool({ name: 'eokg_find_visual_smells', arguments: { concept: ROSE } }));
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.ok(s.total > 4000);
+  assert.ok(s.results[0].image_url.startsWith('https://data.odeuropa.eu/image/'));
+});

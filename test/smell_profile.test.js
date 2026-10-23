@@ -1,0 +1,293 @@
+// In-process server (like inspect_image.test.js) so the deadline test can fake Date.now and the
+// concurrency test can watch the stub. The SPARQL stub routes on the `eokg:<label>` of each query.
+
+import { test, beforeEach, afterEach, mock } from 'node:test';
+import assert from 'node:assert/strict';
+import { Client } from '@modelcontextprotocol/client';
+import { InMemoryTransport } from '@modelcontextprotocol/server';
+import { createServer } from '../src/server.js';
+import { outputSchema } from '../src/tools/smell_profile.js';
+import { clearSparqlCache } from '../src/sparql/client.js';
+import { PROFILE_DEFAULT_FACETS, PROFILE_NARROWER_DEFAULT_FACETS } from '../src/config.js';
+import { installFetchStub, bindings } from './stub-backend.js';
+import { assertWireValid, LIVE } from './helpers.js';
+
+const KG = 'http://data.odeuropa.eu/';
+const ROSE = 'olfactory-objects/138';
+const GARDEN = 'fragrant-spaces/27';
+const en = (value) => ({ type: 'literal', value, 'xml:lang': 'en' });
+const uri = (value) => ({ type: 'uri', value });
+const ok = (rows) => () => ({ body: bindings(rows) });
+
+const FACET_ROWS = {
+  timeline: [{ start: '1800', n: '120' }, { start: '1820', n: '80' }],
+  emission_timeline: [{ start: '1850', n: '5' }],
+  languages: [{ lang: 'en', n: '300' }, { lang: 'fr', n: '100' }],
+  datasets: [{ g: uri(`${KG}gallica`), n: '90' }, { g: uri(`${KG}eebo`), n: '10' }],
+  qualities: [{ q: uri(`${KG}vocabulary/vdi-hedonic/04n`), n: '40' },
+    { q: uri(`${KG}vocabulary/expert-taxonomy-quality/12`), label: en('fragrant'), n: '30' }],
+  emotions: [{ word: 'nostalgia', n: '7' }],
+  fragrant_spaces: [{ space: uri(`${KG}vocabulary/fragrant-spaces/27`), label: en('Garden'), n: '50' }],
+  places: [{ pl: 'jardin', n: '4' }],
+  carriers: [{ cl: 'the', n: '3' }],
+};
+
+const facetRoutes = (over = {}) => Object.fromEntries(
+  Object.entries(FACET_ROWS).map(([f, rows]) => [`profile_${f}`, ok(rows)]).concat(Object.entries(over)),
+);
+const baseRoutes = (over = {}) => ({
+  profile_total: ok([{ n: '29243' }]),
+  concept_label: ok([{ l: en('Rose') }]),
+  ...facetRoutes(),
+  ...over,
+});
+
+let stub;
+let client;
+
+async function start(routes) {
+  stub = installFetchStub(routes);
+  const [ct, st] = InMemoryTransport.createLinkedPair();
+  await createServer().connect(st);
+  client = new Client({ name: 'profile-test', version: '0.0.0' });
+  await client.connect(ct);
+}
+
+beforeEach(() => clearSparqlCache());
+afterEach(async () => {
+  mock.restoreAll();
+  await client?.close();
+  client = null;
+  stub?.restore();
+  stub = null;
+  clearSparqlCache();
+});
+
+const profile = (args = {}) => client.callTool({ name: 'eokg_smell_profile', arguments: { concept: ROSE, ...args } });
+const labels = () => stub.router.calls.map((c) => c.label);
+const facetLabels = () => labels().filter((l) => l.startsWith('profile_') && l !== 'profile_total');
+const valid = (res) => {
+  assert.notEqual(res.isError, true, res.content?.[0]?.text);
+  return assertWireValid(outputSchema, res.structuredContent);
+};
+
+test('default facets: six facet queries plus total and label; shaped and wire-valid', async () => {
+  await start(baseRoutes());
+  const s = valid(await profile());
+  assert.equal(labels().length, 8);
+  assert.deepEqual(facetLabels().sort(), PROFILE_DEFAULT_FACETS.map((f) => `profile_${f}`).sort());
+  assert.equal(labels().filter((l) => l === 'concept_label').length, 1);
+  assert.equal(s.total_smells, 29243);
+  assert.equal(s.concept.label, 'Rose');
+  assert.equal(s.concept.id, `${KG}vocabulary/${ROSE}`);
+  assert.deepEqual(s.timeline, {
+    basis: 'document_date', bucket_years: 20, buckets: [{ start: 1800, count: 120 }, { start: 1820, count: 80 }],
+    out_of_range: 0, dated: 200,
+  });
+  assert.deepEqual(s.languages, [{ label: 'en', count: 300 }, { label: 'fr', count: 100 }]);
+  assert.deepEqual(s.datasets.map((d) => d.label), ['gallica', 'eebo']);
+  assert.deepEqual(s.emotions, [{ label: 'nostalgia', count: 7 }]);
+  assert.deepEqual(s.fragrant_spaces, [{ id: 'fragrant-spaces/27', label: 'Garden', lang: 'en', count: 50 }]);
+  assert.equal(s.emission_timeline, undefined);
+  assert.equal(s.failed_facets, undefined);
+});
+
+test('qualities: unlabelled concepts fall back to the URI, labelled ones keep label and lang', async () => {
+  await start(baseRoutes());
+  const s = valid(await profile({ facets: ['qualities'] }));
+  assert.deepEqual(s.qualities, [
+    { id: 'vdi-hedonic/04n', label: '04n', count: 40 },
+    { id: 'expert-taxonomy-quality/12', label: 'fragrant', lang: 'en', count: 30 },
+  ]);
+});
+
+test('text channel: header, compact timeline, labelled lists', async () => {
+  await start(baseRoutes());
+  const res = await profile({ language: 'fr' });
+  const text = res.content[0].text;
+  assert.ok(text.startsWith('Rose [olfactory-objects/138]: 29,243 smells, in fr'), text);
+  assert.ok(text.includes('1800–1819 120 · 1820–1839 80'));
+  assert.ok(text.includes('Emotions (machine-inferred): nostalgia 7'));
+  assert.ok(text.includes('Fragrant spaces: Garden 50'));
+  assert.ok(stub.router.calls.find((c) => c.label === 'profile_timeline').query.includes('schema:inLanguage "fr"'));
+});
+
+test('timeline noise years go to out_of_range and are not listed', async () => {
+  const rows = [-1000, 180, 1800, 2100, 4820].map((start) => ({ start: String(start), n: '10' }));
+  await start(baseRoutes({ profile_timeline: ok(rows) }));
+  const s = valid(await profile({ facets: ['timeline'] }));
+  assert.deepEqual(s.timeline.buckets, [{ start: 1800, count: 10 }]);
+  assert.equal(s.timeline.out_of_range, 40);
+  assert.equal(s.timeline.dated, 50);
+  assert.ok((await profile({ facets: ['timeline'], bucket_years: 50 })).content[0].text.includes('1800–1849 10'));
+});
+
+test('bucket_years reaches the query', async () => {
+  await start(baseRoutes());
+  valid(await profile({ facets: ['timeline'], bucket_years: 50 }));
+  assert.ok(stub.router.calls.find((c) => c.label === 'profile_timeline').query.includes('/50)*50'));
+});
+
+test('fragrant_spaces: the STRSTARTS filter is in the query and the shaper drops twins that slip through', async () => {
+  const rows = [
+    { space: uri('http://www.wikidata.org/entity/Q1'), label: en('Garden'), n: '99' },
+    { space: uri('https://www.wikidata.org/wiki/Q1'), n: '98' },
+    ...FACET_ROWS.fragrant_spaces,
+  ];
+  await start(baseRoutes({ profile_fragrant_spaces: ok(rows) }));
+  const s = valid(await profile({ facets: ['fragrant_spaces'] }));
+  assert.deepEqual(s.fragrant_spaces.map((x) => x.label), ['Garden']);
+  assert.ok(JSON.stringify(s).indexOf('wikidata') === -1);
+  const q = stub.router.calls.find((c) => c.label === 'profile_fragrant_spaces').query;
+  const at = q.indexOf('STRSTARTS(STR(?space), "http://data.odeuropa.eu/vocabulary/fragrant-spaces/")');
+  assert.ok(at >= 0 && at < q.indexOf('LIMIT'));
+});
+
+test('a 504 on one facet degrades to failed_facets with a warning; the others are returned', async () => {
+  await start(baseRoutes({ profile_qualities: () => ({ status: 504, body: '<html>Gateway Time-out</html>' }) }));
+  const res = await profile();
+  const s = valid(res);
+  assert.deepEqual(s.failed_facets, ['qualities']);
+  assert.equal(s.qualities, undefined);
+  assert.ok(s.languages && s.timeline && s.emotions);
+  assert.ok(s.warnings.includes('The qualities facet timed out; try without include_narrower or with a narrower concept.'));
+  assert.ok(res.content[0].text.includes('The qualities facet timed out'));
+  assert.equal(labels().filter((l) => l === 'profile_qualities').length, 1, '504 is never retried');
+});
+
+test('a non-timeout facet error fails the whole call', async () => {
+  await start(baseRoutes({ profile_languages: () => ({ status: 400, body: 'bad query' }) }));
+  const res = await profile();
+  assert.equal(res.isError, true);
+  assert.equal(res.structuredContent, undefined);
+});
+
+test('a timed-out total fails the call', async () => {
+  await start(baseRoutes({ profile_total: () => ({ status: 504, body: '<html>Gateway Time-out</html>' }) }));
+  assert.equal((await profile()).isError, true);
+  assert.deepEqual(facetLabels(), []);
+});
+
+test('total 0 returns early with empty facets and no facet queries', async () => {
+  await start(baseRoutes({ profile_total: ok([{ n: '0' }]) }));
+  const s = valid(await profile());
+  assert.equal(s.total_smells, 0);
+  assert.deepEqual(facetLabels(), []);
+  assert.deepEqual(s.languages, []);
+  assert.equal(s.timeline.dated, 0);
+  assert.ok(s.warnings.includes('No smells are linked to this concept.'));
+});
+
+test('include_narrower: facets run one at a time, default set is the three narrower facets', async () => {
+  let inFlight = 0;
+  let maxInFlight = 0;
+  const slow = (rows) => async () => {
+    inFlight++;
+    maxInFlight = Math.max(maxInFlight, inFlight);
+    await new Promise((r) => setTimeout(r, 25));
+    inFlight--;
+    return { body: bindings(rows) };
+  };
+  await start(baseRoutes(Object.fromEntries(Object.entries(FACET_ROWS).map(([f, rows]) => [`profile_${f}`, slow(rows)]))));
+  const s = valid(await profile({ include_narrower: true }));
+  assert.equal(maxInFlight, 1);
+  assert.deepEqual(facetLabels().sort(), PROFILE_NARROWER_DEFAULT_FACETS.map((f) => `profile_${f}`).sort());
+  assert.equal(s.include_narrower, true);
+  assert.ok(stub.router.calls.find((c) => c.label === 'profile_total').query.includes('skos:broader*'));
+  assert.ok(s.languages && s.datasets && s.timeline);
+
+  // Without include_narrower the default facets do overlap.
+  maxInFlight = 0;
+  clearSparqlCache();
+  valid(await profile());
+  assert.ok(maxInFlight > 1);
+});
+
+test('deadline: a facet that would start with under 5 s left is skipped, not sent', async () => {
+  let clock = 1_000_000;
+  mock.method(Date, 'now', () => clock);
+  await start(baseRoutes({
+    profile_timeline: () => { clock += 46_000; return { body: bindings(FACET_ROWS.timeline) }; },
+  }));
+  const res = await profile({ include_narrower: true });
+  const s = valid(res);
+  assert.ok(s.timeline);
+  assert.deepEqual(s.failed_facets, ['languages', 'datasets']);
+  assert.deepEqual(facetLabels(), ['profile_timeline']);
+  assert.ok(s.warnings.includes('The languages facet was skipped (time budget); request it on its own.'));
+  assert.ok(res.content[0].text.includes('time budget'));
+});
+
+test('deadline: each query is sent with a timeout no longer than the time left', async () => {
+  let clock = 1_000_000;
+  mock.method(Date, 'now', () => clock);
+  const timeouts = [];
+  const realSetTimeout = globalThis.setTimeout;
+  mock.method(globalThis, 'setTimeout', (fn, ms, ...rest) => {
+    if (ms > 1000) timeouts.push(ms);
+    return realSetTimeout(fn, ms, ...rest);
+  });
+  await start(baseRoutes({
+    profile_timeline: () => { clock += 20_000; return { body: bindings(FACET_ROWS.timeline) }; },
+  }));
+  valid(await profile({ include_narrower: true }));
+  // total + label at 45 s (REQUEST_TIMEOUT_MS), languages at 30 s left, datasets at 30 s.
+  assert.ok(timeouts.includes(45_000));
+  assert.ok(timeouts.includes(30_000), `got ${timeouts}`);
+});
+
+test('input rules fail before any query', async () => {
+  await start(baseRoutes());
+  const cases = [
+    [{ concept: 'expert-taxonomy/rose' }, /not linked to smells/],
+    [{ include_narrower: true, language: 'fr' }, /language/],
+    [{ include_narrower: true, facets: ['timeline', 'languages', 'datasets', 'qualities'] }, /at most 3 facets/],
+    [{ concept: 'not a concept' }, /Not a valid concept id/],
+  ];
+  for (const [args, re] of cases) {
+    const res = await profile(args);
+    assert.equal(res.isError, true, JSON.stringify(args));
+    assert.match(res.content[0].text, re);
+  }
+  assert.deepEqual(labels(), []);
+});
+
+test('fragrant-spaces concept: anchored through the place, the fragrant_spaces facet is dropped with a warning', async () => {
+  await start(baseRoutes());
+  const s = valid(await profile({ concept: GARDEN }));
+  assert.equal(s.concept.vocab, 'fragrant-spaces');
+  assert.equal(s.fragrant_spaces, undefined);
+  assert.ok(!facetLabels().includes('profile_fragrant_spaces'));
+  assert.ok(s.warnings.some((w) => w.includes('fragrant_spaces facet was dropped')));
+  assert.ok(stub.router.calls.find((c) => c.label === 'profile_total').query.includes('crm:P137_exemplifies ?c'));
+});
+
+test('live: Rose default profile', { skip: !LIVE }, async () => {
+  const [ct, st] = InMemoryTransport.createLinkedPair();
+  await createServer().connect(st);
+  client = new Client({ name: 'profile-live', version: '0.0.0' });
+  await client.connect(ct);
+  const t0 = Date.now();
+  const s = valid(await profile());
+  const ms = Date.now() - t0;
+  console.error(`live rose profile: ${ms} ms, total ${s.total_smells}`);
+  assert.ok(ms < 15_000, `took ${ms} ms`);
+  assert.ok(s.total_smells > 20000);
+  assert.ok(['en', 'fr'].includes(s.languages[0].label));
+  assert.ok(s.emotions.some((e) => e.label === 'nostalgia'));
+  assert.ok(s.fragrant_spaces.some((e) => e.label === 'Garden'));
+  assert.doesNotMatch(JSON.stringify(s), /wikidata/);
+});
+
+test('live: Garden profile drops the fragrant_spaces facet', { skip: !LIVE }, async () => {
+  const [ct, st] = InMemoryTransport.createLinkedPair();
+  await createServer().connect(st);
+  client = new Client({ name: 'profile-live', version: '0.0.0' });
+  await client.connect(ct);
+  const t0 = Date.now();
+  const s = valid(await profile({ concept: GARDEN }));
+  console.error(`live garden profile: ${Date.now() - t0} ms, total ${s.total_smells}`);
+  assert.ok(s.total_smells > 3000);
+  assert.equal(s.fragrant_spaces, undefined);
+  assert.ok(s.warnings.some((w) => w.includes('fragrant_spaces')));
+});
