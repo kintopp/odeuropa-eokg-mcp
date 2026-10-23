@@ -32,6 +32,17 @@ export function assertWireValid(outputSchema, structured) {
   return structured;
 }
 
+// A minimal JPEG header (SOI, APP0, SOF0, EOI) that jpegDimensions can read.
+export function makeJpeg(width, height) {
+  const app0 = Buffer.concat([Buffer.from([0xFF, 0xE0, 0x00, 0x10]), Buffer.from('JFIF\0'), Buffer.alloc(9)]);
+  const sof = Buffer.alloc(19);
+  sof.set([0xFF, 0xC0, 0x00, 0x11, 0x08]);
+  sof.writeUInt16BE(height, 5);
+  sof.writeUInt16BE(width, 7);
+  sof[9] = 3;
+  return Buffer.concat([Buffer.from([0xFF, 0xD8]), app0, sof, Buffer.from([0xFF, 0xD9])]);
+}
+
 // ── driving the real server as a child process ───────────────────────────────
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');

@@ -110,3 +110,18 @@ export const SEARCH_MAX_OFFSET = 10000;
 export const SEARCH_WINDOWS = Object.freeze([1000, 5000, 20000]);
 export const SEARCH_MAX_FILTERED_DEPTH = 1000;
 export const SNIPPET_CHARS = 300;
+
+// Images: IMAGE_URL_RE is a security boundary (the only host the server ever fetches binaries from).
+export const IMAGE_URL_RE = /^https:\/\/data\.odeuropa\.eu\/image\/[A-Za-z0-9._~%-]+$/;
+export const MAX_IMAGE_BYTES = 4_500_000; // smallest per-image budget across hosts (Bedrock/Vertex 5 MB)
+export const VISION_MAX_EDGE = 1988; // long edge a vision encoder accepts without downscaling
+export const IMAGE_CACHE_MAX = 16;
+export const SOURCE_DEFAULT_LIMIT = 20;
+export const SOURCE_MAX_LIMIT = 100;
+export const SOURCE_EXCERPT_CHARS = 300;
+export const FRAGMENT_MIN_SCORE_DEFAULT = 0.5;
+// prov:wasGeneratedBy activities of image fragments → the `origin` field
+export const ANNOTATION_ORIGINS = Object.freeze({
+  'http://data.odeuropa.eu/provenance/db29c010-6542-531f-aea4-8d066a16ad70': 'detector',
+  'http://data.odeuropa.eu/provenance/9353c0bc-1e0b-5a83-9ec3-24b82faf8a56': 'manual',
+});
