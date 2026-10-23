@@ -95,16 +95,33 @@ test('both or neither of query and iconclass is an error with zero requests', as
 });
 
 test('iconclass 25G41(ROSE): exact Rose first, broader Flower; no Skosmos request', async () => {
-  const res = await call({ iconclass: '25G41(ROSE)', limit: 50 }, { concept_labels: labelsRoute });
+  const res = await call({ iconclass: '25G41(ROSE)' }, { concept_labels: labelsRoute });
   const s = assertWireValid(outputSchema, res.structuredContent);
+  const pick = (n) => s.results.find((r) => r.id === `${KG}olfactory-objects/${n}`);
+  assert.deepEqual(s.results.filter((r) => r.iconclass_match === 'exact').map((r) => [r.id, r.notation]),
+    [[`${KG}olfactory-objects/138`, '25G41(...)']]);
   assert.equal(s.results[0].id, `${KG}olfactory-objects/138`);
-  assert.equal(s.results[0].iconclass_match, 'exact');
-  assert.equal(s.results[0].notation, '25G41(...)');
   assert.equal(s.results[0].label, 'Rose');
-  const flower = s.results.find((r) => r.id === `${KG}olfactory-objects/72`);
-  assert.equal(flower.iconclass_match, 'broader');
+  assert.deepEqual([pick(72).iconclass_match, pick(72).notation], ['broader', '25G41']);
+  // Placeholder siblings (27, 92, …) are other named notations, not matches at all.
+  for (const n of [27, 92, 170, 223, 226, 236, 257, 327, 391]) assert.equal(pick(n), undefined, String(n));
   assert.equal(searchUrls().length, 0);
   assert.ok(res.content[0].text.includes('- Rose [olfactory-objects/138] — 25G41(...) (exact) — linked to smells'));
+});
+
+test('iconclass 25G41(TULIP): no concept is named Tulip, so only Flower (broader)', async () => {
+  const res = await call({ iconclass: '25G41(TULIP)' }, { concept_labels: labelsRoute });
+  const { results } = res.structuredContent;
+  assert.ok(!results.some((r) => r.iconclass_match === 'exact'));
+  assert.ok(results.some((r) => r.id === `${KG}olfactory-objects/72` && r.iconclass_match === 'broader'));
+  assert.ok(!results.some((r) => r.id === `${KG}olfactory-objects/138`));
+});
+
+test('iconclass 25G41(...): every placeholder concept is exact', async () => {
+  const res = await call({ iconclass: '25G41(...)', limit: 50 }, { concept_labels: labelsRoute });
+  const exact = res.structuredContent.results.filter((r) => r.iconclass_match === 'exact');
+  assert.deepEqual(exact.map((r) => r.id.split('/').pop()).sort((a, b) => a - b),
+    ['27', '92', '138', '170', '223', '226', '236', '257', '327', '391']);
 });
 
 test('iconclass 25G4: Flower and Rose are narrower', async () => {
@@ -165,4 +182,6 @@ test('live: iconclass 25G41(ROSE) puts Rose first', { skip: !LIVE }, async () =>
   const first = res.structuredContent.results[0];
   assert.ok(first.id.endsWith('olfactory-objects/138'));
   assert.equal(first.label, 'Rose');
+  assert.equal(first.iconclass_match, 'exact');
+  assert.deepEqual(res.structuredContent.results.filter((r) => r.iconclass_match === 'exact').map((r) => r.id), [first.id]);
 });

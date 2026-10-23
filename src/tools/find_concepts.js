@@ -70,11 +70,12 @@ function resolveVocabs(vocab) {
 
 const stem = (n) => n.replace(/\(\.\.\.\)$/, '');
 
-// First rule that holds wins: exact, narrower, broader.
+// First rule that holds wins. A placeholder S(...) against a named query S(NAME) is 'named':
+// provisional until the concept's labels show it is NAME (other siblings are neither broader nor narrower).
 function classify(n, q) {
   const s = stem(n);
   if (n === q) return 'exact';
-  if (n.endsWith('(...)') && q.startsWith(`${s}(`) && q.endsWith(')') && q.length > s.length + 2) return 'exact';
+  if (n.endsWith('(...)') && q.startsWith(`${s}(`) && q.endsWith(')') && q.length > s.length + 2) return 'named';
   if (n.startsWith(q)) return 'narrower';
   if (q.startsWith(s)) return 'broader';
   return null;
@@ -82,21 +83,28 @@ function classify(n, q) {
 
 const RANK = { exact: 0, broader: 1, narrower: 2 };
 
-function iconclassMatches(q, vocabRows) {
+// Every candidate (concept, notation, match) before 'named' is resolved.
+function iconclassCandidates(q, vocabRows) {
   const allowed = new Set(vocabRows.map((x) => x.name));
-  const best = new Map(); // uri → match
+  const out = [];
   for (const scheme of ICONCLASS_SCHEMES) {
     if (!allowed.has(scheme)) continue;
     for (const [local, notations] of Object.entries(iconclassData[scheme])) {
       for (const notation of notations) {
         const match = classify(notation, q);
-        if (!match) continue;
-        const uri = `${VOCAB_PREFIX}${scheme}/${local}`;
-        const cand = { uri, scheme, local, notation, match };
-        const prev = best.get(uri);
-        if (!prev || RANK[match] < RANK[prev.match]) best.set(uri, cand);
+        if (match) out.push({ uri: `${VOCAB_PREFIX}${scheme}/${local}`, scheme, local, notation, match });
       }
     }
+  }
+  return out;
+}
+
+// Keep each concept's best match, then order: exact, broader (longest stem first), narrower (by notation).
+function rankMatches(cands) {
+  const best = new Map();
+  for (const c of cands) {
+    const prev = best.get(c.uri);
+    if (!prev || RANK[c.match] < RANK[prev.match]) best.set(c.uri, c);
   }
   const order = (a, b) => RANK[a.match] - RANK[b.match]
     || (a.match === 'broader' ? stem(b.notation).length - stem(a.notation).length : 0)
@@ -123,32 +131,36 @@ function renderText(heading, results) {
   return [heading, ...lines].join('\n');
 }
 
-// Many concepts share one placeholder notation (25G41(...)), so a named query ranks the concept
-// whose label is that name first among the exact matches.
-const nameOf = (q) => /^[^(]+\((.+)\)$/.exec(q)?.[1].toLowerCase();
-
 async function findByIconclass(args, signal) {
   const q = args.iconclass.trim();
-  const found = iconclassMatches(q, resolveVocabs(args.vocab));
+  const cands = iconclassCandidates(q, resolveVocabs(args.vocab));
   const warnings = [];
   const labels = new Map();
-  if (found.length) {
-    const rows = await sparqlSelect('concept_labels', conceptLabelsQuery(found.map((k) => k.uri)), { signal });
+  let found = [];
+  if (cands.length) {
+    const uris = [...new Set(cands.map((c) => c.uri))];
+    const rows = await sparqlSelect('concept_labels', conceptLabelsQuery(uris), { signal });
     const terms = new Map();
     for (const r of rows) {
       const uri = v(r, 'c');
       if (!terms.has(uri)) terms.set(uri, []);
       terms.get(uri).push({ value: v(r, 'l'), 'xml:lang': langOf(r, 'l') });
     }
-    const name = nameOf(q);
     for (const [uri, list] of terms) {
       const wanted = args.lang && list.find((t) => t['xml:lang'] === args.lang);
       labels.set(uri, wanted?.value ?? pickLabel(list));
-      if (name && list.some((t) => t.value.trim().toLowerCase() === name)) labels.set(`named:${uri}`, true);
     }
-    const named = (k) => (k.match === 'exact' && labels.has(`named:${k.uri}`) ? 0 : 1);
-    found.sort((a, b) => RANK[a.match] - RANK[b.match] || named(a) - named(b));
-  } else {
+    const resolved = [];
+    for (const c of cands) {
+      if (c.match !== 'named') { resolved.push(c); continue; }
+      const name = q.slice(stem(c.notation).length + 1, -1).trim().toLowerCase();
+      if ((terms.get(c.uri) ?? []).some((t) => t.value.trim().toLowerCase() === name)) {
+        resolved.push({ ...c, match: 'exact' });
+      }
+    }
+    found = rankMatches(resolved);
+  }
+  if (!found.length) {
     warnings.push(
       `No Odeuropa concept is mapped to ${q} or to a broader or narrower notation. Only ${countNotated()} concepts carry Iconclass notations; try query with a label instead.`,
     );
