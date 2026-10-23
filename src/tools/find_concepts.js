@@ -77,7 +77,8 @@ function classify(n, q) {
   if (n === q) return 'exact';
   if (n.endsWith('(...)') && q.startsWith(`${s}(`) && q.endsWith(')') && q.length > s.length + 2) return 'named';
   if (n.startsWith(q)) return 'narrower';
-  if (q.startsWith(s)) return 'broader';
+  // A placeholder means "S with some name", never an ancestor of a different notation.
+  if (!n.endsWith('(...)') && q.startsWith(s)) return 'broader';
   return null;
 }
 

@@ -103,6 +103,8 @@ test('iconclass 25G41(ROSE): exact Rose first, broader Flower; no Skosmos reques
   assert.equal(s.results[0].id, `${KG}olfactory-objects/138`);
   assert.equal(s.results[0].label, 'Rose');
   assert.deepEqual([pick(72).iconclass_match, pick(72).notation], ['broader', '25G41']);
+  assert.ok(!s.results.some((r) => r.iconclass_match === 'broader' && r.notation.endsWith('(...)')));
+  assert.equal(pick(79), undefined, '25G4(...) is not an ancestor');
   // Placeholder siblings (27, 92, …) are other named notations, not matches at all.
   for (const n of [27, 92, 170, 223, 226, 236, 257, 327, 391]) assert.equal(pick(n), undefined, String(n));
   assert.equal(searchUrls().length, 0);
@@ -113,6 +115,7 @@ test('iconclass 25G41(TULIP): no concept is named Tulip, so only Flower (broader
   const res = await call({ iconclass: '25G41(TULIP)' }, { concept_labels: labelsRoute });
   const { results } = res.structuredContent;
   assert.ok(!results.some((r) => r.iconclass_match === 'exact'));
+  assert.ok(!results.some((r) => r.iconclass_match === 'broader' && r.notation.endsWith('(...)')));
   assert.ok(results.some((r) => r.id === `${KG}olfactory-objects/72` && r.iconclass_match === 'broader'));
   assert.ok(!results.some((r) => r.id === `${KG}olfactory-objects/138`));
 });
@@ -129,6 +132,7 @@ test('iconclass 25G4: Flower and Rose are narrower', async () => {
   const byId = Object.fromEntries(res.structuredContent.results.map((r) => [r.id, r.iconclass_match]));
   assert.equal(byId[`${KG}olfactory-objects/72`], 'narrower');
   assert.equal(byId[`${KG}olfactory-objects/138`], 'narrower');
+  assert.equal(byId[`${KG}olfactory-objects/79`], 'narrower'); // 25G4(...): a named 25G4 is narrower
   // Concepts mapped to 25G4 itself or to 25 are exact and broader matches, so they sort before.
   const order = res.structuredContent.results.map((r) => r.iconclass_match);
   assert.deepEqual(order, [...order].sort((a, b) => ['exact', 'broader', 'narrower'].indexOf(a) - ['exact', 'broader', 'narrower'].indexOf(b)));
