@@ -58,7 +58,8 @@ beforeEach(async () => {
   });
   const sparqlFetch = globalThis.fetch;
   globalThis.fetch = async (url, init) => {
-    if (String(url).startsWith('https://data.odeuropa.eu/image/')) {
+    // Anything that is not the SPARQL endpoint counts as an image fetch, third-party hosts included.
+    if (!String(url).startsWith('https://data.odeuropa.eu/repositories/')) {
       imageCalls.push({ url: String(url), init });
       return imageHandler(url, init);
     }
