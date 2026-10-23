@@ -13,6 +13,8 @@ const REQUIRED_PROPS = {
   eokg_find_concepts: [],
   eokg_get_concept: ['id'],
   eokg_search_smells: ['text'],
+  eokg_get_source: ['id'],
+  eokg_inspect_image: ['id'],
 };
 
 test('exposes the expected tools with strict, $ref-free input schemas', async () => {

@@ -10,6 +10,8 @@ import { registerGetSmellTool } from './tools/get_smell.js';
 import { registerFindConceptsTool } from './tools/find_concepts.js';
 import { registerGetConceptTool } from './tools/get_concept.js';
 import { registerSearchSmellsTool } from './tools/search_smells.js';
+import { registerGetSourceTool } from './tools/get_source.js';
+import { registerInspectImageTool } from './tools/inspect_image.js';
 
 export function createServer() {
   // `listChanged` must be an explicit false: the SDK fills an absent value with
@@ -31,5 +33,7 @@ export function createServer() {
   registerFindConceptsTool(server);
   registerGetConceptTool(server);
   registerSearchSmellsTool(server);
+  registerGetSourceTool(server);
+  registerInspectImageTool(server);
   return server;
 }
