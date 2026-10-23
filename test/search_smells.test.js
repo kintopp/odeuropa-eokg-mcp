@@ -65,6 +65,23 @@ test('unfiltered: 0 hits gives total 0 and the no-hits warning', async () => {
   assert.deepEqual(labels(stub), ['search_page']);
 });
 
+test('unfiltered: empty page at offset > 0 takes the total from a count query', async () => {
+  stub = await startStubServer({ search_page: () => ({ body: bindings([]) }), search_count: countRoute(12120) });
+  const res = await call(stub, { text: 'lavender', offset: 20 });
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.equal(s.total_hits, 12120);
+  assert.equal(s.warnings, undefined);
+  assert.deepEqual(labels(stub), ['search_page', 'search_count']);
+});
+
+test('unfiltered: a title-only hit falls back to a code-side snippet', async () => {
+  const rows = [{ id: uri(sid(1)), score: '0.5', total: '3' }];
+  stub = await startStubServer({ search_page: () => ({ body: bindings(rows) }), search_enrich: enrichRoute });
+  const res = await call(stub, { text: 'lavande', in: 'title' });
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.match(s.results[0].snippets[0], /<em>lavande<\/em>/);
+});
+
 test('filtered, enough matches in the first window: one window, non-exhaustive warning', async () => {
   stub = await startStubServer({
     search_window: () => windowRows(4), search_count: countRoute(12120), search_enrich: enrichRoute,
@@ -118,7 +135,10 @@ test('window queries never ask Lucene for snippets', async () => {
   await call(stub, { text: 'rose', language: 'it' });
   const windows = stub.router.calls.filter((c) => c.label === 'search_window');
   assert.equal(windows.length, 3);
-  for (const w of windows) assert.ok(!w.query.includes('luc:snippets'));
+  for (const w of windows) {
+    assert.ok(!w.query.includes('luc:snippets'));
+    assert.ok(w.query.includes('SELECT DISTINCT ?id ?score'));
+  }
 });
 
 test('year and dataset filters reach the window query', async () => {

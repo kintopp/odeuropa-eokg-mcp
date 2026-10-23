@@ -26,7 +26,7 @@ export const searchWindowQuery = (lq, W, { language, yearFrom, yearTo, dataset }
     yearTo != null && `?b <= "${pad4(yearTo)}"^^xsd:gYear`,
   ].filter(Boolean).join(' && ');
   return `
-SELECT ?id ?score WHERE {
+SELECT DISTINCT ?id ?score WHERE {
   { SELECT ?id ?score WHERE { ?search a luc-index:search ; luc:query "${sparqlString(lq)}" ; luc:limit "${W}" ; luc:entities ?id . ?id luc:score ?score . } }
   ${dataset ? `GRAPH <${DATASET_GRAPH_BASE}${dataset}> { ?id a od:L11_Smell }` : ''}
   ${language || dated ? '?source crm:P67_refers_to ?id . FILTER NOT EXISTS { ?source rdf:value [] }' : ''}

@@ -111,11 +111,9 @@ async function filteredWindows(lq, filters, limit, offset, ctx, signal) {
     scanned = Math.min(W, total);
     if (rows.length > limit || W >= total) break;
   }
-  const seen = new Set();
-  const unique = rows.filter((r) => !seen.has(v(r, 'id')) && seen.add(v(r, 'id')));
   return {
-    total, scanned, exhaustive: scanned >= total, ids: unique.slice(0, limit).map((r) => v(r, 'id')),
-    hasMore: unique.length > limit, scores: new Map(unique.map((r) => [v(r, 'id'), num(r, 'score') ?? 0])),
+    total, scanned, exhaustive: scanned >= total, ids: rows.slice(0, limit).map((r) => v(r, 'id')),
+    hasMore: rows.length > limit, scores: new Map(rows.map((r) => [v(r, 'id'), num(r, 'score') ?? 0])),
   };
 }
 
