@@ -12,6 +12,8 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 | Tests (offline) | `npm test` |
 | Live tests (network) | `EOKG_LIVE=1 npm test` |
 | Lint | `npm run lint` |
+| Regenerate `docs/tools.md` | `npm run build:docs` |
+| Rebuild the skill bundle | `npm run build:skill` |
 | Inspector (manual) | `npm run inspector` |
 
 ## Conventions to follow
@@ -28,6 +30,27 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 - Every SPARQL query is sent through `sparqlSelect(name, body)` with a unique `eokg:<name>` label; the offline stub router depends on it.
 - Committed files never reference `plans/` or `research/` by path (both are gitignored).
 - Test rules are in `test/CLAUDE.md`.
+
+## Architecture
+
+- `src/index.js`, `src/server.js`: stdio entry point and tool registration.
+- `src/config.js`: every backend constant, the dataset snapshot and `SERVER_INSTRUCTIONS`.
+- `src/tools/`: one file per tool (schemas, description, handler, shaping).
+- `src/sparql/`: SPARQL client, Lucene query building, prefixes and `queries/`.
+- `src/skosmos/`: Skosmos REST client for vocabulary search.
+- `src/image/`: image fetching and size limits (`data.odeuropa.eu/image/` only).
+- `src/lib/`: shared helpers (tool wrapper, errors, budgets, caching, CSV, ids, warnings).
+- `src/data/iconclass.json`: curated Iconclass sidecar, built by `npm run build:iconclass`.
+- `scripts/`: build and measurement scripts. `docs/tools.md` and `skill/odeuropa-smells.skill` are generated or checked artefacts.
+
+## Adding a tool touches these places
+
+1. `src/tools/<name>.js`
+2. `src/server.js` (register it)
+3. `REQUIRED_PROPS` in `test/smoke.test.js`
+4. `docs/tools.md`: add a `## \`eokg_<name>\`` section with the three generated markers, then run `npm run build:docs`
+5. `skill/odeuropa-smells/SKILL.md` if it changes a workflow (then `npm run build:skill`)
+6. The tools table in `README.md`
 
 ## Backend facts that drive the whole design
 
@@ -50,3 +73,6 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 ## Common Errors
 
 - **Never retry a SPARQL 504:** the gateway's 60 s cut is deterministic for a given query; retrying costs another minute and fails the same way.
+- **luc:snippets over a window:** snippets are computed for every hit in luc:limit; only request them when the window is the page (24 s at 5k hits).
+- **Skosmos 200 + HTML:** an unknown vocab id returns a PHP fatal-error page with status 200; the VOCABS enum prevents it.
+- **closeMatch is corrupt:** never read skos:closeMatch for Iconclass; use src/data/iconclass.json.
