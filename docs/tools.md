@@ -155,12 +155,12 @@ Counts the smells linked to one concept by period, language, dataset, qualities,
 
 ## `eokg_find_visual_smells`
 
-Lists paintings and prints linked to an olfactory-objects concept, ranked by the detector's best confidence for it; catalogue-only links rank last. Year filters use the artwork date and exclude undated works.
+Lists paintings and prints linked to an olfactory-objects concept, images with hand-drawn boxes first, then by the detector's best confidence for it, then catalogue-only links. Year filters use the artwork date and exclude undated works.
 
 ### Tool description
 
 <!-- generated:eokg_find_visual_smells:description -->
-> Find paintings and prints in which a smell source was detected or catalogued. Lists image sources linked to an olfactory-objects concept, ranked by the object detector's best confidence for that concept (catalogue-only links rank last). Year filters use the artwork date and exclude undated works. Pass a result id to eokg_inspect_image to look at it.
+> Find paintings and prints in which a smell source was detected or catalogued. Lists image sources linked to an olfactory-objects concept, best box score first: images with hand-drawn boxes (score 1) come first, then images ranked by the object detector's confidence, then catalogue-only links with no box. Year filters use the artwork date and exclude undated works. Pass a result id to eokg_inspect_image to look at it.
 <!-- /generated -->
 
 ### Parameters
@@ -182,7 +182,7 @@ Fetches the picture of an image source together with its annotated objects: conc
 ### Tool description
 
 <!-- generated:eokg_inspect_image:description -->
-> Look at an image source, with the smell-related objects detected in it. Returns the picture itself plus each annotated object (vocabulary concept, bounding box as % of width/height from the top-left, and origin: manual boxes were drawn by the Odeuropa team, detector boxes come from an object detector with a confidence score). Detector boxes can be wrong; compare them with what you see. Use these boxes rather than estimating coordinates yourself. Takes a source id from eokg_get_source, eokg_get_smell (source.id) or eokg_find_visual_smells.
+> Look at an image source, with the smell-related objects detected in it. Returns the picture itself plus each annotated object (vocabulary concept, bounding box as % of width/height from the top-left, and origin: manual boxes were drawn by the Odeuropa team, detector boxes come from an object detector with a confidence score). Detector boxes can be wrong; compare them with what you see. Use these boxes rather than estimating coordinates yourself. The picture is returned to you, not shown to the user; to show it, give the user the Record or Image link from the result (an embedded image may not render). Takes a source id from eokg_get_source, eokg_get_smell (source.id) or eokg_find_visual_smells.
 <!-- /generated -->
 
 ### Parameters

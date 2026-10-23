@@ -22,6 +22,7 @@ const RKD_URL = 'https://images.rkd.nl/rkd/thumb/650x650/e90fb725-7275-db43-a805
 
 const imageMeta = (...images) => bindings(images.map((image) => ({
   type: uri(TYPE_IMAGE), title: 'Still life with fruit', artist: 'Pieter van den Bosch', date: '1650/55XX', image,
+  url: 'https://rkd.nl/explore/images/56354',
 })));
 
 const jpegResponse = (w = 650, h = 568, init = {}) => new Response(makeJpeg(w, h), {
@@ -94,6 +95,36 @@ test('percent boxes are 100 * px / dimensions rounded to 2 decimals, in score or
   assert.ok(text.includes('- Lemon 0.95 (detector) — 48.15,78.35,13.54,9.86'));
   assert.equal(imageCalls.length, 1);
   assert.equal(imageCalls[0].init.redirect, 'error');
+});
+
+// Failure modes:
+// - the record page or original image is dropped from the text the model reads;
+// - a link line appears with `undefined` when the source has no record page;
+// - the "user cannot see it" note is missing from the text channel;
+// - structured output omits url/original_image_url, or emits them empty.
+test('links: record page, hosted image and original appear in text and structured output', async () => {
+  const res = await inspect();
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.equal(s.url, 'https://rkd.nl/explore/images/56354');
+  assert.equal(s.original_image_url, RKD_URL);
+  const text = res.content[1].text;
+  assert.ok(text.includes('Record: https://rkd.nl/explore/images/56354'));
+  assert.ok(text.includes(`Image: ${IMAGE_URL}`));
+  assert.ok(text.includes(`Original: ${RKD_URL}`));
+  assert.ok(text.includes('the user does not see it'));
+});
+
+test('links: a source without record page or original prints only the hosted image', async () => {
+  meta = bindings([{ type: uri(TYPE_IMAGE), title: 'Untitled', image: IMAGE_URL }]);
+  const res = await inspect();
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.equal(s.url, undefined);
+  assert.equal(s.original_image_url, undefined);
+  const text = res.content[1].text;
+  assert.ok(!text.includes('Record:'));
+  assert.ok(!text.includes('Original:'));
+  assert.ok(text.includes(`Image: ${IMAGE_URL}`));
+  assert.ok(!text.includes('undefined'));
 });
 
 test('content[0] is the image; structuredContent carries no image bytes', async () => {

@@ -26,7 +26,7 @@ const box = () => z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.n
 
 export const outputSchema = z.object({
   id: z.string(), title: z.string().optional(), artist: z.string().optional(), date: z.string().optional(),
-  image_url: z.string(), width: z.number().int().optional(), height: z.number().int().optional(),
+  image_url: z.string(), url: z.string().optional(), original_image_url: z.string().optional(), width: z.number().int().optional(), height: z.number().int().optional(),
   byte_size: z.number().int(), mime_type: z.string(), min_score: z.number(),
   objects: z.array(z.object({
     concept_id: z.string(), label: z.string(), score: z.number(), origin: z.enum(['detector', 'manual', 'unknown']),
@@ -40,7 +40,9 @@ export const outputSchema = z.object({
 const description =
   'Look at an image source, with the smell-related objects detected in it. ' +
   'Returns the picture itself plus each annotated object (vocabulary concept, bounding box as % of width/height from the top-left, and origin: manual boxes were drawn by the Odeuropa team, detector boxes come from an object detector with a confidence score). ' +
-  'Detector boxes can be wrong; compare them with what you see. Use these boxes rather than estimating coordinates yourself. Takes a source id from eokg_get_source, eokg_get_smell (source.id) or eokg_find_visual_smells.';
+  'Detector boxes can be wrong; compare them with what you see. Use these boxes rather than estimating coordinates yourself. ' +
+  'The picture is returned to you, not shown to the user; to show it, give the user the Record or Image link from the result (an embedded image may not render). ' +
+  'Takes a source id from eokg_get_source, eokg_get_smell (source.id) or eokg_find_visual_smells.';
 
 const round2 = (n) => Math.round(n * 100) / 100;
 const clampPct = (n) => Math.min(100, Math.max(0, n));
@@ -59,6 +61,10 @@ function renderText(s) {
   const when = s.date ? ` (${s.date})` : '';
   const size = s.width ? `${s.width}×${s.height} px, ` : '';
   const lines = [`"${s.title ?? '(untitled)'}"${who}${when}, ${size}${Math.round(s.byte_size / 1000)} KB.`];
+  if (s.url) lines.push(`Record: ${s.url}`);
+  lines.push(`Image: ${s.image_url}`);
+  if (s.original_image_url) lines.push(`Original: ${s.original_image_url}`);
+  lines.push('The picture above is for your own analysis; the user does not see it. To show it, give them these links.');
   const framing = s.width ? 'boxes as % x,y,w,h from top-left' : 'boxes in pixels x,y,w,h from top-left';
   lines.push(`Detected objects (score ≥ ${s.min_score}; ${framing}):`);
   for (const o of s.objects) {
@@ -123,6 +129,8 @@ export function registerInspectImageTool(server) {
         ...(meta.artist && { artist: meta.artist }),
         ...(meta.date && { date: meta.date }),
         image_url: imageUrl,
+        ...(meta.url && { url: meta.url }),
+        ...(originalImageUrl && { original_image_url: originalImageUrl }),
         ...(dims && { width: dims.width, height: dims.height }),
         byte_size: buffer.length, mime_type: mimeType, min_score: args.min_score,
         objects,

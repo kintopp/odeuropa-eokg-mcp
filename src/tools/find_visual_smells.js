@@ -48,7 +48,7 @@ export const outputSchema = z.object({
 
 const description =
   'Find paintings and prints in which a smell source was detected or catalogued. ' +
-  'Lists image sources linked to an olfactory-objects concept, ranked by the object detector\'s best confidence for that concept (catalogue-only links rank last). ' +
+  'Lists image sources linked to an olfactory-objects concept, best box score first: images with hand-drawn boxes (score 1) come first, then images ranked by the object detector\'s confidence, then catalogue-only links with no box. ' +
   'Year filters use the artwork date and exclude undated works. Pass a result id to eokg_inspect_image to look at it.';
 
 const fmt = (n) => n.toLocaleString('en-US');

@@ -29,6 +29,14 @@ async function call(args, r = routes([row(1)])) {
 }
 const queryOf = (label) => stub.router.calls.find((c) => c.label === label).query;
 
+test('the description tells the model hand-drawn boxes rank first', async () => {
+  await withClient('visual', async (c) => {
+    const { tools } = await c.listTools();
+    const t = tools.find((x) => x.name === 'eokg_find_visual_smells');
+    assert.ok(t.description.includes('hand-drawn boxes (score 1) come first'));
+  });
+});
+
 test('page shaping, text and has_more from the extra row', async () => {
   const res = await call({ limit: 2 }, routes([row(1), row(2), row(3)]));
   assert.notEqual(res.isError, true, res.content?.[0]?.text);

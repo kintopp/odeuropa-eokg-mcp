@@ -158,8 +158,11 @@ facets, or profile the specific concept. A timed-out query is not retried.
 ### 4. Text and image together
 
 1. `eokg_find_visual_smells({ concept: "olfactory-objects/138", year_from, year_to })`
-   → artworks ranked by detector confidence; note title, artist and date.
+   → artworks with hand-drawn boxes first, then by detector confidence; note title,
+   artist and date. Hundreds of hand-drawn images can precede the first detector-only one.
 2. `eokg_inspect_image({ id })` → look at the picture; compare boxes with what you see.
+   The user does not see the picture: when they want to, give them the Record and
+   Image links from the result.
 3. `eokg_find_concepts` for the same object in other languages, then
    `eokg_search_smells` for the same concept in texts of the same period.
 4. Compare: what texts say about the smell, what artists chose to depict. Keep
