@@ -33,7 +33,7 @@ The other variables in the README configuration table apply too.
 
 ## Railway
 
-The service runs `node src/http.js` with `/health` as its health check, a single replica. Service configuration lives in `.railway/railway.ts` and is applied with `railway config plan` then `railway config apply`; applying it does not upload code, which is a separate `railway up`. `railway.json` and `railway.toml` are not read.
+The service runs `node src/http.js` with `/health` as its health check, a single replica. Service configuration lives in `.railway/railway.ts` and is applied with `railway config plan` then `railway config apply`; applying it does not upload code. Code deploys from GitHub on every push to `main` that touches `src/`, `package.json` or `package-lock.json` (the `watchPatterns` in `.railway/railway.ts`); `railway up` deploys the local tree by hand. `railway.json` and `railway.toml` are not read.
 
 Keep one replica: the SPARQL concurrency limit (4) is per process, and every hosted user shares one egress IP towards the EOKG.
 

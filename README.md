@@ -27,7 +27,7 @@ Requires Node 24. The server speaks MCP over stdio (`node src/index.js`).
 From a local checkout:
 
 ```sh
-git clone <this repository> && cd odeuropa-eokg-mcp && npm install
+git clone https://github.com/kintopp/odeuropa-eokg-mcp.git && cd odeuropa-eokg-mcp && npm install
 ```
 
 Claude Desktop (`claude_desktop_config.json`):
@@ -49,7 +49,7 @@ Claude Code:
 claude mcp add odeuropa-eokg -- node /absolute/path/to/odeuropa-eokg-mcp/src/index.js
 ```
 
-Running straight from git with `npx` also works once the repository is hosted: replace the command with `npx` and the args with `["-y", "github:<owner>/odeuropa-eokg-mcp"]`.
+Running straight from git with `npx` also works for anyone with access to the repository: replace the command with `npx` and the args with `["-y", "github:kintopp/odeuropa-eokg-mcp"]`.
 
 ## Configuration
 
