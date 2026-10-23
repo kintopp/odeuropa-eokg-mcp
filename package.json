@@ -1,0 +1,26 @@
+{
+  "name": "odeuropa-eokg-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP server for the European Olfactory Knowledge Graph (Odeuropa)",
+  "license": "MIT",
+  "author": { "name": "Arno Bosse", "url": "https://github.com/kintopp" },
+  "type": "module",
+  "engines": { "node": ">=24 <25" },
+  "bin": { "odeuropa-eokg-mcp": "src/index.js" },
+  "files": ["src/"],
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test \"test/*.test.js\"",
+    "test:live": "EOKG_LIVE=1 node --test \"test/*.test.js\"",
+    "lint": "eslint .",
+    "inspector": "npx @modelcontextprotocol/inspector node src/index.js"
+  },
+  "dependencies": { "@modelcontextprotocol/server": "^2.0.0", "zod": "4.4.3" },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@eslint/js": "10.0.1",
+    "eslint": "10.6.0",
+    "globals": "17.7.0"
+  }
+}

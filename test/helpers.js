@@ -1,0 +1,61 @@
+// Shared test utilities.
+
+import assert from 'node:assert/strict';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { Client } from '@modelcontextprotocol/client';
+import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
+import { AjvJsonSchemaValidator } from '@modelcontextprotocol/client/validators/ajv';
+
+// The ONE live-suite gate. Every live test must spell it `{ skip: !LIVE }` (or
+// the equivalent `process.env.EOKG_LIVE !== '1'`) — exact equality, never
+// truthiness. `skip: !process.env.EOKG_LIVE` reads as the same thing but RUNS
+// the live suite for any non-empty value, including the `EOKG_LIVE=0` someone
+// would set to turn it off.
+export const LIVE = process.env.EOKG_LIVE === '1';
+
+// Backend fixtures for the live (EOKG_LIVE=1) tests.
+export const KNOWN_SMELL = 'http://data.odeuropa.eu/smell/7e932a9d-fcd7-5192-a678-ae760d6306ad'; // The Art of Perfumery (1857), lavender
+export const KNOWN_IMAGE_SOURCE_IMAGE = 'https://data.odeuropa.eu/image/e90fb725-7275-db43-a805-c109d9b4f9c3.jpg'; // RKD still life, Pieter van den Bosch
+export const KNOWN_CONCEPT_ROSE = 'http://data.odeuropa.eu/vocabulary/olfactory-objects/138';
+
+// Validate structuredContent the way a client does: against the tool's advertised
+// JSON Schema, where an undeclared key is an additionalProperties violation that
+// fails the call. zod's .parse() strips such keys instead, so a parse-based check
+// passes a shaper field its outputSchema forgot to declare. Returns the object
+// unchanged, so it drops in wherever a test read the result of .parse().
+const wireValidator = new AjvJsonSchemaValidator();
+export function assertWireValid(outputSchema, structured) {
+  const jsonSchema = outputSchema['~standard'].jsonSchema.output({ target: 'draft-2020-12' });
+  const { valid, errorMessage } = wireValidator.getValidator(jsonSchema)(structured);
+  assert.ok(valid, errorMessage);
+  return structured;
+}
+
+// ── driving the real server as a child process ───────────────────────────────
+
+export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+export const SERVER_ENTRY = join(ROOT, 'src', 'index.js');
+
+// `env` is merged over process.env for the child — how a test points the server
+// at a stub backend (stub-backend.js#startStubServer).
+const serverParams = (env) => ({
+  command: process.execPath,
+  args: [SERVER_ENTRY],
+  ...(env && { env: { ...process.env, ...env } }),
+});
+
+/**
+ * Spawn the real server over stdio, hand `run` a connected client, and close it
+ * on every path. `name` only labels the client in the handshake.
+ */
+export async function withClient(name, run, { env } = {}) {
+  const transport = new StdioClientTransport(serverParams(env));
+  const client = new Client({ name, version: '0.0.0' });
+  await client.connect(transport);
+  try {
+    return await run(client);
+  } finally {
+    await client.close();
+  }
+}

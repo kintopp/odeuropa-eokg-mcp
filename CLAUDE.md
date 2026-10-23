@@ -1,0 +1,52 @@
+# odeuropa-eokg-mcp
+
+## What this is
+
+An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a public GraphDB SPARQL endpoint with ~2.4M smell references from European texts and images (1600–1920). Node 24, pure ESM, no build step; runtime deps are `@modelcontextprotocol/server` and `zod`.
+
+## Commands
+
+| Purpose | Command |
+|---|---|
+| Install | `npm install` |
+| Tests (offline) | `npm test` |
+| Live tests (network) | `EOKG_LIVE=1 npm test` |
+| Lint | `npm run lint` |
+| Inspector (manual) | `npm run inspector` |
+
+## Conventions to follow
+
+- **Two output channels.** Every tool returns `content[{type:'text',text}]` and `structuredContent`, both produced from one structured object.
+- **Errors are tool results.** Every failure inside a handler reaches the client as `isError: true`, never as a JSON-RPC error. The error result has no `structuredContent`, because an error object fails outputSchema validation with -32602.
+- **Input schemas are `.strict()` and `$ref`-free.** Output schemas are `$ref`-free too. A zod schema instance reused in two places can serialize to `$ref`, so build each field fresh; don't share one `z.string()` constant across fields.
+- **The first sentence of a tool description is ≤ 79 characters** (text up to the first `". "`, in code points). Hosts truncate there.
+- **stdout is JSON-RPC only.** All logging goes through `console.error`.
+- **Never set a human-readable `serverInfo.title`.** Claude Desktop derives tool ids from it and drops the tools from tool search. Use only the machine name.
+- **Backend constants live in `src/config.js`.** Don't scatter magic strings.
+- Register tools as in `src/tools/list_datasets.js`: `server.registerTool(name, { title, description, inputSchema, outputSchema, annotations: READ_ONLY_ANNOTATIONS }, withTool(name, label, async (args, ctx) => …))`, passing `ctx?.mcpReq?.signal` to the backend.
+- Every tool lives in `src/tools/<name>.js`, is registered in `src/server.js` and is listed in `REQUIRED_PROPS` in `test/smoke.test.js`.
+- Every SPARQL query is sent through `sparqlSelect(name, body)` with a unique `eokg:<name>` label; the offline stub router depends on it.
+- Committed files never reference `plans/` or `research/` by path (both are gitignored).
+- Test rules are in `test/CLAUDE.md`.
+
+## Backend facts that drive the whole design
+
+`backend-facts.md` *(internal)* is the full record; the essentials:
+
+- **Hard 60 s nginx gateway timeout** (HTTP 504, HTML body). A retry of a timed-out query costs another 60 s and fails the same way.
+- Anchored lookups (smell id, concept URI, Lucene hit set) take 40–400 ms; concept-anchored aggregates 0.8–3.5 s; unanchored whole-graph aggregates 20–40 s or time out. **No tool may issue an unanchored aggregate.**
+- Lucene full-text: one connector, `luc-index:search`, fields `source_value` (excerpt text) and `source_label` (source title) on `od:L11_Smell`; no language, date or dataset fields. The query must name a field.
+- A Lucene syntax error is HTTP 500 with `Cannot parse Lucene query …` (a correctable user error); an unknown field name silently gives 0 rows.
+- Language/year/dataset filters must be SPARQL patterns after the Lucene call, so `luc:totalHits` counts unfiltered hits.
+- `schema:` is `https://schema.org/`; the http form matches nothing.
+- `od:F3_had_source` returns three kinds of value:
+
+  | value | meaning | keep as |
+  |---|---|---|
+  | olfactory-objects concept URI | the vocabulary concept | `smell_source.concept` |
+  | `…/object/<uuid>` | the words used in this text | `smell_source.mention` |
+  | Wikidata entity | inferred `owl:sameAs` twin, not in the data | drop |
+
+## Common Errors
+
+- **Never retry a SPARQL 504:** the gateway's 60 s cut is deterministic for a given query; retrying costs another minute and fails the same way.
