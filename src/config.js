@@ -103,3 +103,10 @@ export const VOCAB_NAMES = Object.freeze(VOCABS.map((v) => v.name));
 export const DEFAULT_CONCEPT_VOCABS = Object.freeze(['olfactory-objects', 'fragrant-spaces']);
 export const CONCEPT_MAX_NARROWER = 100;
 export const FIND_CONCEPTS_MAX_LIMIT = 50;
+
+export const SEARCH_DEFAULT_LIMIT = 10;
+export const SEARCH_MAX_LIMIT = 50;
+export const SEARCH_MAX_OFFSET = 10000;
+export const SEARCH_WINDOWS = Object.freeze([1000, 5000, 20000]);
+export const SEARCH_MAX_FILTERED_DEPTH = 1000;
+export const SNIPPET_CHARS = 300;
