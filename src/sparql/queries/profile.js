@@ -36,8 +36,13 @@ const FACETS = {
   emission_timeline: (a, { bucketYears }) => timeline(a, '?emission time:hasTime/time:hasBeginning', bucketYears),
   languages: (a, { top }) => topN(a, '?src crm:P67_refers_to ?smell ; schema:inLanguage ?lang .', 'lang', top),
   datasets: (a, { top }) => topN(a, `GRAPH ?g { ?smell a od:L11_Smell } FILTER(STRSTARTS(STR(?g), "${DATASET_GRAPH_BASE}"))`, 'g', top),
-  qualities: (a, { top }) => topN(a,
-    '?a crm:P140_assigned_attribute_to ?smell ; crm:P141_assigned ?q . OPTIONAL { ?q rdfs:label ?ql }', 'q', top, '(SAMPLE(?ql) AS ?label)'),
+  qualities: (a, { top }) => `
+SELECT ?q ?n (SAMPLE(?pl) AS ?label) (SAMPLE(?rl) AS ?rlabel) WHERE {
+  { SELECT ?q (COUNT(DISTINCT ?smell) AS ?n) WHERE { ${a} ?a crm:P140_assigned_attribute_to ?smell ; crm:P141_assigned ?q . }
+    GROUP BY ?q ORDER BY DESC(?n) LIMIT ${top} }
+  OPTIONAL { ?q skos:prefLabel ?pl FILTER(LANG(?pl) = "en") }
+  OPTIONAL { ?q rdfs:label ?rl }
+} GROUP BY ?q ?n ORDER BY DESC(?n)`,
   emotions: (a, { top }) => topN(a, '?ex od:F2_perceived ?smell . ?emo reo:readP27 ?ex ; rdfs:label ?word .', 'word', top),
   fragrant_spaces: (a, { top }) => topN(a,
     `?emission crm:P7_took_place_at ?fplace . ?fplace crm:P137_exemplifies ?space .

@@ -103,9 +103,10 @@ function localEntry(r, key, base) {
   const uri = v(r, key);
   if (!uri) return null;
   const local = uri.startsWith(base);
-  const label = pickLabel(r.label ? [r.label] : []) ?? labelFromUri(uri);
+  const term = r.label ?? r.rlabel;
+  const label = pickLabel(term ? [term] : []) ?? labelFromUri(uri);
   return {
-    ...(local && { id: shortId(uri) }), label, ...(r.label?.['xml:lang'] && { lang: r.label['xml:lang'] }), count: count(r), local,
+    ...(local && { id: shortId(uri) }), label, ...(term?.['xml:lang'] && { lang: term['xml:lang'] }), count: count(r), local,
   };
 }
 

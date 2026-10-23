@@ -23,8 +23,12 @@ const FACET_ROWS = {
   emission_timeline: [{ start: '1850', n: '5' }],
   languages: [{ lang: 'en', n: '300' }, { lang: 'fr', n: '100' }],
   datasets: [{ g: uri(`${KG}gallica`), n: '90' }, { g: uri(`${KG}eebo`), n: '10' }],
-  qualities: [{ q: uri(`${KG}vocabulary/vdi-hedonic/04n`), n: '40' },
-    { q: uri(`${KG}vocabulary/expert-taxonomy-quality/12`), label: en('fragrant'), n: '30' }],
+  qualities: [
+    { q: uri(`${KG}vocabulary/vdi-hedonic/11n`), label: en('Sweet'), n: '40' },
+    { q: uri(`${KG}attribute/fragrant_en`), rlabel: en('fragrant'), n: '30' },
+    { q: uri(`${KG}vocabulary/edwards/aromatic`), label: en('Aromatic'), rlabel: en('aromatic (old)'), n: '20' },
+    { q: uri(`${KG}vocabulary/historic-book/7`), n: '10' },
+  ],
   emotions: [{ word: 'nostalgia', n: '7' }],
   fragrant_spaces: [{ space: uri(`${KG}vocabulary/fragrant-spaces/27`), label: en('Garden'), n: '50' }],
   places: [{ pl: 'jardin', n: '4' }],
@@ -91,13 +95,20 @@ test('default facets: six facet queries plus total and label; shaped and wire-va
   assert.equal(s.failed_facets, undefined);
 });
 
-test('qualities: unlabelled concepts fall back to the URI, labelled ones keep label and lang', async () => {
+// Failure modes: a prefLabel-only concept (VDI) shows its URI tail; an rdfs:label-only word loses its label or lang;
+// a concept with neither label crashes or disappears; rdfs:label beats prefLabel when both are present.
+test('qualities: prefLabel, then rdfs:label, then the URI tail', async () => {
   await start(baseRoutes());
   const s = valid(await profile({ facets: ['qualities'] }));
   assert.deepEqual(s.qualities, [
-    { id: 'vdi-hedonic/04n', label: '04n', count: 40 },
-    { id: 'expert-taxonomy-quality/12', label: 'fragrant', lang: 'en', count: 30 },
+    { id: 'vdi-hedonic/11n', label: 'Sweet', lang: 'en', count: 40 },
+    { label: 'fragrant', lang: 'en', count: 30 },
+    { id: 'edwards/aromatic', label: 'Aromatic', lang: 'en', count: 20 },
+    { id: 'historic-book/7', label: '7', count: 10 },
   ]);
+  const q = stub.router.calls.find((c) => c.label === 'profile_qualities').query;
+  // Labels are joined outside the top-N subquery, so a multi-label concept cannot change the counts or the ranking.
+  assert.ok(q.indexOf('LIMIT') >= 0 && q.indexOf('LIMIT') < q.indexOf('skos:prefLabel'));
 });
 
 test('text channel: header, compact timeline, labelled lists', async () => {
@@ -108,6 +119,7 @@ test('text channel: header, compact timeline, labelled lists', async () => {
   assert.ok(text.includes('1800–1819 120 · 1820–1839 80'));
   assert.ok(text.includes('Emotions (machine-inferred): nostalgia 7'));
   assert.ok(text.includes('Fragrant spaces: Garden 50'));
+  assert.ok(text.includes('Qualities: Sweet 40 · fragrant 30 · Aromatic 20 · 7 10'), text);
   assert.ok(stub.router.calls.find((c) => c.label === 'profile_timeline').query.includes('schema:inLanguage "fr"'));
 });
 
