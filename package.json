@@ -13,6 +13,7 @@
     "start": "node src/index.js",
     "test": "node --test \"test/*.test.js\"",
     "test:live": "EOKG_LIVE=1 node --test \"test/*.test.js\"",
+    "build:iconclass": "node scripts/build-iconclass.mjs",
     "lint": "eslint .",
     "inspector": "npx @modelcontextprotocol/inspector node src/index.js"
   },
