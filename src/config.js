@@ -125,3 +125,18 @@ export const ANNOTATION_ORIGINS = Object.freeze({
   'http://data.odeuropa.eu/provenance/db29c010-6542-531f-aea4-8d066a16ad70': 'detector',
   'http://data.odeuropa.eu/provenance/9353c0bc-1e0b-5a83-9ec3-24b82faf8a56': 'manual',
 });
+
+// Profiles (eokg_smell_profile) and visual search (eokg_find_visual_smells).
+export const PROFILE_FACETS = Object.freeze(['timeline', 'emission_timeline', 'languages', 'datasets', 'qualities', 'emotions', 'fragrant_spaces', 'places', 'carriers']);
+export const PROFILE_DEFAULT_FACETS = Object.freeze(['timeline', 'languages', 'datasets', 'qualities', 'emotions', 'fragrant_spaces']);
+export const PROFILE_NARROWER_DEFAULT_FACETS = Object.freeze(['timeline', 'languages', 'datasets']);
+export const PROFILE_MAX_NARROWER_FACETS = 3;
+export const PROFILE_CALL_DEADLINE_MS = 50_000; // whole-call budget; plan 008's HTTP guard is 120 s
+export const PROFILE_MIN_FACET_BUDGET_MS = 5_000; // don't start a facet with less than this left
+export const PROFILE_DEFAULT_TOP = 10;
+export const PROFILE_MAX_TOP = 25;
+export const TIMELINE_MIN_YEAR = 1000;
+export const TIMELINE_MAX_YEAR = 2100;
+export const VISUAL_DEFAULT_LIMIT = 10;
+export const VISUAL_MAX_LIMIT = 50;
+export const FRAGRANT_SPACES_BASE = 'http://data.odeuropa.eu/vocabulary/fragrant-spaces/';
