@@ -63,6 +63,10 @@ All variables are optional.
 | `EOKG_RESULT_CHAR_CEILING` | `150000` | Upper bound on a tool result's size in characters. |
 | `EOKG_LOG` | off | `1` writes one JSON line per tool call to stderr. |
 
+## Hosted connector
+
+`npm run serve` runs the same tools over stateless Streamable HTTP (`src/http.js`), which lets claude.ai add the server as a custom connector. Setup, environment variables and limits: [docs/deploy.md](docs/deploy.md).
+
 ## Data caveats
 
 Excerpts are raw OCR text; emotions come from a classifier; dates mix the document date and the emission date and include noise; filtered searches examine only a window of the most relevant hits; only the olfactory-objects and fragrant-spaces vocabularies are linked to smells; Iconclass notations ending in `(...)` are placeholders. Details and examples are in [docs/tools.md](docs/tools.md#data-caveats).

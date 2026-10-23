@@ -34,6 +34,7 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 ## Architecture
 
 - `src/index.js`, `src/server.js`: stdio entry point and tool registration.
+- `src/http.js`, `src/lib/webbridge.js`, `src/lib/origin.js`: stateless Streamable HTTP entry (`npm run serve`) over `node:http`. Guards, in order: Host, Origin, in-flight cap, 1 MiB body, 120 s wall-clock response guard (details in `docs/deploy.md`). Never add a flag or `PORT` sniff to `src/index.js`.
 - `src/config.js`: every backend constant, the dataset snapshot and `SERVER_INSTRUCTIONS`.
 - `src/tools/`: one file per tool (schemas, description, handler, shaping).
 - `src/sparql/`: SPARQL client, Lucene query building, prefixes and `queries/`.
@@ -75,4 +76,5 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 - **Never retry a SPARQL 504:** the gateway's 60 s cut is deterministic for a given query; retrying costs another minute and fails the same way.
 - **luc:snippets over a window:** snippets are computed for every hit in luc:limit; only request them when the window is the page (24 s at 5k hits).
 - **Skosmos 200 + HTML:** an unknown vocab id returns a PHP fatal-error page with status 200; the VOCABS enum prevents it.
+- **railway.json is not read:** Railway's Config as Code is deprecated (new services cannot use it; existing ones stop on 2026-12-01). Service config lives in .railway/railway.ts and is applied with railway config apply; code is deployed separately.
 - **closeMatch is corrupt:** never read skos:closeMatch for Iconclass; use src/data/iconclass.json.
