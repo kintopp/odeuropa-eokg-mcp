@@ -57,7 +57,9 @@ export const outputSchema = z.object({
 const description =
   'Full-text search of smell excerpts and source titles, ranked by relevance. ' +
   'Matching is on the extracted excerpt text (OCR, unnormalised spelling). Language, year and dataset filters are applied after ranking, to a window of the most relevant hits, so a filtered search reports how many hits it scanned and may miss rarer matches; the result says when. ' +
-  'Year filters use the document date; undated sources are kept. Follow up with eokg_get_smell for a full record.';
+  'Year filters use the document date; undated sources are kept. ' +
+  'One passage can contain several smells; each is its own result with its own id and concept, so the same excerpt can appear more than once. ' +
+  'Follow up with eokg_get_smell for a full record.';
 
 const MAX_LUCENE_SNIPPETS = 3;
 const fmt = (n) => n.toLocaleString('en-US');

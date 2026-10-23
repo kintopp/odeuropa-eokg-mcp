@@ -61,6 +61,11 @@ query itself more specific (a phrase, the language's own word), not just the
 filter; for counts by language, period or dataset use `eokg_smell_profile`, which
 counts everything for a concept.
 
+**One passage, several results.** Each smell event extracted from a passage is its
+own record. *Symptom:* two results with the same excerpt but different ids and
+concepts (Lavender and Essence). *Fix:* count passages, not results, when you say
+how often something is mentioned; cite the record whose concept you mean.
+
 **No field prefixes.** Do not write `source_value:rose`; the server picks the field
 (`in`: excerpt, title or both). Lucene operators work: `"phrase"`, `AND`/`OR`,
 parentheses, `*`. *Symptom:* a Lucene syntax error (unbalanced parenthesis or quote)
@@ -83,6 +88,13 @@ text ("jardin", "in", "the", "it"). *Symptom:* function words and a mix of
 languages among the top values. *Fix:* use `fragrant_spaces` (vocabulary-linked) for
 "where"; treat raw places and carriers as hints, never as counts of places.
 
+**Counts are relative.** The corpus grows steeply after 1800 and its datasets differ
+in size, so almost every concept rises over time. *Symptom:* a timeline that looks
+like a historical trend. *Fix:* compare concepts, languages or periods with each
+other (shares, not raw counts), and never present one concept's raw curve as how
+often people smelled it. Emotions are only a weak signal: a classifier assigns
+them, so use them only to compare, never as what the writer felt.
+
 **Timeline noise.** Years like -1000, 180, 2100 and 4830 appear, and the occasional
 20th-century journal. The profile reports such years as `out_of_range` instead of
 bucketing them. *Fix:* quote the in-range counts, mention out-of-range counts, and
@@ -98,10 +110,11 @@ uses Odeuropa's curated tables. A notation ending in `(...)` (Rose: `25G41(...)`
 is a placeholder meaning "with NAME". *Fix:* fill the name only as a candidate
 (`25G41(ROSE)`) and verify it with an Iconclass server before presenting it.
 
-**Image detections can be wrong.** A detector box has a confidence below 1; only
-boxes scoring exactly 1 were drawn by hand (`origin: manual`). *Symptom:* a
-"Peach" box over a lemon. *Fix:* call `eokg_inspect_image`, look at the picture, and
-report what you see against what was detected.
+**Image boxes can be wrong, hand-drawn ones included.** A detector box has a
+confidence below 1; boxes scoring exactly 1 were drawn by hand (`origin: manual`).
+Both kinds can carry the wrong label. *Symptom:* a "Peach" box over a lemon; a
+manual "Meat" box on a bread roll. *Fix:* call `eokg_inspect_image`, look at the
+picture, and report what you see against each label, whatever its origin.
 
 **Slow calls.** `include_narrower` on a broad concept (Flower, Flora) takes 15–30
 seconds per facet and some facets may fall into `failed_facets`; ask for few

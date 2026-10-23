@@ -111,7 +111,7 @@ test('the model-facing description names the dataset filter', async () => {
 test('the initialize instructions carry the data-quality caveats', async () => {
   await withClient('eokg-smoke', async (client) => {
     const instructions = client.getInstructions();
-    for (const phrase of ['classifier', 'OCR', 'window', '(...)']) {
+    for (const phrase of ['classifier', 'OCR', 'window', '(...)', 'weak signal', 'not absolute trends', 'hand-drawn']) {
       assert.ok(instructions.includes(phrase), `instructions must mention ${phrase}`);
     }
   });
