@@ -8,7 +8,6 @@ import { InMemoryTransport } from '@modelcontextprotocol/server';
 import { createServer } from '../src/server.js';
 import { outputSchema } from '../src/tools/smell_profile.js';
 import { clearSparqlCache } from '../src/sparql/client.js';
-import { PROFILE_DEFAULT_FACETS, PROFILE_NARROWER_DEFAULT_FACETS } from '../src/config.js';
 import { installFetchStub, bindings } from './stub-backend.js';
 import { assertWireValid, LIVE } from './helpers.js';
 
@@ -75,7 +74,7 @@ test('default facets: six facet queries plus total and label; shaped and wire-va
   await start(baseRoutes());
   const s = valid(await profile());
   assert.equal(labels().length, 8);
-  assert.deepEqual(facetLabels().sort(), PROFILE_DEFAULT_FACETS.map((f) => `profile_${f}`).sort());
+  assert.deepEqual(facetLabels().sort(), ['profile_datasets', 'profile_emotions', 'profile_fragrant_spaces', 'profile_languages', 'profile_qualities', 'profile_timeline']);
   assert.equal(labels().filter((l) => l === 'concept_label').length, 1);
   assert.equal(s.total_smells, 29243);
   assert.equal(s.concept.label, 'Rose');
@@ -191,7 +190,7 @@ test('include_narrower: facets run one at a time, default set is the three narro
   await start(baseRoutes(Object.fromEntries(Object.entries(FACET_ROWS).map(([f, rows]) => [`profile_${f}`, slow(rows)]))));
   const s = valid(await profile({ include_narrower: true }));
   assert.equal(maxInFlight, 1);
-  assert.deepEqual(facetLabels().sort(), PROFILE_NARROWER_DEFAULT_FACETS.map((f) => `profile_${f}`).sort());
+  assert.deepEqual(facetLabels().sort(), ['profile_datasets', 'profile_languages', 'profile_timeline']);
   assert.equal(s.include_narrower, true);
   assert.ok(stub.router.calls.find((c) => c.label === 'profile_total').query.includes('skos:broader*'));
   assert.ok(s.languages && s.datasets && s.timeline);

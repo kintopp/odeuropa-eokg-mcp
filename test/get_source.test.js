@@ -68,6 +68,7 @@ test('text source: metadata, paging, no detected_objects, image_fragments never 
   const text = res.content[0].text;
   assert.ok(text.includes('609 smells (showing 1–2)'));
   assert.ok(text.includes('a1 [Lavender, Rose] «'));
+  assert.ok(text.includes(EXCERPT_INJECTION_BOUNDARY));
   assert.ok(text.indexOf(EXCERPT_INJECTION_BOUNDARY) < text.indexOf('a1 ['));
 });
 
