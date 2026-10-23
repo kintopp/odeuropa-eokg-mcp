@@ -29,7 +29,7 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 - Every tool lives in `src/tools/<name>.js`, is registered in `src/server.js` and is listed in `REQUIRED_PROPS` in `test/smoke.test.js`.
 - Every SPARQL query is sent through `sparqlSelect(name, body)` with a unique `eokg:<name>` label; the offline stub router depends on it.
 - Committed files never reference `plans/` or `research/` by path (both are gitignored).
-- Test rules are in `test/CLAUDE.md`.
+- Test rules are in `test/CLAUDE.md`. Never delete or weaken a failing test.
 
 ## Architecture
 
