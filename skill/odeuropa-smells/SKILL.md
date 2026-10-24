@@ -30,9 +30,10 @@ holds the dated snapshot, and `eokg_get_concept` gives live per-concept counts.
   representing the concept: boxed ones first, by detector confidence, then
   catalogue-only links with no box.
 - **Vocabularies.** 20 vocabularies exist in the Skosmos service, but only
-  `olfactory-objects` (what smells: Rose, Lavender, Tobacco) and `fragrant-spaces`
-  (where: Garden, Church) can be profiled. `olfactory-gestures` is linked to image
-  smells, but no tool profiles it yet; the other vocabularies are not linked.
+  `olfactory-objects` (what smells: Rose, Lavender, Tobacco), `fragrant-spaces`
+  (where: Garden, Church) and `olfactory-gestures` (how people smelled: holding
+  one's nose) can be profiled. Gesture smells are almost all image smells; the other
+  vocabularies are not linked.
   See `references/vocabularies.md`.
 
 ## What a smell record is (and is not)
@@ -121,9 +122,9 @@ never read a spike in one bucket as history before checking which dataset produc
 
 **The expert taxonomy is not linked.** `expert-taxonomy` (and the other descriptive
 vocabularies) have a "rose" too, but no smell points at it. `olfactory-gestures` is
-linked to image smells, but no tool profiles it yet. *Symptom:* a concept id from
+linked to image smells and can be profiled. *Symptom:* a concept id from
 `vocab: "all"` gives zero smells. *Fix:* use `olfactory-objects` ids for what smells
-and `fragrant-spaces` ids for where.
+`fragrant-spaces` ids for where and `olfactory-gestures` ids for how.
 
 **German and Slovenian are barely linked to concepts.** Rose has 0 German smells,
 Tobacco 2, and Flower with its narrower concepts 142 of 168,243. Many Slovenian smells
@@ -163,6 +164,11 @@ facets, or profile the specific concept. A timed-out query is not retried.
 2. `eokg_smell_profile({ concept, facets: ["timeline", "qualities", "datasets"] })`
    → look for: which periods have enough data (small buckets are noise), which
    adjectives dominate, and whether one dataset drives a peak.
+   For one period instead of the whole timeline, add `year_from` and `year_to`: they
+   count by document date, so undated sources drop out, and images (dataset `odor`)
+   can be half of a period's smells (the profile warns when they are over a quarter).
+   Add `facets: ["smell_sources"]` to see which other smell sources occur in the same
+   smells ("which smells appear together").
 3. `eokg_search_smells({ text: "\"lavender\" AND (sweet OR fragrant)", year_from, year_to })`
    once per period you want to compare → look for: exemplary passages, spelling
    variants, and the `scanned` window note.
@@ -221,7 +227,18 @@ Aim for two tool calls.
    and offer to open one. Near-identical titles with the same date can be two records
    of one painting.
 
-### 6. Allegories of the senses
+### 6. Gestures
+
+1. `eokg_find_concepts({ query: "holding" })` → pick an `olfactory-gestures` id
+   (`olfactory-gestures/2` is holding one's nose).
+2. `eokg_find_visual_smells({ concept: "olfactory-gestures/2" })` → the Raisings of
+   Lazarus come first for holding one's nose.
+3. `eokg_inspect_image({ id })` → look at the picture.
+
+Gesture evidence is almost all from images; `eokg_smell_profile` on a gesture skips
+the languages facet by default for that reason.
+
+### 7. Allegories of the senses
 
 They can only be found through title words: `eokg_search_smells({ text: "allegory AND smell", in: "title" })`.
 Iconclass 31A33 (smell) maps to no Odeuropa concept.

@@ -77,8 +77,8 @@ For artworks, use `eokg_find_visual_smells`, then `eokg_view_image` to show one.
 | [`eokg_get_source`](docs/tools.md#eokg_get_source) | A source text or image with a page of its smells. |
 | [`eokg_find_concepts`](docs/tools.md#eokg_find_concepts) | Find smell-source and fragrant-space concepts by label or Iconclass notation. |
 | [`eokg_get_concept`](docs/tools.md#eokg_get_concept) | A concept's labels, hierarchy, linked-smell counts and Iconclass notation. |
-| [`eokg_smell_profile`](docs/tools.md#eokg_smell_profile) | Counts for one concept by period, language, dataset, qualities, emotions and spaces. |
-| [`eokg_find_visual_smells`](docs/tools.md#eokg_find_visual_smells) | Paintings and prints in which a smell source was detected or catalogued. |
+| [`eokg_smell_profile`](docs/tools.md#eokg_smell_profile) | Counts for one concept (smell source, space or gesture) by period, language, dataset, qualities, emotions and spaces, optionally within a year range, plus co-occurring smell sources. |
+| [`eokg_find_visual_smells`](docs/tools.md#eokg_find_visual_smells) | Paintings and prints in which a smell source or gesture was detected or catalogued. |
 | [`eokg_inspect_image`](docs/tools.md#eokg_inspect_image) | The picture of an image source with its annotated objects, for the model's own analysis. |
 | [`eokg_view_image`](docs/tools.md#eokg_view_image) | Shows an image source to the user in an interactive viewer. Object boxes start hidden; a Boxes button shows them. |
 
@@ -107,7 +107,7 @@ To host your own instance, run `npm run serve`, which serves stateless Streamabl
 - German and Slovenian are barely linked to concepts, so concept profiles undercount them.
 - Filtered searches examine only a window of the most relevant hits.
 - Image boxes, including hand-drawn ones, can carry the wrong label.
-- Only the olfactory-objects and fragrant-spaces vocabularies can be profiled or counted.
+- Only the olfactory-objects, fragrant-spaces and olfactory-gestures vocabularies can be profiled or counted.
 - Iconclass notations ending in `(...)` are placeholders.
 
 Details and examples are in [docs/tools.md](docs/tools.md#data-caveats).

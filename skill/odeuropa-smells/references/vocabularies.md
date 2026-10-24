@@ -12,7 +12,7 @@ searches the first two by default; `vocab: "all"` adds the rest.
 | `drom`, `noses`, `historic-book`, `historical-scent` | Perfumery and historical-scent reference lists | no |
 | `edward_wheel`, `zwaardemaker`, `vdi-hedonic`, `vdi-intensity` | Odour classification systems and rating scales | no |
 | `plutchik` | Emotion model behind the emotion labels | no |
-| `olfactory-gestures` | Gestures of smelling | image smells only; no tool profiles it yet |
+| `olfactory-gestures` | Gestures of smelling | image smells only; profiled and listed as images |
 
 How to use them:
 

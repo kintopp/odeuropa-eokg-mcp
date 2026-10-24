@@ -84,3 +84,4 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 - **Skosmos `lang` restricts matching:** it is not a display preference; pass it only to filter.
 - **Lucene: a lone `NOT` matches nothing and `/` opens a regex:** both are handled in `scopedLuceneQuery`; keep its tests.
 - **Malformed related URIs in fragrant-spaces:** `http://data.odeuropa.eu/olfactory_objects/<n>` means `vocabulary/olfactory-objects/<n>`; `get_concept` maps it.
+- **Gestures link through experiences:** `od:F5_involved_gesture` (experience) and `oa:hasBody` / `crm:P138_represents` (images), not `crm:P137_exemplifies`.
