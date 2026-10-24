@@ -35,6 +35,7 @@ let imageHandler;
 let client;
 let fragRows;
 let meta;
+let smellSource;
 let fragCalls;
 
 async function connect() {
@@ -52,9 +53,11 @@ beforeEach(async () => {
   fragCalls = 0;
   fragRows = FRAGMENT_ROWS;
   meta = imageMeta(IMAGE_URL, RKD_URL);
+  smellSource = null;
   imageHandler = async () => jpegResponse();
   stub = installFetchStub({
-    source_meta: () => ({ body: meta }),
+    source_meta: (q) => ({ body: q.includes('source/096b7995-234f-5a7a-bd30-4dc4add02486') ? bindings([]) : meta }),
+    smell_source: () => ({ body: bindings(smellSource ? [{ source: uri(smellSource) }] : []) }),
     image_fragments: () => { fragCalls++; return { body: bindings(fragRows) }; },
   });
   const sparqlFetch = globalThis.fetch;
@@ -185,6 +188,27 @@ test('origin: manual prints (manual) without a score; unbound provenance is unkn
   const text = res.content[1].text;
   assert.ok(text.includes('- Lemon (manual) — '));
   assert.ok(text.includes('- Peach 0.95 (unknown) — '));
+});
+
+test('an unknown id that is no smell either is "No source found", after the main query', async () => {
+  meta = bindings([]);
+  const res = await inspect();
+  assert.equal(res.isError, true);
+  assert.match(res.content[0].text, /No source found/);
+  const labels = stub.router.calls.map((c) => c.label);
+  assert.ok(labels.indexOf('source_meta') >= 0 && labels.indexOf('source_meta') < labels.indexOf('smell_source'));
+  assert.equal(imageCalls.length, 0);
+});
+
+test('a smell id is followed to its image source with a warning in both channels', async () => {
+  smellSource = IMAGE_SOURCE;
+  const res = await inspect({ id: '096b7995-234f-5a7a-bd30-4dc4add02486' });
+  assert.notEqual(res.isError, true, res.content?.[1]?.text);
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.equal(s.id, IMAGE_SOURCE);
+  const w = '096b7995-234f-5a7a-bd30-4dc4add02486 is a smell id; showing its source 00721405-98be-5795-ac1d-3510448af60a.';
+  assert.ok(s.warnings.includes(w));
+  assert.ok(res.content[1].text.includes(w));
 });
 
 test('a text source is refused with zero image fetches', async () => {

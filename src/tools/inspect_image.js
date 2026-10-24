@@ -80,9 +80,8 @@ export function registerInspectImageTool(server) {
     INSPECT_IMAGE_TOOL_NAME,
     { title: INSPECT_IMAGE_TOOL_NAME, description, inputSchema, outputSchema, annotations: READ_ONLY_ANNOTATIONS },
     withTool(INSPECT_IMAGE_TOOL_NAME, 'Inspecting the image failed', async (args, ctx) => {
-      const id = parseId('source', args.id);
       const signal = ctx?.mcpReq?.signal;
-      const { imageUrl, originalImageUrl, meta } = await lookupHostedImage(id, signal);
+      const { id, imageUrl, originalImageUrl, meta, warnings } = await lookupHostedImage(parseId('source', args.id), signal);
 
       const [fragRows, { buffer, mimeType }] = await Promise.all([
         sparqlSelect('image_fragments', imageFragmentsQuery(id), { signal }),
@@ -91,7 +90,6 @@ export function registerInspectImageTool(server) {
       const dims = jpegDimensions(buffer);
       const all = shapeFragments(fragRows);
       const kept = all.filter((o) => o.score >= args.min_score);
-      const warnings = [];
       const objects = kept.map((o) => (dims ? { ...o, box_pct: toPct(o, dims) } : o));
       if (!dims) {
         warnings.push('Image dimensions could not be read; boxes are given in pixels only.');

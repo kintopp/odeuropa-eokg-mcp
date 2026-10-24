@@ -3,13 +3,14 @@
 import { z } from 'zod';
 import { withTool } from '../lib/tool.js';
 import { ToolError } from '../lib/errors.js';
-import { parseId, uuidOf, isLocal } from '../lib/ids.js';
+import { parseId, uuidOf, isLocal, KG_BASE } from '../lib/ids.js';
 import { pickLabel, labelFromUri, uniqueStrings } from '../lib/rdf.js';
 import { capArrays, truncateText } from '../lib/budget.js';
+import { withWarnings } from '../lib/warnings.js';
 import { prune } from '../lib/prune.js';
 import { sparqlSelect, v, num } from '../sparql/client.js';
 import {
-  sourceMetaQuery, sourceSmellCountQuery, sourceSmellPageQuery, imageFragmentsQuery,
+  sourceMetaQuery, smellSourceQuery, sourceSmellCountQuery, sourceSmellPageQuery, imageFragmentsQuery,
 } from '../sparql/queries/source.js';
 import {
   READ_ONLY_ANNOTATIONS, EXCERPT_INJECTION_BOUNDARY, PER_CHANNEL_RESULT_BUDGET, IMAGE_URL_RE,
@@ -86,14 +87,36 @@ export function shapeSourceMeta(id, rows) {
   };
 }
 
-/** Resolve an image source id to its metadata and locally hosted image URL, or throw the shared ToolErrors. */
-export async function lookupHostedImage(id, signal) {
-  const metaRows = await sparqlSelect('source_meta', sourceMetaQuery(id), { signal });
+const noSourceError = (id) => new ToolError(
+  `No source found with id ${id}.`,
+  'Pass the id exactly as an eokg tool returned it (eokg_get_smell returns it as source.id).',
+);
+
+/** The source URI of the smell whose id was passed by mistake, or null when `id` is no smell either. */
+async function sourceOfSmellId(id, signal) {
+  const uuid = uuidOf(id);
+  if (!uuid) return null;
+  const rows = await sparqlSelect('smell_source', smellSourceQuery(`${KG_BASE}smell/${uuid}`), { signal });
+  return rows.length ? v(rows[0], 'source') : null;
+}
+
+const smellIdWarning = (id, sourceId) => `${uuidOf(id)} is a smell id; showing its source ${uuidOf(sourceId) ?? sourceId}.`;
+
+/**
+ * Resolve an image source id to its metadata and locally hosted image URL, or throw the shared ToolErrors.
+ * A smell id is followed to its source; `id` in the result is the source actually used.
+ */
+export async function lookupHostedImage(inputId, signal) {
+  let id = inputId;
+  let metaRows = await sparqlSelect('source_meta', sourceMetaQuery(id), { signal });
+  const warnings = [];
   if (!metaRows.length) {
-    throw new ToolError(
-      `No source found with id ${id}.`,
-      'Pass the id exactly as an eokg tool returned it (eokg_get_smell returns it as source.id).',
-    );
+    const fromSmell = await sourceOfSmellId(id, signal);
+    if (!fromSmell) throw noSourceError(id);
+    warnings.push(smellIdWarning(id, fromSmell));
+    id = fromSmell;
+    metaRows = await sparqlSelect('source_meta', sourceMetaQuery(id), { signal });
+    if (!metaRows.length) throw noSourceError(id);
   }
   const { isImage, imageUrl, originalImageUrl, meta } = shapeSourceMeta(id, metaRows);
   if (!isImage) throw new ToolError('This source is a text, not an image.', 'Use eokg_get_source to read its smells.');
@@ -105,7 +128,7 @@ export async function lookupHostedImage(id, signal) {
         : 'The graph records no image for it.',
     );
   }
-  return { imageUrl, originalImageUrl, meta };
+  return { id, imageUrl, originalImageUrl, meta, warnings };
 }
 
 function renderText(s) {
@@ -136,19 +159,24 @@ export function registerGetSourceTool(server) {
     GET_SOURCE_TOOL_NAME,
     { title: GET_SOURCE_TOOL_NAME, description, inputSchema, outputSchema, annotations: READ_ONLY_ANNOTATIONS },
     withTool(GET_SOURCE_TOOL_NAME, 'Getting the source failed', async (args, ctx) => {
-      const id = parseId('source', args.id);
+      const inputId = parseId('source', args.id);
+      let id = inputId;
       const signal = ctx?.mcpReq?.signal;
       const { limit, offset } = args;
-      const [metaRows, countRows, pageRows] = await Promise.all([
+      const load = () => Promise.all([
         sparqlSelect('source_meta', sourceMetaQuery(id), { signal }),
         sparqlSelect('source_smell_count', sourceSmellCountQuery(id), { signal }),
         sparqlSelect('source_smell_page', sourceSmellPageQuery(id, limit, offset), { signal }),
       ]);
+      let [metaRows, countRows, pageRows] = await load();
+      const warnings = [];
       if (!metaRows.length) {
-        throw new ToolError(
-          `No source found with id ${id}.`,
-          'Pass the id exactly as an eokg tool returned it (eokg_get_smell returns it as source.id).',
-        );
+        const fromSmell = await sourceOfSmellId(id, signal);
+        if (!fromSmell) throw noSourceError(id);
+        warnings.push(smellIdWarning(id, fromSmell));
+        id = fromSmell;
+        [metaRows, countRows, pageRows] = await load();
+        if (!metaRows.length) throw noSourceError(id);
       }
       const { isImage, imageUrl, originalImageUrl, meta } = shapeSourceMeta(id, metaRows);
       const smellCount = num(countRows[0] ?? {}, 'n') ?? 0;
@@ -170,8 +198,12 @@ export function registerGetSourceTool(server) {
         const fragRows = await sparqlSelect('image_fragments', imageFragmentsQuery(id), { signal });
         full.detected_objects = shapeFragments(fragRows);
       }
-      const structured = capArrays(dropUndefined(full), ['smells', 'detected_objects'], PER_CHANNEL_RESULT_BUDGET);
-      return { content: [{ type: 'text', text: renderText(structured) }], structuredContent: structured };
+      if (offset > 0 && smellCount > 0 && offset >= smellCount) {
+        warnings.push(`Offset ${offset} is past the last smell (${smellCount}).`);
+      }
+      const capped = capArrays(dropUndefined(full), ['smells', 'detected_objects'], PER_CHANNEL_RESULT_BUDGET);
+      const { structured, text } = withWarnings({ structured: capped, text: renderText(capped) }, warnings);
+      return { content: [{ type: 'text', text }], structuredContent: structured };
     }),
   );
 }

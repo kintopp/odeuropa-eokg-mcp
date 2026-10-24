@@ -27,6 +27,7 @@ let imageCalls;
 let client;
 let fragRows;
 let meta;
+let smellSource;
 
 beforeEach(async () => {
   clearSparqlCache();
@@ -34,8 +35,10 @@ beforeEach(async () => {
   imageCalls = [];
   fragRows = FRAGMENT_ROWS;
   meta = imageMeta(IMAGE_URL, RKD_URL);
+  smellSource = null;
   stub = installFetchStub({
-    source_meta: () => ({ body: meta }),
+    source_meta: (q) => ({ body: q.includes('source/096b7995-234f-5a7a-bd30-4dc4add02486') ? bindings([]) : meta }),
+    smell_source: () => ({ body: bindings(smellSource ? [{ source: uri(smellSource) }] : []) }),
     image_fragments: () => ({ body: bindings(fragRows) }),
   });
   const sparqlFetch = globalThis.fetch;
@@ -138,6 +141,25 @@ test('an unknown id is an error without structuredContent', async () => {
   assert.equal(res.isError, true);
   assert.equal(res.structuredContent, undefined);
   assert.ok(res.content[0].text.includes('No source found'));
+});
+
+test('an unknown id that is no smell either runs the main query first, then the smell lookup', async () => {
+  meta = bindings([]);
+  await view();
+  const labels = stub.router.calls.map((c) => c.label);
+  assert.ok(labels.indexOf('source_meta') >= 0 && labels.indexOf('source_meta') < labels.indexOf('smell_source'));
+});
+
+test('a smell id is followed to its image source with a warning', async () => {
+  smellSource = IMAGE_SOURCE;
+  const res = await view({ id: '096b7995-234f-5a7a-bd30-4dc4add02486' });
+  assert.notEqual(res.isError, true, res.content?.[0]?.text);
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.equal(s.id, IMAGE_SOURCE);
+  const w = '096b7995-234f-5a7a-bd30-4dc4add02486 is a smell id; showing its source 00721405-98be-5795-ac1d-3510448af60a.';
+  assert.ok(s.warnings.includes(w));
+  assert.ok(res.content[0].text.includes(w));
+  assert.deepEqual(JSON.parse(res.content[1].text), res.structuredContent);
 });
 
 test('stdio fallback: content[1] is the structured result as JSON', async () => {

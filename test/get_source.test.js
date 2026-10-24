@@ -100,11 +100,41 @@ test('image source: detected objects by score, twin dropped, origin mapped, imag
   assert.ok(res.content[0].text.includes('Detected objects: Lemon 0.949'));
 });
 
+const SMELL_UUID = '096b7995-234f-5a7a-bd30-4dc4add02486';
+
 test('unknown source id is an error result', async () => {
-  stub = await startStubServer(routes(bindings([])));
+  stub = await startStubServer({ ...routes(bindings([])), smell_source: () => ({ body: bindings([]) }) });
   const res = await call(stub, { id: TEXT_SOURCE });
   assert.equal(res.isError, true);
   assert.ok(res.content[0].text.includes('No source found'));
+  const labels = stub.router.calls.map((c) => c.label);
+  assert.ok(labels.indexOf('source_meta') >= 0 && labels.indexOf('source_meta') < labels.indexOf('smell_source'));
+});
+
+test('a smell id is followed to its source, with a warning', async () => {
+  const meta = (q) => ({ body: q.includes(`<${TEXT_SOURCE}>`) ? textMeta : bindings([]) });
+  stub = await startStubServer({
+    ...routes(textMeta), source_meta: meta,
+    smell_source: () => ({ body: bindings([{ source: uri(TEXT_SOURCE) }]) }),
+  });
+  const res = await call(stub, { id: SMELL_UUID });
+  assert.notEqual(res.isError, true, res.content?.[0]?.text);
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.equal(s.id, TEXT_SOURCE);
+  assert.equal(s.title, 'The Art of Perfumery');
+  const w = `${SMELL_UUID} is a smell id; showing its source 638ff424-2531-5bc8-959e-9951e2c42697.`;
+  assert.ok(s.warnings.includes(w));
+  assert.ok(res.content[0].text.includes(w));
+  assert.ok(stub.router.calls.find((c) => c.label === 'smell_source').query.includes(`<${KG}smell/${SMELL_UUID}>`));
+});
+
+test('an offset past the last smell warns', async () => {
+  stub = await startStubServer(routes(textMeta));
+  const res = await call(stub, { id: TEXT_SOURCE, offset: 700 });
+  assert.ok(res.structuredContent.warnings.includes('Offset 700 is past the last smell (609).'));
+  assert.ok(res.content[0].text.includes('Offset 700 is past the last smell (609).'));
+  const inRange = await call(stub, { id: TEXT_SOURCE, offset: 600 });
+  assert.equal(inRange.structuredContent.warnings, undefined);
 });
 
 test('a fragment id is rejected before any query', async () => {

@@ -28,3 +28,11 @@ SELECT ?f ?body ?label ?score ?x ?y ?w ?h ?prov FROM onto:explicit WHERE {
   OPTIONAL { ?f <http://www.w3.org/ns/prov#wasGeneratedBy> ?prov }
   OPTIONAL { GRAPH <${OLFACTORY_OBJECTS_GRAPH}> { ?body skos:prefLabel ?label FILTER(LANG(?label) = "en") } }
 } ORDER BY DESC(?score) ?f`;
+
+export const smellSourceQuery = (smell) => `
+SELECT ?source WHERE {
+  ?source crm:P67_refers_to <${smell}> ; a ?t . FILTER(?t IN (crm:E33_Linguistic_Object, crm:E36_Visual_Item))
+} LIMIT 1`;
+
+export const sourceExistsQuery = (src) => `
+SELECT ?t WHERE { <${src}> a ?t . FILTER(?t IN (crm:E33_Linguistic_Object, crm:E36_Visual_Item)) } LIMIT 1`;

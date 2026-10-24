@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { registerAppTool } from '@modelcontextprotocol/ext-apps/server';
 import { withTool } from '../lib/tool.js';
 import { parseId } from '../lib/ids.js';
+import { mirrorWarnings } from '../lib/warnings.js';
 import { sparqlSelect } from '../sparql/client.js';
 import { imageFragmentsQuery } from '../sparql/queries/source.js';
 import { shapeFragments, lookupHostedImage } from './get_source.js';
@@ -87,9 +88,8 @@ export function registerViewImageTool(server) {
       _meta: { ui: { resourceUri: VIEWER_RESOURCE_URI } },
     },
     withTool(VIEW_IMAGE_TOOL_NAME, 'Opening the image viewer failed', async (args, ctx) => {
-      const id = parseId('source', args.id);
       const signal = ctx?.mcpReq?.signal;
-      const { imageUrl, originalImageUrl, meta } = await lookupHostedImage(id, signal);
+      const { id, imageUrl, originalImageUrl, meta, warnings } = await lookupHostedImage(parseId('source', args.id), signal);
       const fragRows = await sparqlSelect('image_fragments', imageFragmentsQuery(id), { signal });
       const all = shapeFragments(fragRows);
       const objects = all.filter((o) => o.score >= args.min_score);
@@ -105,8 +105,9 @@ export function registerViewImageTool(server) {
         min_score: args.min_score, show_boxes: args.show_boxes,
         objects,
         hidden_below_min_score: all.length - objects.length,
+        ...(warnings.length && { warnings }),
       };
-      const content = [{ type: 'text', text: renderText(structured) }];
+      const content = [{ type: 'text', text: mirrorWarnings(renderText(structured), warnings) }];
       // Claude Desktop's stdio bridge strips structuredContent before it reaches the iframe; the page falls back to this block.
       if (process.env.EOKG_ENTRY_POINT !== 'http') content.push({ type: 'text', text: JSON.stringify(structured) });
       return { content, structuredContent: structured };

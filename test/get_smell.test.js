@@ -110,10 +110,35 @@ test('too many excerpts warns', async () => {
 });
 
 test('not found: zero core rows is an error', async () => {
-  stub = await startStubServer(routes(bindings([]), excerpts(), bindings([])));
+  stub = await startStubServer({
+    ...routes(bindings([]), excerpts(), bindings([])), source_exists: () => ({ body: bindings([]) }),
+  });
   const res = await call(stub, SMELL);
   assert.equal(res.isError, true);
   assert.match(res.content[0].text, /No smell found/);
+  assert.equal(stub.router.calls.find((c) => c.label === 'smell_core') !== undefined, true);
+});
+
+test('a source id passed as a smell id is named as such', async () => {
+  const hit = bindings([{ t: uri('http://erlangen-crm.org/current/E33_Linguistic_Object') }]);
+  stub = await startStubServer({
+    ...routes(bindings([]), excerpts(), bindings([])), source_exists: () => ({ body: hit }),
+  });
+  const res = await call(stub, '638ff424-2531-5bc8-959e-9951e2c42697');
+  assert.equal(res.isError, true);
+  assert.equal(res.structuredContent, undefined);
+  assert.match(res.content[0].text, /638ff424-2531-5bc8-959e-9951e2c42697 is a source id, not a smell id/);
+  assert.match(res.content[0].text, /Use eokg_get_source to list its smells/);
+  const labels = stub.router.calls.map((c) => c.label);
+  assert.ok(labels.indexOf('smell_core') >= 0 && labels.indexOf('smell_core') < labels.indexOf('source_exists'));
+  assert.ok(stub.router.calls.find((c) => c.label === 'source_exists').query
+    .includes('<http://data.odeuropa.eu/source/638ff424-2531-5bc8-959e-9951e2c42697>'));
+});
+
+test('a found smell never runs the source check', async () => {
+  stub = await startStubServer(routes(textCore, excerpts(EXCERPT), textRoles));
+  await call(stub, SMELL);
+  assert.ok(!stub.router.calls.some((c) => c.label === 'source_exists'));
 });
 
 test('invalid id: error and no request reaches the backend', async () => {

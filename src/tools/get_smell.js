@@ -10,6 +10,7 @@ import { withWarnings } from '../lib/warnings.js';
 import { prune } from '../lib/prune.js';
 import { sparqlSelect, v } from '../sparql/client.js';
 import { smellCoreQuery, smellExcerptsQuery, smellRolesQuery } from '../sparql/queries/smell.js';
+import { sourceExistsQuery } from '../sparql/queries/source.js';
 import {
   READ_ONLY_ANNOTATIONS, DATASET_GRAPH_BASE, EXCERPT_INJECTION_BOUNDARY, EXCERPT_MAX_CHARS,
   SMELL_MAX_EXCERPTS, PER_CHANNEL_RESULT_BUDGET,
@@ -133,6 +134,11 @@ export function registerGetSmellTool(server) {
         sparqlSelect('smell_roles', smellRolesQuery(id), { signal }),
       ]);
       if (!core.length) {
+        const uuid = uuidOf(id);
+        const asSource = uuid && await sparqlSelect('source_exists', sourceExistsQuery(`${KG_BASE}source/${uuid}`), { signal });
+        if (asSource?.length) {
+          throw new ToolError(`${uuid} is a source id, not a smell id.`, 'Use eokg_get_source to list its smells.');
+        }
         throw new ToolError(
           `No smell found with id ${id}.`,
           'Pass the id exactly as an eokg tool returned it; re-run the search that produced it.',
