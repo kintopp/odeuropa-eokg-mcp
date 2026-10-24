@@ -2,7 +2,7 @@
 
 Condensed from Odeuropa deliverables (CC-BY 4.0), https://odeuropa.eu/deliverables/. Figures describe the pipeline as reported at the time.
 
-Read this before judging how reliable a count, an emotion or an image label is. Deliverables cited: D3.2 (benchmark), D3.3 to D3.5 (text), D2.4 and D2.5 (images), D4.1 and D4.2 (graph and vocabularies). D4.3, the final graph description, could not be retrieved. Page numbers are the printed ones.
+Read this before judging how reliable a count, an emotion or an image label is. Deliverables cited: D3.2 (benchmark), D3.3 to D3.5 (text), D2.4 and D2.5 (images), D4.1 to D4.3 (graph and vocabularies). Page numbers are the printed ones.
 
 ## Text extraction
 
@@ -33,11 +33,13 @@ Meaning for an answer: on benchmark text, source F1 runs from 0.41 to 0.58 and q
 
 ## Linking to concepts
 
-In the first graph load, benchmark labels were matched to the vocabularies by string matching: 32 labels were linked, and the authors suggested lemmatising terms first (D4.2 p. 10). The same load linked 41 of 158 places to GeoNames (D4.2 p. 10). The deliverables available here do not describe the matching used for the full graph.
+In the first graph load, benchmark labels were matched to the vocabularies by string matching: 32 labels were linked, and the authors suggested lemmatising terms first (D4.2 p. 10). The same load linked 41 of 158 places to GeoNames (D4.2 p. 10). For the full graph, D4.3 says only that the converter has a module that interlinks entities with the controlled vocabularies and another that links places to GeoNames (D4.3 p. 9). It does not describe how a text mention is matched to a concept. The string matching it does describe (YAM++, a Levenshtein score of at least 0.7, 606 `skos:exactMatch` links) joins vocabularies to each other, not mentions to concepts (D4.3 p. 8).
 
-German explanation: when the vocabularies were published, 172 of the 417 olfactory-objects concepts had a German label, against 400 English, 378 French, 381 Italian and 390 Dutch. Only 4 of 110 fragrant spaces and none of the 35 gestures had a German label (D4.1 p. 12, Table 2). Many German words had no concept to match.
+In the graph of June 2023, of 1,048,284 Material Substantial instances 483,342 were linked to a vocabulary (46 per cent). Of 53,512 places, 8,215 were linked to a vocabulary and 1,181 to an external source such as GeoNames (15 and 2 per cent). Of 83,601 persons, 8,709 were linked externally (10 per cent). All 483 gestures and all 74 animals were linked (D4.3 p. 10, Table 5). Places linked to GeoNames share one instance, and persons with the same name and surname are merged (D4.3 p. 9).
 
-Slovenian is not explained. The same table lists 402 Slovenian labels for objects, and no deliverable says why few Slovenian smells are linked.
+German explanation: in D4.3, 239 of the 574 olfactory-objects concepts have a German label, against 567 English, 550 French, 540 Italian and 542 Dutch. Only 10 of 115 fragrant spaces and none of the 35 gestures have one (D4.3 p. 8, Table 2). D4.1 had reported 172 of 417 (D4.1 p. 12). Many German words had no concept to match.
+
+Slovenian is not explained. The same table lists 568 Slovenian labels for objects, and no deliverable says why few Slovenian smells are linked.
 
 Some concepts mix roles. A concept such as smoke can be a source or a carrier, so the vocabulary keeps one list with a preferred role (D4.1 p. 11).
 
@@ -87,6 +89,6 @@ Meaning for an answer: a detector box is a candidate. Small objects, heaps and f
 
 The corpus metadata carries author, publication date and source (D3.2 p. 4). For Italian Project Gutenberg books the metadata date is that of the last publication, not the first (D3.2 p. 9). Dates parsed from Italian LiberLiber and Wikisource text were error-prone, with ranges such as "between 1628 and 1650" reduced to a midpoint (D3.4 p. 12); that describes the language-model training data, and the deliverables do not say it applies to the graph.
 
-Time expressions annotated in the benchmark (for example "at first handling") were parsed with regular expressions, and durations and vague words such as "sometimes" were left open (D4.2 p. 10). The benchmark has only 49 to 131 Time annotations per language (D3.5 p. 8). No deliverable here says how the emission date of an extracted smell is set.
+Time expressions annotated in the benchmark (for example "at first handling") were parsed with regular expressions, and durations and vague words such as "sometimes" were left open (D4.2 p. 10). The benchmark has only 49 to 131 Time annotations per language (D3.5 p. 8). The converter has a module for parsing time (D4.3 p. 9), and the graph holds 21,744 `time:TemporalEntity` instances against 718,375 smells (D4.3 p. 10, Table 5); the deliverable does not say how these relate to the document and emission dates. No deliverable says how the emission date of an extracted smell is set.
 
 Meaning for an answer: date an event from the passage itself, and expect a document date to be a publication date that can fall long after first publication.
