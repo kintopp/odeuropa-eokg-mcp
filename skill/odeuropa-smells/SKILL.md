@@ -1,6 +1,6 @@
 ---
 name: odeuropa-smells
-last_updated: 2026-10-23
+last_updated: 2026-10-24
 description: Research guidance for the Odeuropa European Olfactory Knowledge Graph (about 2.4 million machine-extracted smell references from European texts and artworks, mostly 1600–1920, in English, French, Italian, Slovenian, German and Dutch). Use whenever the user asks about smells, scents, odours, perfume, fragrance, stench or olfactory history, historical sensory history, the Odeuropa Smell Explorer, how a smell source (rose, lavender, tobacco, a garden, a church) was described over time or across languages, or smells in paintings and prints, including in French, German, Italian or Dutch (odeur, parfum, Geruch, Duft, odore, profumo, geur), and any time an eokg_ tool is about to be called.
 ---
 
@@ -31,7 +31,9 @@ holds the dated snapshot, and `eokg_get_concept` gives live per-concept counts.
   catalogue-only links with no box.
 - **Vocabularies.** 20 vocabularies exist in the Skosmos service, but only
   `olfactory-objects` (what smells: Rose, Lavender, Tobacco) and `fragrant-spaces`
-  (where: Garden, Church) are linked to smells. See `references/vocabularies.md`.
+  (where: Garden, Church) can be profiled. `olfactory-gestures` is linked to image
+  smells, but no tool profiles it yet; the other vocabularies are not linked.
+  See `references/vocabularies.md`.
 
 ## What a smell record is (and is not)
 
@@ -45,9 +47,11 @@ A **smell** is one extracted reference, not a documented odour event. It has:
 - optional roles: carrier, place, perceiver, time, qualities (adjectives), emotions.
   Roles are extracted strings; many smells have only some of them.
 - **two dates.** The *document date* is when the source was created and drives
-  `year_from`/`year_to` and the profile timeline. The *emission date* is the
-  smell's own time, extracted from the text; request it explicitly
-  (`emission_timeline`). They answer different questions and both include noise.
+  `year_from`/`year_to` and the profile timeline. The *emission date* is meant to be
+  the smell's own time, but in almost every record it equals the document date (10 of
+  8,393 dated Tobacco smells differ). Both include noise. For an event (Waterloo in
+  1815, described in an 1870 edition of Charles Bell's letters), date the experience
+  from the passage itself.
 - **emotions** assigned by a classifier. They are not in the text; never quote them
   as what the writer felt.
 
@@ -68,20 +72,35 @@ how often something is mentioned; cite the record whose concept you mean.
 
 **No field prefixes.** Do not write `source_value:rose`; the server picks the field
 (`in`: excerpt, title or both). Lucene operators work: `"phrase"`, `AND`/`OR`,
-parentheses, `*`. *Symptom:* a Lucene syntax error (unbalanced parenthesis or quote)
-comes back as a correctable error; fix the query and retry.
+parentheses, `*`. Words without an operator are OR-ed: `tobacco and smoke` gives
+1,254,625 hits, `tobacco AND smoke` 3,478. Quote hyphenated words (`"eau de cologne"`),
+or they split into OR-ed words. *Symptom:* a Lucene syntax error (unbalanced
+parenthesis or quote) comes back as a correctable error; fix the query and retry.
 
 **OCR spelling.** Matching is on raw, unnormalised OCR text from 1600–1920. *Symptom:*
 a modern spelling finds only a fraction of the passages. *Fix:* search period
 spellings (`savour`, `perfum'd`, `odeur` vs `odor`), and each language's own word
-(`rosa OR rose` for Italian; `puanteur` for French stench). A concept-level
-profile is not affected, because it counts the classified concept.
+(`rosa OR rose` for Italian; `puanteur` for French stench). OCR reads the long s as
+f: `fmell` alone gives 36,672 hits, and `fweet` and `fmoke` also occur. Accents and
+umlauts must match exactly (`égouts` 594 hits, `egouts` 22), so search both forms. A
+concept-level profile is not affected, because it counts the classified concept.
+
+**False friends.** Older German *Duft* also means hoarfrost; Italian *odore* also
+means fame or a hint; French *sentir* also means to feel. *Fix:* read the excerpt
+before counting it as a smell.
 
 **Undated sources.** Text search keeps sources with no date when you give
-`year_from`/`year_to`; visual search drops them. *Symptom:* a period-filtered text
+`year_from`/`year_to`; visual search drops them. Some Old Bailey sessions have no date
+field and carry the date only in their long title, and dates such as `XXXX-09-08`
+count as undated. *Symptom:* a period-filtered text
 search includes records with no date at all, but an artwork search for the same
 period seems smaller. *Fix:* read the date on each result, and say so when a
 time-bounded claim rests on a mixed set.
+
+**One passage in several datasets.** `text-annotation` holds hand-annotated copies of
+passages that also sit in other datasets (Kostanjevec's *Noč*, 1902, appears in
+`dlib`, in *Ljubljanski zvon* and in `text-annotation`, each with different roles).
+*Fix:* count passages, not records.
 
 **Raw place and carrier strings.** `places` and `carriers` facets are unnormalised
 text ("jardin", "in", "the", "it"). *Symptom:* function words and a mix of
@@ -100,10 +119,23 @@ them, so use them only to compare, never as what the writer felt.
 bucketing them. *Fix:* quote the in-range counts, mention out-of-range counts, and
 never read a spike in one bucket as history before checking which dataset produced it.
 
-**The expert taxonomy is not linked.** `expert-taxonomy` (and the other 17 descriptive
-vocabularies) have a "rose" too, but no smell points at it. *Symptom:* a concept id
-from `vocab: "all"` gives zero smells. *Fix:* use `olfactory-objects` ids for
-what smells and `fragrant-spaces` ids for where.
+**The expert taxonomy is not linked.** `expert-taxonomy` (and the other descriptive
+vocabularies) have a "rose" too, but no smell points at it. `olfactory-gestures` is
+linked to image smells, but no tool profiles it yet. *Symptom:* a concept id from
+`vocab: "all"` gives zero smells. *Fix:* use `olfactory-objects` ids for what smells
+and `fragrant-spaces` ids for where.
+
+**German and Slovenian are barely linked to concepts.** Rose has 0 German smells,
+Tobacco 2, and Flower with its narrower concepts 142 of 168,243. Many Slovenian smells
+have only the words used (`gnilobi`) and no concept. *Fix:* for these languages,
+full-text search has to carry the question; a concept profile undercounts.
+
+**Topics outside the vocabulary.** There is no concept for battlefield or corpse.
+*Fix:* use full-text search.
+
+**Substances have no images.** Coffee (4,571 smells), Incense (9,673) and Sulphur
+(8,661) have 0 image sources; Coffeepot has 76. *Fix:* use a related object concept;
+`eokg_get_concept` lists related ones.
 
 **Iconclass placeholders.** The KG's own Iconclass links are corrupt, so the server
 uses Odeuropa's curated tables. A notation ending in `(...)` (Rose: `25G41(...)`)
@@ -153,7 +185,8 @@ facets, or profile the specific concept. A timed-out query is not retried.
 1. `eokg_find_concepts({ query: "garden", vocab: "fragrant-spaces" })`.
 2. `eokg_smell_profile({ concept: "fragrant-spaces/27", facets: ["timeline", "datasets", "qualities"] })`
    → what smells co-occur there; fragrant-spaces concepts count smells perceived in
-   such a place.
+   such a place. Check the `datasets` facet before reading a difference as national:
+   Hospital has 677 French smells against 215 English, almost all from Gallica.
 3. `eokg_search_smells` for exemplary passages ("garden" with a smell word), then
    `eokg_get_smell` to cite. Raw `places` are only a hint.
 
@@ -188,10 +221,17 @@ Aim for two tool calls.
    and offer to open one. Near-identical titles with the same date can be two records
    of one painting.
 
+### 6. Allegories of the senses
+
+They can only be found through title words: `eokg_search_smells({ text: "allegory AND smell", in: "title" })`.
+Iconclass 31A33 (smell) maps to no Odeuropa concept.
+
 ## Citing
 
 Give, for each smell: the `explorer_url` (`https://explorer.odeuropa.eu/smells/…`),
-the source title, date and dataset. Quote excerpts verbatim. Where OCR damage is
+the source title, date and dataset. Quote excerpts verbatim. The artist field can carry
+provenance or attribution notes ("Jan Breughel as such in Dorotheum Vienne,
+2015-10-20"); quote the artist name only. Where OCR damage is
 visible, mark it with [sic] rather than silently fixing it (`soaps , English`,
 `Â £`). Say whether a date is the document date or the emission date. Attribute
 emotions and qualities to the extraction, not to the author. Odeuropa is
