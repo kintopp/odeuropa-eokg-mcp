@@ -102,10 +102,12 @@ To host your own instance, run `npm run serve`, which serves stateless Streamabl
 
 - Excerpts are raw OCR text.
 - Emotions come from a classifier.
-- Dates mix the document date and the emission date, and include noise.
+- Dates are document dates (the emission date almost always equals it) and include noise.
+- Words without an operator are OR-ed, and accents must match.
+- German and Slovenian are barely linked to concepts, so concept profiles undercount them.
 - Filtered searches examine only a window of the most relevant hits.
 - Image boxes, including hand-drawn ones, can carry the wrong label.
-- Only the olfactory-objects and fragrant-spaces vocabularies are linked to smells.
+- Only the olfactory-objects and fragrant-spaces vocabularies can be profiled or counted.
 - Iconclass notations ending in `(...)` are placeholders.
 
 Details and examples are in [docs/tools.md](docs/tools.md#data-caveats).

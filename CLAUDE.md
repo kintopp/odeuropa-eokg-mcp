@@ -80,3 +80,7 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 - **railway.json is not read:** Railway's Config as Code is deprecated (new services cannot use it; existing ones stop on 2026-12-01). Service config lives in .railway/railway.ts and is applied with railway config apply; code is deployed separately.
 - **`svg.hidden = true` does nothing:** `hidden` is an HTML element property; on an SVGElement it is a plain JS expando. Hide SVG with a class and `display: none`.
 - **closeMatch is corrupt:** never read skos:closeMatch for Iconclass; use src/data/iconclass.json.
+- **`SAMPLE(?label)` picks up sameAs twin labels:** inference copies GeoNames and Wikidata labels onto vocabulary concepts; bind labels inside the vocabulary's named graph.
+- **Skosmos `lang` restricts matching:** it is not a display preference; pass it only to filter.
+- **Lucene: a lone `NOT` matches nothing and `/` opens a regex:** both are handled in `scopedLuceneQuery`; keep its tests.
+- **Malformed related URIs in fragrant-spaces:** `http://data.odeuropa.eu/olfactory_objects/<n>` means `vocabulary/olfactory-objects/<n>`; `get_concept` maps it.
