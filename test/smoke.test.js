@@ -118,6 +118,21 @@ test('the initialize instructions carry the data-quality caveats', async () => {
   });
 });
 
+test('the initialize instructions state the OR default, document dates and concept coverage', async () => {
+  await withClient('eokg-smoke', async (client) => {
+    const instructions = client.getInstructions();
+    for (const phrase of [
+      'Search words without an operator are OR-ed; write AND/OR/NOT in capitals and quote phrases.',
+      'dates are document dates (the emission date almost always equals it) and include noise and undated sources',
+      'Profiles and image lists work for olfactory-objects and fragrant-spaces concepts; the other vocabularies describe smells but cannot be counted with these tools.',
+    ]) {
+      assert.ok(instructions.includes(phrase), `instructions must say: ${phrase}`);
+    }
+    assert.ok(!instructions.includes('Only olfactory-objects and fragrant-spaces concepts are linked to smells.'));
+    assert.ok(!instructions.includes('dates mix document date and emission date'));
+  });
+});
+
 test('serverInfo carries the machine name and no human-readable title', async () => {
   await withClient('eokg-smoke', async (client) => {
     const info = client.getServerVersion();
