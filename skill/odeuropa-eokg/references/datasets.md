@@ -21,7 +21,7 @@ The deliverables describe one automatic pipeline for the text (D3.5 p. 11; see `
 | `dbnl` | Digitale Bibliotheek voor de Nederlandse Letteren: literary, linguistic and cultural-historical texts | Dutch | DBNL spans the 12th to 21st century; the corpus was collected for 1620–1920 | D3.2 p. 7 |
 | `liberliber` | LiberLiber, an Italian non-profit library; about 3,000 books in D3.2, over 4,000 books and about 230M tokens in D3.4 | Italian | 1620–1925 | D3.2 p. 9; D3.4 p. 12 |
 | `dta` | Deutsches Textarchiv, a cross-section of printed New High German works | German | about 1600–1900 | D3.2 p. 9 |
-| `dlib` | dLib.si, the Digital Library of Slovenia: books and periodicals (the subcorpora the project focused on) | Slovenian | OCR is decent after the mid to late 19th century and often too poor to use before 1850 | D3.2 pp. 10–11; D3.4 p. 7 |
+| `dlib` | dLib.si, the Digital Library of Slovenia: books and periodicals (the subcorpora the project focused on) | Slovenian | OCR is decent after the mid to late 19th century and often too poor to use before 1850 | D3.2 pp. 10–11; D3.4 p. 8 |
 | `pulse` | London's Pulse: Medical Officer of Health reports on public health, sanitation and urban life | English | 1848–1925 | D3.2 p. 8 |
 | `royal-society-corpus` | Royal Society Corpus: scientific periodicals | English | 1665–1869 | D3.2 p. 8 |
 | `old-bailey-corpus` | A small pre-processed version of the Old Bailey court proceedings | English | 1720–1913 | D3.2 p. 8 |
