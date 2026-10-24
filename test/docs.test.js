@@ -20,3 +20,8 @@ test('docs/tools.md\'s generated blocks match the wire', async () => {
   assert.equal(DOC, renderToolsDoc(DOC, await wire),
     'docs/tools.md is stale — run `npm run build:docs` and commit the result');
 });
+
+test('no parameter row has an undefined type', () => {
+  assert.doesNotMatch(DOC, /^\| `\w+` \| [^|]*undefined/m);
+  assert.match(DOC, /^\| `bucket_years` \| enum: `10` · `20` · `50` \|/m);
+});

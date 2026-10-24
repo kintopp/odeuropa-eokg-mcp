@@ -107,7 +107,7 @@ Looks up vocabulary concepts by label in six languages, or by Iconclass notation
 |---|---|---|---|
 | `query` | string (≤ 100) | — | Label to search for, in any of de, en, fr, it, nl, sl (e.g. "rose", "jardin"). A trailing * is added unless present. |
 | `iconclass` | string (≤ 100) | — | Iconclass notation (e.g. 25G41(ROSE)) instead of query: finds concepts mapped to it or to broader or narrower notations. |
-| `vocab` | undefined | — | Vocabulary or vocabularies to search. Default: olfactory-objects and fragrant-spaces, the two linked to smells. "all" searches every vocabulary. |
+| `vocab` | enum: `olfactory-objects` · `fragrant-spaces` · `dhsv-sw` · `dravnieks` · `dravnieks-odorants` · `drom` · `edward_wheel` · `expert-taxonomy` · `expert-taxonomy-chemical` · `expert-taxonomy-quality` · `flavornet-odorants` · `flavornet-odors` · `historic-book` · `historical-scent` · `noses` · `olfactory-gestures` · `plutchik` · `vdi-hedonic` · `vdi-intensity` · `zwaardemaker` or string[] or `all` | — | Vocabulary or vocabularies to search. Default: olfactory-objects and fragrant-spaces, the two linked to smells. "all" searches every vocabulary. |
 | `lang` | enum: `en` · `fr` · `it` · `sl` · `de` · `nl` | — | Show labels in this language where the concept has one. Matching always covers all six languages. |
 | `limit` | int (1–50) | `10` | Maximum results (default 10). |
 <!-- /generated -->
@@ -148,7 +148,7 @@ Counts the smells linked to one concept by period, language, dataset, qualities,
 | `concept` | string (≤ 300) | **required** | An olfactory-objects or fragrant-spaces concept id as eokg_find_concepts returns it (e.g. olfactory-objects/138 for Rose). |
 | `facets` | string[] | — | Which aggregates to compute. Default: timeline, languages, datasets, qualities, emotions, fragrant_spaces (with include_narrower: timeline, languages, datasets). Opt-in: emission_timeline, places, carriers. |
 | `include_narrower` | bool | `false` | Also count smells of narrower concepts (e.g. Flower for every flower). Slow: allows at most 3 facets. |
-| `bucket_years` | undefined | `20` | Timeline bucket width: 10, 20 or 50 years. |
+| `bucket_years` | enum: `10` · `20` · `50` | `20` | Timeline bucket width: 10, 20 or 50 years. |
 | `top` | int (1–25) | `10` | Values per ranked facet. |
 | `language` | enum: `en` · `fr` · `it` · `sl` · `de` · `nl` | — | Only count smells from sources in this language. Not combinable with include_narrower. |
 <!-- /generated -->

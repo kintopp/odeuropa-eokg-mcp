@@ -25,6 +25,11 @@ const code = (v) => `\`${v === '' ? '""' : v}\``;
 
 function typeOf(schema) {
   if (schema.enum) return `enum: ${schema.enum.map(code).join(' · ')}`;
+  if ('const' in schema) return code(schema.const);
+  if (schema.anyOf) {
+    if (schema.anyOf.every((m) => 'const' in m)) return `enum: ${schema.anyOf.map((m) => code(m.const)).join(' · ')}`;
+    return schema.anyOf.map(typeOf).join(' or ');
+  }
   if (schema.type === 'array') {
     const item = schema.items?.type === 'integer' ? 'int' : schema.items?.type;
     return schema.minItems === schema.maxItems ? `${item}[${schema.minItems}]` : `${item}[]`;
