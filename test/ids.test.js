@@ -49,6 +49,24 @@ test('concept ids: URI, https, short form, nested path', () => {
   assert.equal(vocabOf('http://data.odeuropa.eu/vocabulary/nope/1'), null);
 });
 
+test('concept ids: Explorer smell-sources and fragrant-spaces links', () => {
+  const V = 'http://data.odeuropa.eu/vocabulary/';
+  assert.equal(parseId('concept', 'https://explorer.odeuropa.eu/smell-sources/227'), `${V}olfactory-objects/227`);
+  assert.equal(parseId('concept', 'http://explorer.odeuropa.eu/fragrant-spaces/32/'), `${V}fragrant-spaces/32`);
+  for (const bad of [
+    'https://explorer.odeuropa.eu/smell-sources/abc', 'https://explorer.odeuropa.eu/smell-sources/',
+    `https://explorer.odeuropa.eu/smells/${U}`, 'https://explorer.odeuropa.eu/smell-sources/12/../3',
+  ]) assert.throws(() => parseId('concept', bad), ToolError, bad);
+});
+
+test('the concept rejection names concept id forms, not a uuid', () => {
+  assert.throws(
+    () => parseId('concept', 'nope'),
+    (e) => !e.suggestion.includes('<uuid>') && /olfactory-objects\/138/.test(e.suggestion) && /Explorer smell-sources/.test(e.suggestion),
+  );
+  assert.throws(() => parseId('smell', 'nope'), (e) => e.suggestion.includes('<uuid>'));
+});
+
 test('concept ids: traversal, injection and whitespace rejected', () => {
   for (const bad of [
     'http://data.odeuropa.eu/vocabulary/x/../y', 'x/../y', 'x/./y', 'olfactory-objects/138>',

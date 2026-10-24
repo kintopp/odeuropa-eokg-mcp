@@ -12,7 +12,12 @@ const VOCAB_PREFIX = `${KG_BASE}vocabulary/`;
 const CONCEPT_RE = /^https?:\/\/data\.odeuropa\.eu\/vocabulary\/([a-z0-9][a-z0-9_-]*)((?:\/[A-Za-z0-9_.-]+)+)\/?$/;
 const SHORT_CONCEPT_RE = /^([a-z0-9][a-z0-9_-]*)((?:\/[A-Za-z0-9_.-]+)+)\/?$/;
 
+const EXPLORER_CONCEPT_RE = /^https?:\/\/explorer\.odeuropa\.eu\/(smell-sources|fragrant-spaces)\/(\d+)\/?$/i;
+const EXPLORER_VOCAB = { 'smell-sources': 'olfactory-objects', 'fragrant-spaces': 'fragrant-spaces' };
+
 function matchConcept(raw) {
+  const ex = EXPLORER_CONCEPT_RE.exec(raw);
+  if (ex) return `${VOCAB_PREFIX}${EXPLORER_VOCAB[ex[1].toLowerCase()]}/${ex[2]}`;
   const m = CONCEPT_RE.exec(raw) ?? SHORT_CONCEPT_RE.exec(raw);
   if (!m || m[2].split('/').some((seg) => seg === '.' || seg === '..')) return null;
   return `${VOCAB_PREFIX}${m[1]}${m[2]}`;
@@ -51,7 +56,9 @@ export function parseId(kind, input) {
     const group = spec?.group ?? kind;
     throw new ToolError(
       `Not a valid ${kind} id: "${String(input ?? '').slice(0, 120)}"`,
-      `Pass the id exactly as another eokg tool returned it (a http://data.odeuropa.eu/${group}/<uuid> URI or the bare uuid).`,
+      kind === 'concept'
+        ? 'Pass the id as eokg_find_concepts returns it: olfactory-objects/138, the http://data.odeuropa.eu/vocabulary/… URI, or an Explorer smell-sources/… or fragrant-spaces/… link.'
+        : `Pass the id exactly as another eokg tool returned it (a http://data.odeuropa.eu/${group}/<uuid> URI or the bare uuid).`,
     );
   }
   return canonical;
