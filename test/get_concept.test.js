@@ -85,6 +85,38 @@ test('Garden: plain iconclass, place count query, explicit narrower', async () =
   assert.ok(!labelsSent().includes('concept_smell_count'));
 });
 
+test('a malformed olfactory_objects related URI is mapped to olfactory-objects with its label', async () => {
+  const HOSPITAL = `${KG}fragrant-spaces/32`;
+  const detail = bindings([
+    { g: GS, p: uri(`${SKOS}prefLabel`), o: lit('Hospital', 'en') },
+    { g: GS, p: uri(`${SKOS}related`), o: uri('http://data.odeuropa.eu/olfactory_objects/248') },
+  ]);
+  const res = await call(HOSPITAL, {
+    concept_detail: () => ({ body: detail }),
+    concept_narrower: () => ({ body: none }),
+    space_smell_count: () => ({ body: bindings([{ smells: lit('5') }]) }),
+    concept_labels: () => ({
+      body: bindings([
+        { c: uri(`${KG}olfactory-objects/248`), l: lit('Acide carbolique', 'fr') },
+        { c: uri(`${KG}olfactory-objects/248`), l: lit('Carbolic acid', 'en') },
+      ]),
+    }),
+  });
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.deepEqual(s.related, [{ id: `${KG}olfactory-objects/248`, label: 'Carbolic acid' }]);
+  assert.ok(res.content[0].text.includes('Related: Carbolic acid'));
+  assert.ok(stub.router.calls.find((c) => c.label === 'concept_labels').query.includes(`<${KG}olfactory-objects/248>`));
+});
+
+test('without a malformed URI no labels query runs', async () => {
+  await call(GARDEN, {
+    concept_detail: () => ({ body: gardenDetail }),
+    concept_narrower: () => ({ body: gardenNarrower }),
+    space_smell_count: () => ({ body: bindings([{ smells: lit('1') }]) }),
+  });
+  assert.ok(!labelsSent().includes('concept_labels'));
+});
+
 test('expert-taxonomy concept: no counts query, no iconclass, no explorer url', async () => {
   const T = `${KG}expert-taxonomy/flower/other_flowers/rose`;
   const res = await call(T, {

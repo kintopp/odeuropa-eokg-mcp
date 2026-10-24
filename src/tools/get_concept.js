@@ -6,6 +6,7 @@ import { ToolError } from '../lib/errors.js';
 import { parseId, explorerUrl, schemeOf, vocabOf, KG_BASE } from '../lib/ids.js';
 import { pickLabel, collectByUri, uniqueStrings } from '../lib/rdf.js';
 import { withWarnings } from '../lib/warnings.js';
+import { fetchConceptTerms } from '../lib/concept_labels.js';
 import { sparqlSelect, v, num, lang as langOf } from '../sparql/client.js';
 import {
   conceptDetailQuery, conceptNarrowerQuery, conceptSmellCountQuery, conceptImageCountQuery, spaceSmellCountQuery,
@@ -52,6 +53,21 @@ const description =
   'Get a vocabulary concept: labels in six languages, hierarchy, and usage counts. ' +
   'For olfactory-objects and fragrant-spaces concepts, also returns how many smells (and, for objects, image sources) the knowledge graph links to it, ' +
   'and the curated Iconclass notation where Odeuropa assigned one. A notation ending in (...) is an Iconclass placeholder for a name; the candidate with the name filled in is unverified, so check it with an Iconclass server before using it.';
+
+// Data error: 21 skos:related links in fragrant-spaces use this namespace (underscore, no vocabulary/) for
+// olfactory-objects concepts. Do not remove the mapping as dead code.
+const MALFORMED_OBJECT_URI = /^http:\/\/data\.odeuropa\.eu\/olfactory_objects\/(\d+)$/;
+
+/** Rewrite malformed object URIs in `rows[key]`; the rewritten URIs are added to `remapped`. */
+function remapMalformed(rows, key, remapped) {
+  return rows.map((r) => {
+    const m = MALFORMED_OBJECT_URI.exec(r[key]?.value ?? '');
+    if (!m) return r;
+    const fixed = `${VOCAB_PREFIX}olfactory-objects/${m[1]}`;
+    remapped.add(fixed);
+    return { ...r, [key]: { ...r[key], value: fixed } };
+  });
+}
 
 const fmt = (n) => n.toLocaleString('en-US');
 
@@ -115,7 +131,8 @@ export function registerGetConceptTool(server) {
           'Find the id with eokg_find_concepts and pass it as returned.',
         );
       }
-      const by = (p) => detail.filter((r) => v(r, 'p') === `${SKOS}${p}`);
+      const remapped = new Set();
+      const by = (p) => remapMalformed(detail.filter((r) => v(r, 'p') === `${SKOS}${p}`), 'o', remapped);
       const labels = {};
       for (const r of by('prefLabel')) {
         const l = langOf(r, 'o');
@@ -128,7 +145,15 @@ export function registerGetConceptTool(server) {
         return l ? `${v(r, 'o')}@${l}` : v(r, 'o');
       }));
       const links = (rows, keyVar, labelVar) => collectByUri(rows, keyVar, labelVar).filter((x) => x.id !== id);
-      const narrowerAll = links(narrowerRows, 'n', 'l');
+      const narrowerAll = links(remapMalformed(narrowerRows, 'n', remapped), 'n', 'l');
+      const broader = links(by('broader'), 'o', 'olabel');
+      const related = links(by('related'), 'o', 'olabel');
+      if (remapped.size) {
+        const terms = await fetchConceptTerms([...remapped], signal);
+        for (const x of [...broader, ...related, ...narrowerAll]) {
+          if (remapped.has(x.id) && terms.has(x.id)) x.label = pickLabel(terms.get(x.id));
+        }
+      }
       const warnings = [];
       if (narrowerAll.length > CONCEPT_MAX_NARROWER) {
         warnings.push(`This concept has ${narrowerAll.length} narrower concepts; only the first ${CONCEPT_MAX_NARROWER} are listed.`);
@@ -141,8 +166,8 @@ export function registerGetConceptTool(server) {
         label,
         labels,
         alt_labels: altLabels,
-        broader: links(by('broader'), 'o', 'olabel'),
-        related: links(by('related'), 'o', 'olabel'),
+        broader,
+        related,
         narrower: narrowerAll.slice(0, CONCEPT_MAX_NARROWER),
         narrower_count: narrowerAll.length,
       };
