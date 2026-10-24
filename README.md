@@ -1,25 +1,30 @@
 # odeuropa-eokg-mcp
 
-[![MCP Protocol](https://img.shields.io/badge/MCP_Protocol-2026--07--28-blue?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIi8+PC9zdmc+)](https://modelcontextprotocol.io/specification/2026-07-28) [![MCP SDK](https://img.shields.io/badge/MCP_SDK-v2-blue?logo=npm&logoColor=white)](https://www.npmjs.com/package/@modelcontextprotocol/server) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![MCP Protocol](https://img.shields.io/badge/MCP_Protocol-2026--07--28-blue?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIi8+PC9zdmc+)](https://modelcontextprotocol.io/specification/2026-07-28) [![MCP SDK](https://img.shields.io/badge/MCP_SDK-v2-blue?logo=npm&logoColor=white)](https://www.npmjs.com/package/@modelcontextprotocol/server) [![MCP Apps](https://img.shields.io/badge/MCP_Apps-v2.0.3-teal)](https://github.com/modelcontextprotocol/ext-apps) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server for the European Olfactory Knowledge Graph (EOKG): about 2.4 million smell references machine-extracted from European texts (English, French, Italian, Slovenian, German, Dutch) and from roughly 109,000 images of artworks, mostly 1600–1920. It lets an AI assistant search passages, resolve vocabulary concepts, profile a smell source over time, and show artworks with their detected smell-related objects.
 
 The data is the work of the [Odeuropa](https://odeuropa.eu) project (EU Horizon 2020, grant 101004469). Browse it in the [Smell Explorer](https://explorer.odeuropa.eu). The knowledge-graph repository, [Odeuropa/knowledge-graph](https://github.com/Odeuropa/knowledge-graph), is licensed Apache-2.0; individual sources carry their own licence in the graph. This server is an independent client of the public endpoint and is not affiliated with Odeuropa.
 
+This MCP server was developed by the [Research and Infrastructure Support](https://rise.unibas.ch/en/) (RISE) group at the University of Basel. We are particularly interested in exploring the research opportunities, methodological risks, and technical challenges posed by retrieving and analysing data with LLMs. If you are interested in collaborating with us in this area, please [get in touch](mailto:rise@unibas.ch).
+
 ## Install
 
 ### Remote (default)
 
-A hosted instance runs the same tools over Streamable HTTP. No install, no credentials.
+The best way to get started is with [Claude Desktop](https://claude.com/download) or [claude.ai](https://claude.ai). Add the server to Claude as a remotely hosted [custom connector](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp) with this URL:
 
-- **claude.ai and Claude Desktop:** Settings → Connectors → Add custom connector, with the URL `https://<hosted-url>/mcp` and no authentication.
-- **Claude Code:**
+```
+https://<hosted-url>/mcp
+```
 
-  ```bash
-  claude mcp add --transport http odeuropa-eokg https://<hosted-url>/mcp
-  ```
+1. Go to _Customize_ → _Connectors_ → _Add custom connector_.
+2. Name the connector as you like and paste the URL into the _Remote MCP Server URL_ field. You can ignore the Authentication section.
+3. Optionally, set the permissions for its tools (for example, "Always allow").
 
-The image viewer (`eokg_view_image`) is an [MCP App](https://modelcontextprotocol.io/docs/extensions/apps) and appears only in clients that support MCP Apps. Other clients get plain links instead.
+Anthropic's [instructions](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp) give more detail. The image viewer (`eokg_view_image`) is an [MCP App](https://github.com/modelcontextprotocol/ext-apps) and opens inline in both.
+
+Many other clients also support remotely hosted MCP servers, such as ChatGPT, Mistral's Le Chat and open-source applications; please consult their documentation. In clients without MCP Apps support, the viewer is replaced by plain links.
 
 ### Local (stdio)
 
@@ -52,7 +57,7 @@ To check the install without a client, run `npm test`.
 
 ### Skill (optional)
 
-[skill/odeuropa-smells.skill](skill/odeuropa-smells.skill) teaches a model the research patterns and the traps of this data. In Claude Desktop, double-click the file, or go to Settings → Skills → Add; the latter also works in claude.ai.
+The skill file [skill/odeuropa-smells.skill](skill/odeuropa-smells.skill) gives the AI assistant guidance in natural language on how to use this server well: which tool to choose for a given question, how to combine them, and the traps in this data. [Skills](https://support.claude.com/en/articles/12512176-what-are-skills) were developed by Anthropic and are now an [open standard](https://agentskills.io/home). To install it in Claude, follow [these instructions](https://claude.com/resources/tutorials/teach-claude-your-way-of-working-using-skills).
 
 ## Tools
 
