@@ -80,6 +80,7 @@ export const SERVER_INSTRUCTIONS = [
   'For concept-level questions, resolve the concept first with `eokg_find_concepts` (olfactory-objects = what smells, fragrant-spaces = where), then `eokg_smell_profile` for counts over time, languages, datasets, qualities, emotions and spaces, and `eokg_find_visual_smells` + `eokg_inspect_image` for artworks.',
   'Read results critically: excerpts are raw OCR text; one passage can yield several smells, each its own result; emotions come from a classifier, not the text, and are a weak signal; dates mix document date and emission date and include OCR noise; profile counts compare concepts with each other and are not absolute trends; filtered searches examine only a window of the most relevant hits and say so; image boxes, including hand-drawn ones, can carry the wrong label.',
   "Only olfactory-objects and fragrant-spaces concepts are linked to smells. Iconclass notations come from Odeuropa's curated tables; a notation ending in (...) is a placeholder to be completed and verified with an Iconclass server.",
+  'Artwork images cannot be displayed in the chat: never embed an image URL as a Markdown image and never write "if the image does not display"; say the picture cannot be shown here and give image and record URLs as plain links.',
   'Cite smells with their explorer_url (https://explorer.odeuropa.eu/smells/…).',
 ].join(' ');
 

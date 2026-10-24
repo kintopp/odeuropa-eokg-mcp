@@ -164,8 +164,8 @@ facets, or profile the specific concept. A timed-out query is not retried.
    artist and date. Hundreds of hand-drawn images can precede the first detector-only one.
    Images with only low-confidence boxes are hidden and counted; `min_score: 0` brings them back.
 2. `eokg_inspect_image({ id })` → look at the picture; compare boxes with what you see.
-   The user does not see the picture: when they want to, give them the Record and
-   Image links from the result.
+   The user does not see the picture, and the chat cannot display it: say so, and give
+   the Record and Image links as plain links, never as a Markdown image.
 3. `eokg_find_concepts` for the same object in other languages, then
    `eokg_search_smells` for the same concept in texts of the same period.
 4. Compare: what texts say about the smell, what artists chose to depict. Keep

@@ -101,7 +101,8 @@ test('percent boxes are 100 * px / dimensions rounded to 2 decimals, in score or
 // - the record page or original image is dropped from the text the model reads;
 // - a link line appears with `undefined` when the source has no record page;
 // - the "user cannot see it" note is missing from the text channel;
-// - structured output omits url/original_image_url, or emits them empty.
+// - structured output omits url/original_image_url, or emits them empty;
+// - the text result still invites embedding the image (no plain-link instruction).
 test('links: record page, hosted image and original appear in text and structured output', async () => {
   const res = await inspect();
   const s = assertWireValid(outputSchema, res.structuredContent);
@@ -112,6 +113,7 @@ test('links: record page, hosted image and original appear in text and structure
   assert.ok(text.includes(`Image: ${IMAGE_URL}`));
   assert.ok(text.includes(`Original: ${RKD_URL}`));
   assert.ok(text.includes('the user does not see it'));
+  assert.ok(text.includes('never embed them as Markdown images'));
 });
 
 test('links: a source without record page or original prints only the hosted image', async () => {
@@ -131,9 +133,21 @@ test('content[0] is the image; structuredContent carries no image bytes', async 
   const res = await inspect();
   assert.equal(res.content[0].type, 'image');
   assert.equal(res.content[0].mimeType, 'image/jpeg');
+  assert.equal(res.content[0].annotations, undefined); // an audience annotation could hide the tool-card thumbnail
   assert.deepEqual([...Buffer.from(res.content[0].data, 'base64').subarray(0, 2)], [0xFF, 0xD8]);
   assert.ok(JSON.stringify(res.structuredContent).length < 10000);
   assert.ok(!JSON.stringify(res.structuredContent).includes(res.content[0].data));
+});
+
+// Failure modes:
+// - the description still says "may not render", which lets the model try an embed;
+// - the Markdown-image prohibition or the plain-link instruction is missing from the description.
+test('the description forbids Markdown image embeds and asks for plain links', async () => {
+  const { tools } = await client.listTools();
+  const d = tools.find((x) => x.name === 'eokg_inspect_image').description;
+  assert.ok(d.includes('never embed an image URL as a Markdown image'));
+  assert.ok(d.includes('as a plain link'));
+  assert.ok(!d.includes('may not render'));
 });
 
 test('min_score 0.94 keeps the three top boxes and counts the rest as hidden', async () => {

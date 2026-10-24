@@ -41,7 +41,7 @@ const description =
   'Look at an image source, with the smell-related objects detected in it. ' +
   'Returns the picture itself plus each annotated object (vocabulary concept, bounding box as % of width/height from the top-left, and origin: manual boxes were drawn by the Odeuropa team, detector boxes come from an object detector with a confidence score). ' +
   'Detector boxes can be wrong; compare them with what you see. Use these boxes rather than estimating coordinates yourself. ' +
-  'The picture is returned to you, not shown to the user; to show it, give the user the Record or Image link from the result (an embedded image may not render). ' +
+  'The picture is returned to you only; the chat cannot display it, so never embed an image URL as a Markdown image (![](…)). To let the user see it, say it cannot be shown here and give the Record or Image link from the result as a plain link. ' +
   'Takes a source id from eokg_get_source, eokg_get_smell (source.id) or eokg_find_visual_smells.';
 
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -64,7 +64,7 @@ function renderText(s) {
   if (s.url) lines.push(`Record: ${s.url}`);
   lines.push(`Image: ${s.image_url}`);
   if (s.original_image_url) lines.push(`Original: ${s.original_image_url}`);
-  lines.push('The picture above is for your own analysis; the user does not see it. To show it, give them these links.');
+  lines.push('The picture above is for your own analysis; the user does not see it and the chat cannot display it. Give them these as plain links; never embed them as Markdown images, which display blank.');
   const framing = s.width ? 'boxes as % x,y,w,h from top-left' : 'boxes in pixels x,y,w,h from top-left';
   lines.push(`Detected objects (score ≥ ${s.min_score}; ${framing}):`);
   for (const o of s.objects) {
