@@ -82,7 +82,7 @@ const description =
   'Counts smells linked to an olfactory-objects, fragrant-spaces or olfactory-gestures concept (from eokg_find_concepts) by 20-year period of document date (bucket_years changes it), language, dataset, qualities, emotions and fragrant spaces; emission dates, raw place labels and carriers on request. ' +
   'The languages facet counts text smells only; image smells are in the total and the timeline but have no language. ' +
   'The emission date is extracted from the text but in almost every record equals the document date, so emission_timeline rarely differs from timeline. ' +
-  'All values are machine-extracted: dates include OCR noise (reported as out_of_range), and emotions are inferred by a classifier. ' +
+  'All values are machine-extracted: dates include OCR noise (reported as out_of_range), and emotions are inferred by a classifier that was not run on medical-heritage, royal-society-corpus, old-bailey-corpus or text-annotation and has no German or Slovenian model. ' +
   'Gesture smells come from texts (Perfuming, mostly French) or from images (Holding one\'s nose); check the datasets facet. ' +
   'year_from and year_to restrict the profile to a period by document date; undated sources drop out, and images can be a large share of a period\'s smells. ' +
   'include_narrower adds sub-concepts (e.g. all flowers) but takes 15–30 s per facet; facets that do not fit the time budget are listed in failed_facets.';

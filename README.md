@@ -2,7 +2,7 @@
 
 [![MCP Protocol](https://img.shields.io/badge/MCP_Protocol-2026--07--28-blue?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIi8+PC9zdmc+)](https://modelcontextprotocol.io/specification/2026-07-28) [![MCP SDK](https://img.shields.io/badge/MCP_SDK-v2-blue?logo=npm&logoColor=white)](https://www.npmjs.com/package/@modelcontextprotocol/server) [![MCP Apps](https://img.shields.io/badge/MCP_Apps-v2.0.3-teal)](https://github.com/modelcontextprotocol/ext-apps) 
 
-A [Model Context Protocol](https://modelcontextprotocol.io) server for the *European Olfactory Knowledge Graph* (EOKG): about 2.4 million smell references machine-extracted from European texts (English, French, Italian, Slovenian, German, Dutch) and from roughly 109,000 images of artworks, mostly 1600–1920. It lets an AI assistant search passages, resolve vocabulary concepts, profile a smell source over time, and show artworks with their detected smell-related objects.
+A [Model Context Protocol](https://modelcontextprotocol.io) server for the *European Olfactory Knowledge Graph* (EOKG): about 2.4 million smell references machine-extracted from European texts (English, French, Italian, Slovenian, German, Dutch) and from roughly 44,000 images of artworks, mostly 1600–1920. It lets an AI assistant search passages, resolve vocabulary concepts, profile a smell source over time, and show artworks with their detected smell-related objects.
 
 The data is the work of the [Odeuropa](https://odeuropa.eu) project (EU Horizon 2020, grant 101004469). Browse it in the [Smell Explorer](https://explorer.odeuropa.eu). The knowledge-graph repository, [Odeuropa/knowledge-graph](https://github.com/Odeuropa/knowledge-graph), is licensed Apache-2.0; individual sources carry their own licence in the graph. This server is an independent client of the public endpoint and is not affiliated with Odeuropa.
 
@@ -101,7 +101,7 @@ To host your own instance, run `npm run serve`, which serves stateless Streamabl
 ## Data caveats
 
 - Excerpts are raw OCR text.
-- Emotions come from a classifier.
+- Emotions come from a classifier, and some datasets, German and Slovenian have none.
 - Dates are document dates (the emission date almost always equals it) and include noise.
 - Words without an operator are OR-ed, and accents must match.
 - German and Slovenian are barely linked to concepts, so concept profiles undercount them.

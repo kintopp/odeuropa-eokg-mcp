@@ -25,8 +25,8 @@ holds the dated snapshot, and `eokg_get_concept` gives live per-concept counts.
 - **Languages.** Text sources are mostly English, then French; Italian, Slovenian,
   German and Dutch are thin (a few thousand sources each). Expect English-heavy
   results unless you filter or search in the other language.
-- **Images.** About 109,000 images exist; around 24,000 of them carry boxes
-  (detector or manual). `eokg_find_visual_smells` lists every image catalogued as
+- **Images.** About 109,000 images are catalogued, but only about 44,000 carry a
+  smell; around 24,000 of them carry boxes (detector or manual). `eokg_find_visual_smells` lists every image catalogued as
   representing the concept: boxed ones first, by detector confidence, then
   catalogue-only links with no box.
 - **Vocabularies.** 20 vocabularies exist in the Skosmos service, but only
