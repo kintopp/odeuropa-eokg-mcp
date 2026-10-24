@@ -171,6 +171,20 @@ facets, or profile the specific concept. A timed-out query is not retried.
 4. Compare: what texts say about the smell, what artists chose to depict. Keep
    the two evidence types separate in the write-up.
 
+### 5. Show or describe a named artwork
+
+Aim for two tool calls.
+
+1. `eokg_search_smells({ text: "\"smoking equipment\"", in: "title" })` with distinctive
+   words from the title. Titles carry no artist names, and the artist is not searchable.
+   Each hit is one smell, so the same work can appear several times; group hits by
+   `source_id`, and keep hits with `source_type: "image"`.
+2. Pick the best title and date match and call `eokg_inspect_image({ id: source_id })`
+   directly; `eokg_get_smell` and `eokg_get_source` are not needed for this.
+3. Mention other candidates from the hit list by title and date without opening them,
+   and offer to open one. Near-identical titles with the same date can be two records
+   of one painting.
+
 ## Citing
 
 Give, for each smell: the `explorer_url` (`https://explorer.odeuropa.eu/smells/…`),
