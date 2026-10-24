@@ -1,22 +1,29 @@
 // Queries for eokg_smell_profile. Every aggregate starts from `anchorPattern`, which binds ?smell, ?emission and ?c.
-// Concept URIs come from parseId; `scheme` from vocabOf (never user text); `language` and `bucketYears` from zod.
+// Concept URIs come from parseId; `scheme` from vocabOf (never user text); `language`, years and `bucketYears` from zod.
 
 import { KG_BASE } from '../../lib/ids.js';
 import { DATASET_GRAPH_BASE, FRAGRANT_SPACES_BASE } from '../../config.js';
 
+const pad4 = (y) => String(y).padStart(4, '0');
+
 /** The graph pattern binding ?smell for a concept. `scheme` is 'olfactory-objects', 'fragrant-spaces' or 'olfactory-gestures'. */
-export function anchorPattern(conceptUri, scheme, { narrower = false, language } = {}) {
-  const lang = language ? ` ?lsrc crm:P67_refers_to ?smell ; schema:inLanguage "${language}" .` : '';
+export function anchorPattern(conceptUri, scheme, { narrower = false, language, yearFrom, yearTo } = {}) {
+  const bounds = [
+    yearFrom != null && `?yb >= "${pad4(yearFrom)}"^^xsd:gYear`,
+    yearTo != null && `?yb <= "${pad4(yearTo)}"^^xsd:gYear`,
+  ].filter(Boolean).join(' && ');
+  const years = bounds ? ` ?ysrc crm:P67_refers_to ?smell ; schema:dateCreated/time:hasBeginning ?yb . FILTER(${bounds})` : '';
+  const filters = (language ? ` ?lsrc crm:P67_refers_to ?smell ; schema:inLanguage "${language}" .` : '') + years;
   if (scheme === 'fragrant-spaces') {
     const head = narrower ? `?c (skos:broader|^skos:narrower)* <${conceptUri}> .` : `VALUES ?c { <${conceptUri}> }`;
-    return `${head} ?place crm:P137_exemplifies ?c . ?emission crm:P7_took_place_at ?place ; od:F1_generated ?smell .${lang}`;
+    return `${head} ?place crm:P137_exemplifies ?c . ?emission crm:P7_took_place_at ?place ; od:F1_generated ?smell .${filters}`;
   }
   if (scheme === 'olfactory-gestures') {
     const head = narrower ? `?c skos:broader* <${conceptUri}> .` : `VALUES ?c { <${conceptUri}> }`;
-    return `${head} ?ex od:F5_involved_gesture ?c ; od:F2_perceived ?smell . ?emission od:F1_generated ?smell .${lang}`;
+    return `${head} ?ex od:F5_involved_gesture ?c ; od:F2_perceived ?smell . ?emission od:F1_generated ?smell .${filters}`;
   }
   const head = narrower ? `?c skos:broader* <${conceptUri}> .` : `VALUES ?c { <${conceptUri}> }`;
-  return `${head} ?emission od:F3_had_source ?c ; od:F1_generated ?smell .${lang}`;
+  return `${head} ?emission od:F3_had_source ?c ; od:F1_generated ?smell .${filters}`;
 }
 
 export const profileTotalQuery = (anchor) => `

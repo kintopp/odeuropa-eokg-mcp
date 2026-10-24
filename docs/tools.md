@@ -137,7 +137,7 @@ Counts the smells linked to one concept by period, language, dataset, qualities,
 ### Tool description
 
 <!-- generated:eokg_smell_profile:description -->
-> Profile a smell source, fragrant space or gesture across the whole graph. Counts smells linked to an olfactory-objects, fragrant-spaces or olfactory-gestures concept (from eokg_find_concepts) by 20-year period of document date (bucket_years changes it), language, dataset, qualities, emotions and fragrant spaces; emission dates, raw place labels and carriers on request. The languages facet counts text smells only; image smells are in the total and the timeline but have no language. The emission date is extracted from the text but in almost every record equals the document date, so emission_timeline rarely differs from timeline. All values are machine-extracted: dates include OCR noise (reported as out_of_range), and emotions are inferred by a classifier. Gesture smells come almost entirely from images, so a gesture profile leaves out languages by default. include_narrower adds sub-concepts (e.g. all flowers) but takes 15–30 s per facet; facets that do not fit the time budget are listed in failed_facets.
+> Profile a smell source, fragrant space or gesture across the whole graph. Counts smells linked to an olfactory-objects, fragrant-spaces or olfactory-gestures concept (from eokg_find_concepts) by 20-year period of document date (bucket_years changes it), language, dataset, qualities, emotions and fragrant spaces; emission dates, raw place labels and carriers on request. The languages facet counts text smells only; image smells are in the total and the timeline but have no language. The emission date is extracted from the text but in almost every record equals the document date, so emission_timeline rarely differs from timeline. All values are machine-extracted: dates include OCR noise (reported as out_of_range), and emotions are inferred by a classifier. Gesture smells come almost entirely from images, so a gesture profile leaves out languages by default. year_from and year_to restrict the profile to a period by document date; undated sources drop out, and images can be a large share of a period's smells. include_narrower adds sub-concepts (e.g. all flowers) but takes 15–30 s per facet; facets that do not fit the time budget are listed in failed_facets.
 <!-- /generated -->
 
 ### Parameters
@@ -151,6 +151,8 @@ Counts the smells linked to one concept by period, language, dataset, qualities,
 | `bucket_years` | enum: `10` · `20` · `50` | `20` | Timeline bucket width: 10, 20 or 50 years. |
 | `top` | int (1–25) | `10` | Values per ranked facet. |
 | `language` | enum: `en` · `fr` · `it` · `sl` · `de` · `nl` | — | Only count smells from sources in this language. Not combinable with include_narrower. |
+| `year_from` | int (1000–2100) | — | Only smells whose source is dated in this range (document date, inclusive; a range such as 1616/1678 counts by its first year). Undated sources are excluded. |
+| `year_to` | int (1000–2100) | — | Only smells whose source is dated in this range (document date, inclusive; a range such as 1616/1678 counts by its first year). Undated sources are excluded. |
 <!-- /generated -->
 
 ## `eokg_find_visual_smells`

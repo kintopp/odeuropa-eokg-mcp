@@ -352,3 +352,63 @@ test('a gesture profile still computes languages when asked, without the explana
   assert.ok(s.languages.length > 0);
   assert.ok(!(s.warnings ?? []).some((w) => w.includes('no language')));
 });
+
+// Failure modes: the filter reaches the total but not a facet (facet counts exceed the total); a bound is dropped;
+// undated sources slip in; the inverted range reaches the backend.
+test('year range is part of the anchor of the total and of every facet query', async () => {
+  await start(baseRoutes());
+  const s = valid(await profile({ year_from: 1700, year_to: 1799, facets: ['timeline', 'languages', 'datasets', 'qualities', 'emotions', 'fragrant_spaces'] }));
+  const queries = stub.router.calls.filter((c) => c.label.startsWith('profile_'));
+  assert.equal(queries.length, 7);
+  for (const c of queries) {
+    assert.ok(c.query.includes('?ysrc crm:P67_refers_to ?smell ; schema:dateCreated/time:hasBeginning ?yb'), c.label);
+    assert.ok(c.query.includes('?yb >= "1700"^^xsd:gYear && ?yb <= "1799"^^xsd:gYear'), c.label);
+  }
+  assert.equal(s.year_from, 1700);
+  assert.equal(s.year_to, 1799);
+});
+
+test('a single bound and the absence of bounds', async () => {
+  await start(baseRoutes());
+  valid(await profile({ year_to: 1799, facets: ['timeline'] }));
+  const q = stub.router.calls.find((c) => c.label === 'profile_total').query;
+  assert.ok(q.includes('?yb <= "1799"^^xsd:gYear') && !q.includes('?yb >='));
+  stub.router.calls.length = 0;
+  clearSparqlCache();
+  const s = valid(await profile({ facets: ['timeline'] }));
+  assert.ok(stub.router.calls.every((c) => !c.query.includes('?ysrc')));
+  assert.equal(s.year_from, undefined);
+  assert.equal(s.year_to, undefined);
+});
+
+test('year_from after year_to fails before any query', async () => {
+  await start(baseRoutes());
+  const res = await profile({ year_from: 1800, year_to: 1700 });
+  assert.equal(res.isError, true);
+  assert.ok(res.content[0].text.includes('`year_from` is later than `year_to`.'));
+  assert.equal(stub.router.calls.length, 0);
+});
+
+test('the heading states the period', async () => {
+  await start(baseRoutes({ profile_total: ok([{ n: '1479' }]) }));
+  const both = (await profile({ year_from: 1700, year_to: 1799, facets: ['timeline'] })).content[0].text;
+  assert.ok(both.startsWith('Rose [olfactory-objects/138]: 1,479 smells, dated 1700–1799'), both);
+  clearSparqlCache();
+  const from = (await profile({ year_from: 1700, facets: ['timeline'] })).content[0].text;
+  assert.ok(from.startsWith('Rose [olfactory-objects/138]: 1,479 smells, dated 1700 or later'), from);
+});
+
+// Boundary: a quarter exactly is not "more than a quarter".
+test('image-share warning: 251 of 1000 warns, 250 of 1000 and an absent datasets facet do not', async () => {
+  const datasets = (odor) => ok([{ g: uri(`${KG}odor`), n: String(odor) }, { g: uri(`${KG}gallica`), n: '500' }]);
+  await start(baseRoutes({ profile_total: ok([{ n: '1000' }]), profile_datasets: datasets(251) }));
+  const s = valid(await profile({ facets: ['datasets'] }));
+  assert.ok(s.warnings.includes('251 of these smells come from images (odor); compare text and image evidence separately.'), String(s.warnings));
+  clearSparqlCache();
+  stub.restore();
+  await client.close();
+  await start(baseRoutes({ profile_total: ok([{ n: '1000' }]), profile_datasets: datasets(250) }));
+  assert.equal(valid(await profile({ facets: ['datasets'] })).warnings, undefined);
+  clearSparqlCache();
+  assert.equal(valid(await profile({ facets: ['timeline'] })).warnings, undefined);
+});

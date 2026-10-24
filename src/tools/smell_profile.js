@@ -24,6 +24,8 @@ export const SMELL_PROFILE_TOOL_NAME = 'eokg_smell_profile';
 
 const VOCAB_PREFIX = `${KG_BASE}vocabulary/`;
 
+const YEAR_DESCRIPTION = 'Only smells whose source is dated in this range (document date, inclusive; a range such as 1616/1678 counts by its first year). Undated sources are excluded.';
+
 const inputSchema = z.object({
   concept: z.string().min(1).max(300).describe(
     'An olfactory-objects, fragrant-spaces or olfactory-gestures concept id as eokg_find_concepts returns it (e.g. olfactory-objects/138 for Rose, olfactory-gestures/2 for holding one\'s nose).',
@@ -37,6 +39,8 @@ const inputSchema = z.object({
   bucket_years: z.union([z.literal(10), z.literal(20), z.literal(50)]).default(20).describe('Timeline bucket width: 10, 20 or 50 years.'),
   top: z.number().int().min(1).max(PROFILE_MAX_TOP).default(PROFILE_DEFAULT_TOP).describe('Values per ranked facet.'),
   language: z.enum([...TEXT_LANGUAGES]).optional().describe('Only count smells from sources in this language. Not combinable with include_narrower.'),
+  year_from: z.number().int().min(1000).max(2100).optional().describe(YEAR_DESCRIPTION),
+  year_to: z.number().int().min(1000).max(2100).optional().describe(YEAR_DESCRIPTION),
 }).strict();
 
 // A factory, so no zod instance is shared between fields (a shared instance can serialise to $ref).
@@ -56,6 +60,8 @@ export const outputSchema = z.object({
   concept: z.object({ id: z.string(), label: z.string().optional(), vocab: z.string() }),
   include_narrower: z.boolean(),
   language: z.string().optional(),
+  year_from: z.number().int().optional(),
+  year_to: z.number().int().optional(),
   total_smells: z.number().int(),
   timeline: timelineSchema('document_date').optional(),
   emission_timeline: timelineSchema('emission_date').optional(),
@@ -77,6 +83,7 @@ const description =
   'The emission date is extracted from the text but in almost every record equals the document date, so emission_timeline rarely differs from timeline. ' +
   'All values are machine-extracted: dates include OCR noise (reported as out_of_range), and emotions are inferred by a classifier. ' +
   'Gesture smells come almost entirely from images, so a gesture profile leaves out languages by default. ' +
+  'year_from and year_to restrict the profile to a period by document date; undated sources drop out, and images can be a large share of a period\'s smells. ' +
   'include_narrower adds sub-concepts (e.g. all flowers) but takes 15–30 s per facet; facets that do not fit the time budget are listed in failed_facets.';
 
 const fmt = (n) => n.toLocaleString('en-US');
@@ -145,9 +152,16 @@ function renderTimeline(t, title) {
   return `${title}: ${cells.join(' · ') || '(none)'}${noise}`;
 }
 
+function yearPhrase({ year_from: from, year_to: to }) {
+  if (from != null && to != null) return `, dated ${from}–${to}`;
+  if (from != null) return `, dated ${from} or later`;
+  if (to != null) return `, dated ${to} or earlier`;
+  return '';
+}
+
 function renderText(s) {
   const head = `${s.concept.label ?? s.concept.id} [${shortId(s.concept.id)}]: ${fmt(s.total_smells)} smells` +
-    (s.include_narrower ? ', including narrower concepts' : '') + (s.language ? `, in ${s.language}` : '');
+    (s.include_narrower ? ', including narrower concepts' : '') + (s.language ? `, in ${s.language}` : '') + yearPhrase(s);
   const lines = [head];
   if (s.timeline) lines.push(renderTimeline(s.timeline, 'By document date'));
   if (s.emission_timeline) lines.push(renderTimeline(s.emission_timeline, 'By emission date'));
@@ -173,6 +187,10 @@ export function registerSmellProfileTool(server) {
         );
       }
       const { include_narrower: narrower, language, bucket_years: bucketYears, top } = args;
+      const { year_from: yearFrom, year_to: yearTo } = args;
+      if (yearFrom != null && yearTo != null && yearFrom > yearTo) {
+        throw new ToolError('`year_from` is later than `year_to`.', 'Swap them or widen the range.');
+      }
       if (narrower && language) {
         throw new ToolError(
           '`language` cannot be combined with include_narrower.',
@@ -202,7 +220,7 @@ export function registerSmellProfileTool(server) {
 
       const deadline = Date.now() + PROFILE_CALL_DEADLINE_MS;
       const timeoutLeft = () => Math.floor(Math.min(REQUEST_TIMEOUT_MS, deadline - Date.now()));
-      const anchor = anchorPattern(concept, vocab.name, { narrower, language });
+      const anchor = anchorPattern(concept, vocab.name, { narrower, language, yearFrom, yearTo });
 
       const [totalRows, labelRows] = await Promise.all([
         sparqlSelect('profile_total', profileTotalQuery(anchor), { signal, timeoutMs: timeoutLeft() }),
@@ -215,6 +233,8 @@ export function registerSmellProfileTool(server) {
         concept: { id: concept, ...(label && { label }), vocab: vocab.name },
         include_narrower: narrower,
         ...(language && { language }),
+        ...(yearFrom != null && { year_from: yearFrom }),
+        ...(yearTo != null && { year_to: yearTo }),
         total_smells: totalSmells,
       };
 
@@ -247,6 +267,10 @@ export function registerSmellProfileTool(server) {
           done++;
           report(done, facets.length, `Facet ${done}/${facets.length}: ${facet}`);
         });
+      }
+      const odor = out.datasets?.find((d) => d.label === 'odor')?.count ?? 0;
+      if (odor * 4 > totalSmells) {
+        warnings.push(`${fmt(odor)} of these smells come from images (odor); compare text and image evidence separately.`);
       }
       const failedFacets = facets.filter((f) => failed.has(f));
       const structured = { ...out, ...(failedFacets.length && { failed_facets: failedFacets }) };
