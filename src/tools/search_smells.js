@@ -10,7 +10,7 @@ import { withWarnings } from '../lib/warnings.js';
 import { progressReporter } from '../lib/progress.js';
 import { makeSnippet } from '../lib/snippet.js';
 import { sparqlSelect, v, num } from '../sparql/client.js';
-import { scopedLuceneQuery } from '../sparql/lucene.js';
+import { scopedLuceneQuery, luceneHints } from '../sparql/lucene.js';
 import {
   searchCountQuery, searchPageQuery, searchWindowQuery, searchEnrichQuery,
 } from '../sparql/queries/search.js';
@@ -24,12 +24,12 @@ export const SEARCH_SMELLS_TOOL_NAME = 'eokg_search_smells';
 
 const inputSchema = z.object({
   text: z.string().min(1).max(500).describe(
-    'Lucene query text without field prefixes: words, "quoted phrases", AND/OR/NOT (capitals), parentheses, trailing * wildcards. Works in any of the six corpus languages; search in the language of the texts you want.',
+    'Lucene query text without field prefixes. Words without an operator are OR-ed: write AND/OR/NOT in capitals, and quote phrases and hyphenated words ("eau de cologne"). Trailing * and ? wildcards and ~ fuzzy matching work. Accents and umlauts must match exactly (égouts ≠ egouts); search both forms when unsure. Search in the language of the texts you want.',
   ),
   in: z.enum(['excerpt', 'title', 'both']).default('excerpt').describe('Search the smell excerpts (default), the source titles, or both.'),
   language: z.enum([...TEXT_LANGUAGES]).optional().describe('Only smells from sources in this language.'),
-  year_from: z.number().int().min(1000).max(2100).optional().describe('Earliest document date (inclusive). Undated sources are kept.'),
-  year_to: z.number().int().min(1000).max(2100).optional().describe('Latest document date (inclusive). Undated sources are kept.'),
+  year_from: z.number().int().min(1000).max(2100).optional().describe('Earliest document date, inclusive. A date range such as 1616/1678 counts by its first year. Undated sources are kept.'),
+  year_to: z.number().int().min(1000).max(2100).optional().describe('Latest document date, inclusive. A date range such as 1616/1678 counts by its first year. Undated sources are kept.'),
   dataset: z.enum([...DATASET_NAMES]).optional().describe('Only smells from this source corpus (see eokg_list_datasets).'),
   limit: z.number().int().min(1).max(SEARCH_MAX_LIMIT).default(SEARCH_DEFAULT_LIMIT).describe('Results per page.'),
   offset: z.number().int().min(0).max(SEARCH_MAX_OFFSET).default(0).describe('Results to skip.'),
@@ -144,15 +144,22 @@ function shapeEnriched(rows, ids, page, filtered, text) {
   });
 }
 
+const isUndated = (r) => !r.date || !/^\d/.test(r.date);
+
 function renderText(s) {
   const head = `${fmt(s.total_hits)} full-text hits for ${s.query}` +
     (s.filtered ? `; ${s.results.length} on this page after filters (scanned ${fmt(s.scanned)})` : '');
   const blocks = s.results.map((r, i) => {
-    const meta = [r.date, r.language, r.dataset].filter(Boolean).join(', ');
+    const meta = [isUndated(r) ? 'undated' : r.date, r.language, r.dataset].filter(Boolean).join(', ');
     const concepts = r.concepts.length ? ` — concepts: ${r.concepts.join(', ')}` : '';
     const lines = [`${s.offset + i + 1}. ${r.title ?? '(untitled)'} (${meta})${concepts}`];
     for (const sn of r.snippets) lines.push(`   «${sn.replace(/\s+/g, ' ')}»`);
-    lines.push(`   id: ${uuidOf(r.id) ?? r.id}`);
+    const src = uuidOf(r.source_id) ?? r.source_id;
+    lines.push(
+      r.source_type === 'image'
+        ? `   id: ${uuidOf(r.id) ?? r.id} · image source: ${src} (for eokg_view_image / eokg_inspect_image)`
+        : `   id: ${uuidOf(r.id) ?? r.id} · source: ${src}`,
+    );
     return lines.join('\n');
   });
   const hasSnippets = s.results.some((r) => r.snippets.length);
@@ -191,6 +198,13 @@ export function registerSearchSmellsTool(server) {
       const warnings = [];
       if (filtered && !page.exhaustive) warnings.push(partialWarning(page.scanned, page.total));
       if (page.total === 0) warnings.push(NO_HITS);
+      const undated = results.filter(isUndated).length;
+      if ((yearFrom != null || yearTo != null) && undated > 0) {
+        warnings.push(
+          `${undated} of the ${results.length} results on this page are undated; year filters keep undated sources. Check each date before using it in a period claim.`,
+        );
+      }
+      warnings.push(...luceneHints(args.text));
 
       const full = {
         query: lq, total_hits: page.total, filtered,

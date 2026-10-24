@@ -42,11 +42,11 @@ Full-text search over smell excerpts and source titles using Lucene syntax. Resu
 <!-- generated:eokg_search_smells:parameters -->
 | Param | Type | Default | Description |
 |---|---|---|---|
-| `text` | string (≤ 500) | **required** | Lucene query text without field prefixes: words, "quoted phrases", AND/OR/NOT (capitals), parentheses, trailing * wildcards. Works in any of the six corpus languages; search in the language of the texts you want. |
+| `text` | string (≤ 500) | **required** | Lucene query text without field prefixes. Words without an operator are OR-ed: write AND/OR/NOT in capitals, and quote phrases and hyphenated words ("eau de cologne"). Trailing * and ? wildcards and ~ fuzzy matching work. Accents and umlauts must match exactly (égouts ≠ egouts); search both forms when unsure. Search in the language of the texts you want. |
 | `in` | enum: `excerpt` · `title` · `both` | `excerpt` | Search the smell excerpts (default), the source titles, or both. |
 | `language` | enum: `en` · `fr` · `it` · `sl` · `de` · `nl` | — | Only smells from sources in this language. |
-| `year_from` | int (1000–2100) | — | Earliest document date (inclusive). Undated sources are kept. |
-| `year_to` | int (1000–2100) | — | Latest document date (inclusive). Undated sources are kept. |
+| `year_from` | int (1000–2100) | — | Earliest document date, inclusive. A date range such as 1616/1678 counts by its first year. Undated sources are kept. |
+| `year_to` | int (1000–2100) | — | Latest document date, inclusive. A date range such as 1616/1678 counts by its first year. Undated sources are kept. |
 | `dataset` | enum: `medical-heritage` · `gallica` · `british-library` · `wikisource` · `eebo` · `dbnl` · `gutenberg` · `liberliber` · `odor` · `dlib` · `europeana` · `dta` · `ecco` · `text-annotation` · `pulse` · `royal-society-corpus` · `nuk` · `old-bailey-corpus` · `bibbleue` · `grimm` · `rijksmuseum` | — | Only smells from this source corpus (see eokg_list_datasets). |
 | `limit` | int (1–50) | `10` | Results per page. |
 | `offset` | int (0–10000) | `0` | Results to skip. |

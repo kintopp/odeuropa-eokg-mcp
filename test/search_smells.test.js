@@ -175,6 +175,75 @@ test('year_from after year_to is an error', async () => {
   assert.equal(stub.router.calls.length, 0);
 });
 
+const SRC = '11111111-2222-4333-8444-555555555555';
+const customEnrich = (over) => (query) => {
+  const found = [...query.matchAll(/<(http:\/\/data\.odeuropa\.eu\/smell\/[^>]+)>/g)].map((m) => m[1]);
+  return {
+    body: bindings(found.map((id) => ({
+      id: uri(id), graph: uri(`${KG}gallica`), source: uri(`${KG}source/${SRC}`),
+      type: uri('http://erlangen-crm.org/current/E33_Linguistic_Object'), title: en('Le Jardin'),
+      lang: 'fr', date: '1850', text: 'Le parfum de la lavande.', cl: en('Lavender'), ...over,
+    }))),
+  };
+};
+const pageRows = (n) => ({ body: bindings(ids(n).map((id, i) => ({ id: uri(id), score: String(1 - i / 10), total: String(n) }))) });
+
+test('the text names the source id next to the smell id', async () => {
+  stub = await startStubServer({ search_page: () => pageRows(1), search_enrich: customEnrich({}) });
+  const res = await call(stub, { text: 'lavande' });
+  assert.match(res.content[0].text, new RegExp(`id: 00000000-0000-4000-8000-000000000001 · source: ${SRC}\\b`));
+  assert.ok(!res.content[0].text.includes('image source'));
+});
+
+test('an image hit names its source for the image tools', async () => {
+  stub = await startStubServer({
+    search_page: () => pageRows(1),
+    search_enrich: customEnrich({ type: uri('http://erlangen-crm.org/current/E36_Visual_Item') }),
+  });
+  const res = await call(stub, { text: 'lavande' });
+  assert.ok(res.content[0].text.includes(`image source: ${SRC} (for eokg_view_image / eokg_inspect_image)`));
+});
+
+test('missing and EDTF dates read as undated, the raw date stays in structuredContent', async () => {
+  for (const [date, raw] of [[undefined, undefined], ['XXXX-09-08', 'XXXX-09-08']]) {
+    stub = await startStubServer({ search_page: () => pageRows(1), search_enrich: customEnrich({ date }) });
+    const res = await call(stub, { text: 'lavande' });
+    assert.match(res.content[0].text, /\(undated, fr, gallica\)/);
+    assert.equal(res.structuredContent.results[0].date, raw);
+    await stub.close();
+  }
+  stub = null;
+});
+
+test('the undated warning appears only with a year filter', async () => {
+  stub = await startStubServer({
+    search_page: () => pageRows(1), search_window: () => windowRows(1), search_count: countRoute(1),
+    search_enrich: customEnrich({ date: 'XXXX-09-08' }),
+  });
+  const plain = await call(stub, { text: 'lavande' });
+  assert.ok(!plain.content[0].text.includes('undated; year filters keep undated sources'));
+  const filtered = await call(stub, { text: 'lavande', year_from: 1800 });
+  assert.match(filtered.content[0].text, /1 of the 1 results on this page are undated; year filters keep undated sources\. Check each date/);
+  assert.match(filtered.structuredContent.warnings.join(' '), /1 of the 1 results/);
+});
+
+test('Lucene hints reach warnings', async () => {
+  stub = await startStubServer({ search_page: () => pageRows(1), search_enrich: customEnrich({}) });
+  const res = await call(stub, { text: 'tobacco and smoke' });
+  assert.match(res.structuredContent.warnings.join(' '), /Write AND\/OR in capitals/);
+});
+
+test('the parameter descriptions carry the query-writing rules', async () => {
+  const tools = await withClient('search', (c) => c.listTools(), { env: {} });
+  const t = tools.tools.find((x) => x.name === 'eokg_search_smells');
+  const p = t.inputSchema.properties;
+  assert.match(p.text.description, /Words without an operator are OR-ed/);
+  assert.match(p.text.description, /write AND\/OR\/NOT in capitals/);
+  assert.match(p.text.description, /Accents and umlauts must match exactly/);
+  assert.match(p.year_from.description, /1616\/1678 counts by its first year/);
+  assert.match(p.year_to.description, /Undated sources are kept/);
+});
+
 test('a Lucene parse error surfaces as a correctable tool error', async () => {
   stub = await startStubServer({
     search_page: () => ({ status: 500, body: 'Cannot parse Lucene query [source_value:(rose]: Encountered "<EOF>"' }),
