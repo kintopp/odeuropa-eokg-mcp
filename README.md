@@ -136,4 +136,4 @@ npm run inspector        # open the MCP Inspector against the server
 
 ## License
 
-[MIT](./LICENSE) © 2026 Arno Bosse. The licence covers the code, not the EOKG data it queries; see the Odeuropa terms above.
+[MIT](./LICENSE) © 2026 University of Basel. The licence covers the code, not the EOKG data it queries; see the Odeuropa terms above.
