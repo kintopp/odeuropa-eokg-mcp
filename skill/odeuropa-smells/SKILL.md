@@ -32,8 +32,9 @@ holds the dated snapshot, and `eokg_get_concept` gives live per-concept counts.
 - **Vocabularies.** 20 vocabularies exist in the Skosmos service, but only
   `olfactory-objects` (what smells: Rose, Lavender, Tobacco), `fragrant-spaces`
   (where: Garden, Church) and `olfactory-gestures` (how people smelled: holding
-  one's nose) can be profiled. Gesture smells are almost all image smells; the other
-  vocabularies are not linked.
+  one's nose, perfuming) can be profiled. Some gestures come mostly from texts (Perfuming:
+  1,655 smells, nearly all French) and others mostly from images (Holding one's nose: 415);
+  the other vocabularies are not linked.
   See `references/vocabularies.md`.
 
 ## What a smell record is (and is not)
@@ -235,8 +236,9 @@ Aim for two tool calls.
    Lazarus come first for holding one's nose.
 3. `eokg_inspect_image({ id })` → look at the picture.
 
-Gesture evidence is almost all from images; `eokg_smell_profile` on a gesture skips
-the languages facet by default for that reason.
+Check where a gesture's evidence comes from before comparing gestures: Holding one's
+nose is almost all images, Perfuming almost all French texts. The `datasets` facet of
+`eokg_smell_profile` shows which.
 
 ### 7. Allegories of the senses
 

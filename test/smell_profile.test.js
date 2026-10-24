@@ -193,6 +193,14 @@ test('total 0 returns early with empty facets and no facet queries', async () =>
   assert.ok(s.warnings.includes('No smells are linked to this concept.'));
 });
 
+// Failure mode: an empty period reads as if the concept had no smells at all.
+test('total 0 within a year range names the range', async () => {
+  await start(baseRoutes({ profile_total: ok([{ n: '0' }]) }));
+  const s = valid(await profile({ year_from: 1300, year_to: 1400 }));
+  assert.ok(s.warnings.includes('No smells dated 1300–1400 are linked to this concept.'));
+  assert.ok(!s.warnings.includes('No smells are linked to this concept.'));
+});
+
 test('include_narrower: facets run one at a time, default set is the three narrower facets', async () => {
   let inFlight = 0;
   let maxInFlight = 0;
@@ -338,13 +346,12 @@ const GESTURE = 'olfactory-gestures/2';
 
 // Failure modes: the vocabulary is still rejected; the default facets are the object ones (languages, qualities);
 // the reason languages are missing is not stated; the label comes from the wrong graph.
-test('a gesture concept profiles with timeline, datasets, smell_sources and emotions, and explains the missing languages', async () => {
+test('a gesture concept profiles with timeline, languages, datasets, smell_sources and emotions', async () => {
   await start(baseRoutes({ concept_label: ok([{ l: en("Holding one's nose") }]) }));
   const s = valid(await profile({ concept: GESTURE }));
-  assert.deepEqual(facetLabels().sort(), ['profile_datasets', 'profile_emotions', 'profile_smell_sources', 'profile_timeline']);
+  assert.deepEqual(facetLabels().sort(), ['profile_datasets', 'profile_emotions', 'profile_languages', 'profile_smell_sources', 'profile_timeline']);
   assert.equal(s.concept.vocab, 'olfactory-gestures');
-  assert.equal(s.languages, undefined);
-  assert.ok(s.warnings.some((w) => w.includes('Gesture smells come almost entirely from images, which have no language')));
+  assert.ok(!(s.warnings ?? []).some((w) => /from images/.test(w)));
   const anchored = stub.router.calls.filter((c) => c.label.startsWith('profile_'));
   assert.ok(anchored.every((c) => c.query.includes('od:F5_involved_gesture')));
   assert.ok(stub.router.calls.find((c) => c.label === 'concept_label').query.includes('vocabulary/olfactory-gestures>'));

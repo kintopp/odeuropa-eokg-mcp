@@ -15,7 +15,7 @@ import {
 import {
   READ_ONLY_ANNOTATIONS, REQUEST_TIMEOUT_MS, SPARQL_MAX_CONCURRENCY, TEXT_LANGUAGES, DATASET_GRAPH_BASE,
   FRAGRANT_SPACES_BASE, OLFACTORY_OBJECTS_BASE, PROFILE_FACETS, PROFILE_DEFAULT_FACETS, PROFILE_NARROWER_DEFAULT_FACETS,
-  PROFILE_GESTURE_DEFAULT_FACETS, PROFILE_GESTURE_NARROWER_DEFAULT_FACETS,
+  PROFILE_GESTURE_DEFAULT_FACETS,
   PROFILE_MAX_NARROWER_FACETS, PROFILE_CALL_DEADLINE_MS, PROFILE_MIN_FACET_BUDGET_MS, PROFILE_DEFAULT_TOP,
   PROFILE_MAX_TOP, TIMELINE_MIN_YEAR, TIMELINE_MAX_YEAR, LANGUAGE_NAMES,
 } from '../config.js';
@@ -83,7 +83,7 @@ const description =
   'The languages facet counts text smells only; image smells are in the total and the timeline but have no language. ' +
   'The emission date is extracted from the text but in almost every record equals the document date, so emission_timeline rarely differs from timeline. ' +
   'All values are machine-extracted: dates include OCR noise (reported as out_of_range), and emotions are inferred by a classifier. ' +
-  'Gesture smells come almost entirely from images, so a gesture profile leaves out languages by default. ' +
+  'Gesture smells come from texts (Perfuming, mostly French) or from images (Holding one\'s nose); check the datasets facet. ' +
   'year_from and year_to restrict the profile to a period by document date; undated sources drop out, and images can be a large share of a period\'s smells. ' +
   'include_narrower adds sub-concepts (e.g. all flowers) but takes 15–30 s per facet; facets that do not fit the time budget are listed in failed_facets.';
 
@@ -201,9 +201,8 @@ export function registerSmellProfileTool(server) {
         );
       }
       const gesture = vocab.name === 'olfactory-gestures';
-      const defaults = gesture
-        ? (narrower ? PROFILE_GESTURE_NARROWER_DEFAULT_FACETS : PROFILE_GESTURE_DEFAULT_FACETS)
-        : (narrower ? PROFILE_NARROWER_DEFAULT_FACETS : PROFILE_DEFAULT_FACETS);
+      let defaults = narrower ? PROFILE_NARROWER_DEFAULT_FACETS : PROFILE_DEFAULT_FACETS;
+      if (gesture && !narrower) defaults = PROFILE_GESTURE_DEFAULT_FACETS;
       let facets = [...new Set(args.facets ?? defaults)];
       if (narrower && facets.length > PROFILE_MAX_NARROWER_FACETS) {
         throw new ToolError(
@@ -213,9 +212,6 @@ export function registerSmellProfileTool(server) {
       }
 
       const warnings = [];
-      if (gesture && !args.facets) {
-        warnings.push('Gesture smells come almost entirely from images, which have no language, so the languages facet is not computed by default.');
-      }
       if (vocab.name === 'fragrant-spaces' && facets.includes('fragrant_spaces')) {
         facets = facets.filter((f) => f !== 'fragrant_spaces');
         warnings.push('The fragrant_spaces facet was dropped: it would only repeat the concept itself.');
@@ -244,9 +240,8 @@ export function registerSmellProfileTool(server) {
       const failed = new Set();
       if (totalSmells === 0) {
         for (const f of facets) out[f] = shapeFacet(f, [], bucketYears);
-        warnings.push(language
-          ? `No ${LANGUAGE_NAMES[language]} smells are linked to this concept.`
-          : 'No smells are linked to this concept.');
+        const lang = language ? `${LANGUAGE_NAMES[language]} ` : '';
+        warnings.push(`No ${lang}smells${yearPhrase(out).replace(/^,/, '')} are linked to this concept.`);
       } else {
         const report = progressReporter(ctx);
         let done = 0;

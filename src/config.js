@@ -83,7 +83,7 @@ export const SERVER_INSTRUCTIONS = [
   'Search words without an operator are OR-ed; write AND/OR/NOT in capitals and quote phrases.',
   'For concept-level questions, resolve the concept first with `eokg_find_concepts` (olfactory-objects = what smells, fragrant-spaces = where, olfactory-gestures = how people smelled), then `eokg_smell_profile` for counts over time, languages, datasets, qualities, emotions and spaces, and `eokg_find_visual_smells` + `eokg_inspect_image` for artworks.',
   'Read results critically: excerpts are raw OCR text; one passage can yield several smells, each its own result; emotions come from a classifier, not the text, and are a weak signal; dates are document dates (the emission date almost always equals it) and include noise and undated sources; profile counts compare concepts with each other and are not absolute trends; filtered searches examine only a window of the most relevant hits and say so; image boxes, including hand-drawn ones, can carry the wrong label.',
-  "Profiles and image lists work for olfactory-objects, fragrant-spaces and olfactory-gestures concepts (gestures such as holding one's nose, almost all from images); the other vocabularies describe smells but cannot be counted with these tools. Iconclass notations come from Odeuropa's curated tables; a notation ending in (...) is a placeholder to be completed and verified with an Iconclass server.",
+  "Profiles and image lists work for olfactory-objects, fragrant-spaces and olfactory-gestures concepts (gestures such as perfuming or holding one's nose; some come mostly from texts, others mostly from images); the other vocabularies describe smells but cannot be counted with these tools. Iconclass notations come from Odeuropa's curated tables; a notation ending in (...) is a placeholder to be completed and verified with an Iconclass server.",
   'To show an artwork to the user, call `eokg_view_image`, which opens a viewer; never embed an image URL as a Markdown image. If no viewer appears, give image and record URLs as plain links. Its object boxes start hidden, since many carry the wrong label; the user can turn them on with the viewer\'s Boxes button.',
   'Cite smells with their explorer_url (https://explorer.odeuropa.eu/smells/…).',
 ].join(' ');
@@ -140,8 +140,7 @@ export const ANNOTATION_ORIGINS = Object.freeze({
 export const PROFILE_FACETS = Object.freeze(['timeline', 'emission_timeline', 'languages', 'datasets', 'qualities', 'emotions', 'fragrant_spaces', 'smell_sources', 'places', 'carriers']);
 export const PROFILE_DEFAULT_FACETS = Object.freeze(['timeline', 'languages', 'datasets', 'qualities', 'emotions', 'fragrant_spaces']);
 export const PROFILE_NARROWER_DEFAULT_FACETS = Object.freeze(['timeline', 'languages', 'datasets']);
-export const PROFILE_GESTURE_DEFAULT_FACETS = Object.freeze(['timeline', 'datasets', 'smell_sources', 'emotions']);
-export const PROFILE_GESTURE_NARROWER_DEFAULT_FACETS = Object.freeze(['timeline', 'datasets']);
+export const PROFILE_GESTURE_DEFAULT_FACETS = Object.freeze(['timeline', 'languages', 'datasets', 'smell_sources', 'emotions']);
 export const PROFILE_MAX_NARROWER_FACETS = 3;
 export const PROFILE_CALL_DEADLINE_MS = 50_000; // whole-call budget; plan 008's HTTP guard is 120 s
 export const PROFILE_MIN_FACET_BUDGET_MS = 5_000; // don't start a facet with less than this left
