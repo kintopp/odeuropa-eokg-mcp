@@ -329,3 +329,26 @@ test('the description carries the language-facet and emission-date caveats', asy
   assert.match(t.description, /in almost every record equals the document date, so emission_timeline rarely differs from timeline/);
   assert.match(t.inputSchema.properties.bucket_years.description, /Timeline bucket width: 10, 20 or 50 years\./);
 });
+
+const GESTURE = 'olfactory-gestures/2';
+
+// Failure modes: the vocabulary is still rejected; the default facets are the object ones (languages, qualities);
+// the reason languages are missing is not stated; the label comes from the wrong graph.
+test('a gesture concept profiles with timeline, datasets and emotions, and explains the missing languages', async () => {
+  await start(baseRoutes({ concept_label: ok([{ l: en("Holding one's nose") }]) }));
+  const s = valid(await profile({ concept: GESTURE }));
+  assert.deepEqual(facetLabels().sort(), ['profile_datasets', 'profile_emotions', 'profile_timeline']);
+  assert.equal(s.concept.vocab, 'olfactory-gestures');
+  assert.equal(s.languages, undefined);
+  assert.ok(s.warnings.some((w) => w.includes('Gesture smells come almost entirely from images, which have no language')));
+  const anchored = stub.router.calls.filter((c) => c.label.startsWith('profile_'));
+  assert.ok(anchored.every((c) => c.query.includes('od:F5_involved_gesture')));
+  assert.ok(stub.router.calls.find((c) => c.label === 'concept_label').query.includes('vocabulary/olfactory-gestures>'));
+});
+
+test('a gesture profile still computes languages when asked, without the explanation', async () => {
+  await start(baseRoutes());
+  const s = valid(await profile({ concept: GESTURE, facets: ['languages'] }));
+  assert.ok(s.languages.length > 0);
+  assert.ok(!(s.warnings ?? []).some((w) => w.includes('no language')));
+});

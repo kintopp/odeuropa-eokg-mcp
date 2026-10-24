@@ -84,3 +84,15 @@ test('fragrant_spaces binds the label inside the fragrant-spaces graph, so sameA
   assert.match(sp, /GRAPH <http:\/\/data\.odeuropa\.eu\/vocabulary\/fragrant-spaces> \{ \?space skos:prefLabel \?sl FILTER\(LANG\(\?sl\) = "en"\) \}/);
   assert.equal(sp.match(/\?space skos:prefLabel/g).length, 1, 'no second, ungraphed label pattern');
 });
+
+// Invariant: a gesture count is anchored on the concept through experiences, never on od:F3_had_source (0 rows for gestures).
+test('gesture anchor binds the experience to the gesture and the smell it perceived', () => {
+  const G = 'http://data.odeuropa.eu/vocabulary/olfactory-gestures/2';
+  const a = anchorPattern(G, 'olfactory-gestures');
+  assert.ok(a.includes(`VALUES ?c { <${G}> }`));
+  assert.ok(a.includes('od:F5_involved_gesture ?c') && a.includes('od:F2_perceived ?smell'));
+  assert.ok(a.includes('od:F1_generated ?smell'));
+  assert.ok(!a.includes('F3_had_source'));
+  assert.ok(anchorPattern(G, 'olfactory-gestures', { narrower: true }).includes(`?c skos:broader* <${G}>`));
+  assert.ok(anchorPattern(G, 'olfactory-gestures', { language: 'fr' }).includes('schema:inLanguage "fr"'));
+});

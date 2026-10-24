@@ -85,6 +85,25 @@ test('Garden: plain iconclass, place count query, explicit narrower', async () =
   assert.ok(!labelsSent().includes('concept_smell_count'));
 });
 
+// Failure modes: the gesture is counted through od:F3_had_source (0 smells) or the image count is skipped.
+test('a gesture counts smells through its experiences and images through P138', async () => {
+  const res = await call('olfactory-gestures/2', {
+    concept_detail: () => ({ body: bindings([{ g: uri(`${KG}olfactory-gestures`), p: uri(`${SKOS}prefLabel`), o: lit("Holding one's nose", 'en') }]) }),
+    concept_narrower: () => ({ body: none }),
+    gesture_smell_count: () => ({ body: bindings([{ smells: lit('415') }]) }),
+    concept_image_count: () => ({ body: bindings([{ images: lit('415') }]) }),
+  });
+  assert.notEqual(res.isError, true, res.content?.[0]?.text);
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.equal(s.linked_to, 'smells');
+  assert.equal(s.smell_count, 415);
+  assert.equal(s.image_source_count, 415);
+  assert.equal(s.explorer_url, undefined);
+  assert.ok(!labelsSent().includes('concept_smell_count'));
+  const q = stub.router.calls.find((c) => c.label === 'gesture_smell_count').query;
+  assert.ok(q.includes('od:F5_involved_gesture <http://data.odeuropa.eu/vocabulary/olfactory-gestures/2>') && q.includes('od:F2_perceived ?smell'));
+});
+
 test('a malformed olfactory_objects related URI is mapped to olfactory-objects with its label', async () => {
   const HOSPITAL = `${KG}fragrant-spaces/32`;
   const detail = bindings([

@@ -31,7 +31,7 @@ const inputSchema = z.object({
     z.array(z.enum([...VOCAB_NAMES])).min(1).max(5),
     z.literal('all'),
   ]).optional().describe(
-    'Vocabulary or vocabularies to search. Default: olfactory-objects and fragrant-spaces, the two linked to smells. "all" searches every vocabulary.',
+    'Vocabulary or vocabularies to search. Default: olfactory-objects, fragrant-spaces and olfactory-gestures, the three linked to smells. "all" searches every vocabulary.',
   ),
   lang: z.enum([...TEXT_LANGUAGES]).optional().describe('Show labels in this language where the concept has one. Matching always covers all six languages.'),
   limit: z.number().int().min(1).max(FIND_CONCEPTS_MAX_LIMIT).default(10).describe('Maximum results (default 10).'),
@@ -53,8 +53,8 @@ export const outputSchema = z.object({
 });
 
 const description =
-  'Find smell-source and fragrant-space concepts by label, in any language. ' +
-  'Matches labels in de, en, fr, it, nl or sl; a trailing * is added unless the query already has one. By default searches the two vocabularies linked to smells: olfactory-objects (what smells) and fragrant-spaces (where). ' +
+  'Find smell-source, space and gesture concepts by label, in any language. ' +
+  'Matches labels in de, en, fr, it, nl or sl; a trailing * is added unless the query already has one. By default searches the three vocabularies linked to smells: olfactory-objects (what smells), fragrant-spaces (where) and olfactory-gestures (how people smelled). ' +
   'Pass a concept id to eokg_get_concept or eokg_smell_profile; vocab "all" also searches the descriptive vocabularies, which are not linked to smells. ' +
   'Alternatively pass iconclass (a notation such as 25G41(ROSE), e.g. from an Iconclass or Rijksmuseum server) instead of query, to find the concepts Odeuropa mapped to that notation or to broader or narrower ones.';
 

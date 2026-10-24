@@ -167,8 +167,34 @@ test('year_from after year_to and a fragrant-spaces concept fail with zero queri
   await stub.close();
   res = await call({ concept: 'fragrant-spaces/27' });
   assert.equal(res.isError, true);
-  assert.match(res.content[0].text, /Only olfactory-objects concepts have images/);
+  assert.match(res.content[0].text, /Only olfactory-objects and olfactory-gestures concepts have images/);
   assert.equal(stub.router.calls.length, 0);
+});
+
+// Failure modes: the gesture is rejected as a non-object; the label is read from the objects graph; the queries are not anchored on the gesture.
+test('a gesture concept is accepted; queries are anchored on it and the label comes from the gestures vocabulary', async () => {
+  const gesture = 'olfactory-gestures/2';
+  const res = await call({ concept: gesture }, {
+    ...routes([row(1, { title: en('Raising of Lazarus') })], 415, 221),
+    concept_label: () => ({ body: bindings([{ l: en("Holding one's nose") }]) }),
+  });
+  assert.notEqual(res.isError, true, res.content?.[0]?.text);
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.equal(s.concept.label, "Holding one's nose");
+  assert.equal(s.total, 194);
+  const g = `<${KG}vocabulary/${gesture}>`;
+  assert.ok(queryOf('visual_count').includes(`crm:P138_represents ${g}`));
+  assert.ok(queryOf('visual_page').includes(`crm:P138_represents ${g}`));
+  assert.ok(queryOf('concept_label').includes('vocabulary/olfactory-gestures>'));
+});
+
+test('the description and concept parameter say gestures are accepted', async () => {
+  await withClient('visual', async (c) => {
+    const { tools } = await c.listTools();
+    const t = tools.find((x) => x.name === 'eokg_find_visual_smells');
+    assert.ok(t.description.includes('olfactory-objects or olfactory-gestures concept'));
+    assert.ok(t.inputSchema.properties.concept.description.includes('olfactory-gestures/2'));
+  });
 });
 
 test('live: Rose images', { skip: !LIVE }, async () => {

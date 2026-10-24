@@ -21,7 +21,7 @@ const VOCAB_PREFIX = `${KG_BASE}vocabulary/`;
 
 const inputSchema = z.object({
   concept: z.string().min(1).max(300).describe(
-    'An olfactory-objects concept id as eokg_find_concepts returns it (e.g. olfactory-objects/138 for Rose). Exact concept only, no narrower concepts.',
+    'An olfactory-objects or olfactory-gestures concept id as eokg_find_concepts returns it (e.g. olfactory-objects/138 for Rose, olfactory-gestures/2 for holding one\'s nose). Exact concept only, no narrower concepts.',
   ),
   year_from: z.number().int().min(1000).max(2100).optional().describe('Earliest artwork date (inclusive). Undated works are excluded.'),
   year_to: z.number().int().min(1000).max(2100).optional().describe('Latest artwork date (inclusive). Undated works are excluded.'),
@@ -54,8 +54,8 @@ export const outputSchema = z.object({
 });
 
 const description =
-  'Find paintings and prints in which a smell source was detected or catalogued. ' +
-  'Lists image sources linked to an olfactory-objects concept, best box score first: images with hand-drawn boxes (score 1) come first, then images ranked by the object detector\'s confidence, then catalogue-only links with no box. ' +
+  'Find paintings and prints in which a smell source or gesture appears. ' +
+  'Lists image sources linked to an olfactory-objects or olfactory-gestures concept, best box score first: images with hand-drawn boxes (score 1) come first, then images ranked by the object detector\'s confidence, then catalogue-only links with no box. ' +
   `Images whose boxes all score below min_score (default ${FRAGMENT_MIN_SCORE_DEFAULT}) are hidden and counted; boxes and best_score count only the boxes shown. ` +
   'Images are linked to the objects they show, so substances often have none; try a related object concept. ' +
   'Year filters use the artwork date and exclude undated works. Pass a result id to eokg_inspect_image to look at it.';
@@ -99,8 +99,9 @@ export function registerFindVisualSmellsTool(server) {
     withTool(FIND_VISUAL_SMELLS_TOOL_NAME, 'Finding images failed', async (args, ctx) => {
       const signal = ctx?.mcpReq?.signal;
       const concept = parseId('concept', args.concept);
-      if (schemeOf(concept) !== 'olfactory-objects') {
-        throw new ToolError('Only olfactory-objects concepts have images.', 'Find one with eokg_find_concepts.');
+      const scheme = schemeOf(concept);
+      if (scheme !== 'olfactory-objects' && scheme !== 'olfactory-gestures') {
+        throw new ToolError('Only olfactory-objects and olfactory-gestures concepts have images.', 'Find one with eokg_find_concepts.');
       }
       const { limit, offset } = args;
       const years = { yearFrom: args.year_from, yearTo: args.year_to };
@@ -111,7 +112,7 @@ export function registerFindVisualSmellsTool(server) {
       const [countRows, pageRows, labelRows] = await Promise.all([
         q('visual_count', visualCountQuery(concept, years, args.min_score)),
         q('visual_page', visualPageQuery(concept, years, args.min_score, limit, offset)),
-        q('concept_label', conceptLabelQuery(concept, 'olfactory-objects')),
+        q('concept_label', conceptLabelQuery(concept, scheme)),
       ]);
       const n = countRows.length ? Math.round(num(countRows[0], 'n') ?? 0) : 0;
       const hidden = countRows.length ? Math.round(num(countRows[0], 'hidden') ?? 0) : 0;

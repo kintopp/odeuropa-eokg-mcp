@@ -23,3 +23,6 @@ SELECT (COUNT(DISTINCT ?smell) AS ?smells) WHERE { ?place crm:P137_exemplifies <
 
 export const conceptLabelsQuery = (uris) => `
 SELECT ?c ?l FROM onto:explicit WHERE { VALUES ?c { ${uris.map((u) => `<${u}>`).join(' ')} } ?c skos:prefLabel ?l }`;
+
+export const gestureSmellCountQuery = (c) => `
+SELECT (COUNT(DISTINCT ?smell) AS ?smells) WHERE { ?ex od:F5_involved_gesture <${c}> ; od:F2_perceived ?smell }`;

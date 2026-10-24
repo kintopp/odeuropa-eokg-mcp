@@ -10,6 +10,7 @@ import { fetchConceptTerms } from '../lib/concept_labels.js';
 import { sparqlSelect, v, num, lang as langOf } from '../sparql/client.js';
 import {
   conceptDetailQuery, conceptNarrowerQuery, conceptSmellCountQuery, conceptImageCountQuery, spaceSmellCountQuery,
+  gestureSmellCountQuery,
 } from '../sparql/queries/concept.js';
 import iconclassData from '../data/iconclass.json' with { type: 'json' };
 import { READ_ONLY_ANNOTATIONS, CONCEPT_MAX_NARROWER } from '../config.js';
@@ -51,7 +52,7 @@ export const outputSchema = z.object({
 
 const description =
   'Get a vocabulary concept: labels in six languages, hierarchy, and usage counts. ' +
-  'For olfactory-objects and fragrant-spaces concepts, also returns how many smells (and, for objects, image sources) the knowledge graph links to it, ' +
+  'For olfactory-objects, fragrant-spaces and olfactory-gestures concepts, also returns how many smells (and, for objects and gestures, image sources) the knowledge graph links to it, ' +
   'and the curated Iconclass notation where Odeuropa assigned one. A notation ending in (...) is an Iconclass placeholder for a name; the candidate with the name filled in is unverified, so check it with an Iconclass server before using it.';
 
 // Data error: 21 skos:related links in fragrant-spaces use this namespace (underscore, no vocabulary/) for
@@ -121,7 +122,8 @@ export function registerGetConceptTool(server) {
       const [detail, narrowerRows, smellRows, imageRows] = await Promise.all([
         q('concept_detail', conceptDetailQuery(id)),
         q('concept_narrower', conceptNarrowerQuery(id, CONCEPT_MAX_NARROWER)),
-        row?.linked === 'smells' ? q('concept_smell_count', conceptSmellCountQuery(id))
+        row?.name === 'olfactory-gestures' ? q('gesture_smell_count', gestureSmellCountQuery(id))
+          : row?.linked === 'smells' ? q('concept_smell_count', conceptSmellCountQuery(id))
           : row?.linked === 'places' ? q('space_smell_count', spaceSmellCountQuery(id)) : [],
         row?.linked === 'smells' ? q('concept_image_count', conceptImageCountQuery(id)) : [],
       ]);

@@ -15,6 +15,7 @@ import {
 import {
   READ_ONLY_ANNOTATIONS, REQUEST_TIMEOUT_MS, SPARQL_MAX_CONCURRENCY, TEXT_LANGUAGES, DATASET_GRAPH_BASE,
   FRAGRANT_SPACES_BASE, PROFILE_FACETS, PROFILE_DEFAULT_FACETS, PROFILE_NARROWER_DEFAULT_FACETS,
+  PROFILE_GESTURE_DEFAULT_FACETS, PROFILE_GESTURE_NARROWER_DEFAULT_FACETS,
   PROFILE_MAX_NARROWER_FACETS, PROFILE_CALL_DEADLINE_MS, PROFILE_MIN_FACET_BUDGET_MS, PROFILE_DEFAULT_TOP,
   PROFILE_MAX_TOP, TIMELINE_MIN_YEAR, TIMELINE_MAX_YEAR, LANGUAGE_NAMES,
 } from '../config.js';
@@ -25,7 +26,7 @@ const VOCAB_PREFIX = `${KG_BASE}vocabulary/`;
 
 const inputSchema = z.object({
   concept: z.string().min(1).max(300).describe(
-    'An olfactory-objects or fragrant-spaces concept id as eokg_find_concepts returns it (e.g. olfactory-objects/138 for Rose).',
+    'An olfactory-objects, fragrant-spaces or olfactory-gestures concept id as eokg_find_concepts returns it (e.g. olfactory-objects/138 for Rose, olfactory-gestures/2 for holding one\'s nose).',
   ),
   facets: z.array(z.enum([...PROFILE_FACETS])).min(1).max(PROFILE_FACETS.length).optional().describe(
     `Which aggregates to compute. Default: ${PROFILE_DEFAULT_FACETS.join(', ')} (with include_narrower: ${PROFILE_NARROWER_DEFAULT_FACETS.join(', ')}). Opt-in: emission_timeline, places, carriers.`,
@@ -70,11 +71,12 @@ export const outputSchema = z.object({
 });
 
 const description =
-  'Profile how one smell source or fragrant space appears across the whole graph. ' +
-  'Counts smells linked to an olfactory-objects or fragrant-spaces concept (from eokg_find_concepts) by 20-year period of document date (bucket_years changes it), language, dataset, qualities, emotions and fragrant spaces; emission dates, raw place labels and carriers on request. ' +
+  'Profile a smell source, fragrant space or gesture across the whole graph. ' +
+  'Counts smells linked to an olfactory-objects, fragrant-spaces or olfactory-gestures concept (from eokg_find_concepts) by 20-year period of document date (bucket_years changes it), language, dataset, qualities, emotions and fragrant spaces; emission dates, raw place labels and carriers on request. ' +
   'The languages facet counts text smells only; image smells are in the total and the timeline but have no language. ' +
   'The emission date is extracted from the text but in almost every record equals the document date, so emission_timeline rarely differs from timeline. ' +
   'All values are machine-extracted: dates include OCR noise (reported as out_of_range), and emotions are inferred by a classifier. ' +
+  'Gesture smells come almost entirely from images, so a gesture profile leaves out languages by default. ' +
   'include_narrower adds sub-concepts (e.g. all flowers) but takes 15–30 s per facet; facets that do not fit the time budget are listed in failed_facets.';
 
 const fmt = (n) => n.toLocaleString('en-US');
@@ -177,7 +179,11 @@ export function registerSmellProfileTool(server) {
           'Drop one of them: the combination is too slow for the endpoint.',
         );
       }
-      let facets = [...new Set(args.facets ?? (narrower ? PROFILE_NARROWER_DEFAULT_FACETS : PROFILE_DEFAULT_FACETS))];
+      const gesture = vocab.name === 'olfactory-gestures';
+      const defaults = gesture
+        ? (narrower ? PROFILE_GESTURE_NARROWER_DEFAULT_FACETS : PROFILE_GESTURE_DEFAULT_FACETS)
+        : (narrower ? PROFILE_NARROWER_DEFAULT_FACETS : PROFILE_DEFAULT_FACETS);
+      let facets = [...new Set(args.facets ?? defaults)];
       if (narrower && facets.length > PROFILE_MAX_NARROWER_FACETS) {
         throw new ToolError(
           `include_narrower allows at most ${PROFILE_MAX_NARROWER_FACETS} facets per call.`,
@@ -186,6 +192,9 @@ export function registerSmellProfileTool(server) {
       }
 
       const warnings = [];
+      if (gesture && !args.facets) {
+        warnings.push('Gesture smells come almost entirely from images, which have no language, so the languages facet is not computed by default.');
+      }
       if (vocab.name === 'fragrant-spaces' && facets.includes('fragrant_spaces')) {
         facets = facets.filter((f) => f !== 'fragrant_spaces');
         warnings.push('The fragrant_spaces facet was dropped: it would only repeat the concept itself.');

@@ -35,11 +35,11 @@ const labelsRoute = () => ({
   ]),
 });
 
-test('default vocabs are sent as olfactory_objects+fragrant-spaces; trailing * added', async () => {
+test('default vocabs are sent as olfactory_objects, fragrant-spaces and olfactory-gestures; trailing * added', async () => {
   const res = await call({ query: 'rose' }, { skosmos_search: () => ({ body: { results: ROSE } }) });
   assert.notEqual(res.isError, true, res.content?.[0]?.text);
   const [u] = searchUrls();
-  assert.equal(u.searchParams.get('vocab'), 'olfactory_objects fragrant-spaces');
+  assert.equal(u.searchParams.get('vocab'), 'olfactory_objects fragrant-spaces olfactory-gestures');
   assert.equal(u.searchParams.get('query'), 'rose*');
   assert.equal(res.structuredContent.query, 'rose*');
 });

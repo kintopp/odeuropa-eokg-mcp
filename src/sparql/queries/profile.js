@@ -4,12 +4,16 @@
 import { KG_BASE } from '../../lib/ids.js';
 import { DATASET_GRAPH_BASE, FRAGRANT_SPACES_BASE } from '../../config.js';
 
-/** The graph pattern binding ?smell for a concept. `scheme` is 'olfactory-objects' or 'fragrant-spaces'. */
+/** The graph pattern binding ?smell for a concept. `scheme` is 'olfactory-objects', 'fragrant-spaces' or 'olfactory-gestures'. */
 export function anchorPattern(conceptUri, scheme, { narrower = false, language } = {}) {
   const lang = language ? ` ?lsrc crm:P67_refers_to ?smell ; schema:inLanguage "${language}" .` : '';
   if (scheme === 'fragrant-spaces') {
     const head = narrower ? `?c (skos:broader|^skos:narrower)* <${conceptUri}> .` : `VALUES ?c { <${conceptUri}> }`;
     return `${head} ?place crm:P137_exemplifies ?c . ?emission crm:P7_took_place_at ?place ; od:F1_generated ?smell .${lang}`;
+  }
+  if (scheme === 'olfactory-gestures') {
+    const head = narrower ? `?c skos:broader* <${conceptUri}> .` : `VALUES ?c { <${conceptUri}> }`;
+    return `${head} ?ex od:F5_involved_gesture ?c ; od:F2_perceived ?smell . ?emission od:F1_generated ?smell .${lang}`;
   }
   const head = narrower ? `?c skos:broader* <${conceptUri}> .` : `VALUES ?c { <${conceptUri}> }`;
   return `${head} ?emission od:F3_had_source ?c ; od:F1_generated ?smell .${lang}`;
