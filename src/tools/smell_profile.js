@@ -14,7 +14,7 @@ import {
 } from '../sparql/queries/profile.js';
 import {
   READ_ONLY_ANNOTATIONS, REQUEST_TIMEOUT_MS, SPARQL_MAX_CONCURRENCY, TEXT_LANGUAGES, DATASET_GRAPH_BASE,
-  FRAGRANT_SPACES_BASE, PROFILE_FACETS, PROFILE_DEFAULT_FACETS, PROFILE_NARROWER_DEFAULT_FACETS,
+  FRAGRANT_SPACES_BASE, OLFACTORY_OBJECTS_BASE, PROFILE_FACETS, PROFILE_DEFAULT_FACETS, PROFILE_NARROWER_DEFAULT_FACETS,
   PROFILE_GESTURE_DEFAULT_FACETS, PROFILE_GESTURE_NARROWER_DEFAULT_FACETS,
   PROFILE_MAX_NARROWER_FACETS, PROFILE_CALL_DEADLINE_MS, PROFILE_MIN_FACET_BUDGET_MS, PROFILE_DEFAULT_TOP,
   PROFILE_MAX_TOP, TIMELINE_MIN_YEAR, TIMELINE_MAX_YEAR, LANGUAGE_NAMES,
@@ -31,7 +31,7 @@ const inputSchema = z.object({
     'An olfactory-objects, fragrant-spaces or olfactory-gestures concept id as eokg_find_concepts returns it (e.g. olfactory-objects/138 for Rose, olfactory-gestures/2 for holding one\'s nose).',
   ),
   facets: z.array(z.enum([...PROFILE_FACETS])).min(1).max(PROFILE_FACETS.length).optional().describe(
-    `Which aggregates to compute. Default: ${PROFILE_DEFAULT_FACETS.join(', ')} (with include_narrower: ${PROFILE_NARROWER_DEFAULT_FACETS.join(', ')}). Opt-in: emission_timeline, places, carriers.`,
+    `Which aggregates to compute. Default: ${PROFILE_DEFAULT_FACETS.join(', ')} (with include_narrower: ${PROFILE_NARROWER_DEFAULT_FACETS.join(', ')}). Opt-in: smell_sources (other smell sources extracted from the same smell events; a default for gestures), emission_timeline, places, carriers.`,
   ),
   include_narrower: z.boolean().default(false).describe(
     `Also count smells of narrower concepts (e.g. Flower for every flower). Slow: allows at most ${PROFILE_MAX_NARROWER_FACETS} facets.`,
@@ -70,6 +70,7 @@ export const outputSchema = z.object({
   qualities: idTopList().optional(),
   emotions: topList().optional(),
   fragrant_spaces: idTopList().optional(),
+  smell_sources: idTopList().optional(),
   places: topList().optional(),
   carriers: topList().optional(),
   failed_facets: z.array(z.string()).optional(),
@@ -133,6 +134,8 @@ const SHAPERS = {
     .map(({ local: _local, ...e }) => e),
   fragrant_spaces: (rows) => rows.map((r) => localEntry(r, 'space', FRAGRANT_SPACES_BASE))
     .filter((e) => e?.local).map(({ local: _local, ...e }) => e),
+  smell_sources: (rows) => rows.map((r) => localEntry(r, 'o', OLFACTORY_OBJECTS_BASE))
+    .filter((e) => e?.local).map(({ local: _local, ...e }) => e),
 };
 
 function shapeFacet(facet, rows, bucketYears) {
@@ -143,7 +146,7 @@ function shapeFacet(facet, rows, bucketYears) {
 
 const LIST_LABELS = {
   languages: 'Languages', datasets: 'Datasets', qualities: 'Qualities', emotions: 'Emotions (machine-inferred)',
-  fragrant_spaces: 'Fragrant spaces', places: 'Place words (raw text)', carriers: 'Carrier words (raw text)',
+  fragrant_spaces: 'Fragrant spaces', smell_sources: 'Smell sources in the same smells', places: 'Place words (raw text)', carriers: 'Carrier words (raw text)',
 };
 
 function renderTimeline(t, title) {
@@ -254,7 +257,7 @@ export function registerSmellProfileTool(server) {
             warnings.push(skipWarning(facet));
           } else {
             try {
-              const rows = await sparqlSelect(`profile_${facet}`, profileFacetQuery(facet, anchor, { bucketYears, top }), {
+              const rows = await sparqlSelect(`profile_${facet}`, profileFacetQuery(facet, anchor, { bucketYears, top, exclude: vocab.name === 'olfactory-objects' ? concept : undefined }), {
                 signal, timeoutMs: left,
               });
               out[facet] = shapeFacet(facet, rows, bucketYears);

@@ -146,7 +146,7 @@ Counts the smells linked to one concept by period, language, dataset, qualities,
 | Param | Type | Default | Description |
 |---|---|---|---|
 | `concept` | string (≤ 300) | **required** | An olfactory-objects, fragrant-spaces or olfactory-gestures concept id as eokg_find_concepts returns it (e.g. olfactory-objects/138 for Rose, olfactory-gestures/2 for holding one's nose). |
-| `facets` | string[] | — | Which aggregates to compute. Default: timeline, languages, datasets, qualities, emotions, fragrant_spaces (with include_narrower: timeline, languages, datasets). Opt-in: emission_timeline, places, carriers. |
+| `facets` | string[] | — | Which aggregates to compute. Default: timeline, languages, datasets, qualities, emotions, fragrant_spaces (with include_narrower: timeline, languages, datasets). Opt-in: smell_sources (other smell sources extracted from the same smell events; a default for gestures), emission_timeline, places, carriers. |
 | `include_narrower` | bool | `false` | Also count smells of narrower concepts (e.g. Flower for every flower). Slow: allows at most 3 facets. |
 | `bucket_years` | enum: `10` · `20` · `50` | `20` | Timeline bucket width: 10, 20 or 50 years. |
 | `top` | int (1–25) | `10` | Values per ranked facet. |

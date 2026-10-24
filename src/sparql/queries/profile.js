@@ -2,7 +2,7 @@
 // Concept URIs come from parseId; `scheme` from vocabOf (never user text); `language`, years and `bucketYears` from zod.
 
 import { KG_BASE } from '../../lib/ids.js';
-import { DATASET_GRAPH_BASE, FRAGRANT_SPACES_BASE } from '../../config.js';
+import { DATASET_GRAPH_BASE, FRAGRANT_SPACES_BASE, OLFACTORY_OBJECTS_BASE } from '../../config.js';
 
 const pad4 = (y) => String(y).padStart(4, '0');
 
@@ -41,7 +41,7 @@ SELECT ?${key} ${extra} (COUNT(DISTINCT ?smell) AS ?n) WHERE { ${anchor} ${body}
 GROUP BY ?${key} ORDER BY DESC(?n) LIMIT ${top}`;
 
 // Each template selects ?n = COUNT(DISTINCT ?smell). The fragrant-spaces and datasets filters sit in
-// the WHERE clause, so sameAs twins cannot take a top-N slot.
+// the WHERE clause, so sameAs twins cannot take a top-N slot (smell_sources filters to olfactory-objects the same way).
 const FACETS = {
   timeline: (a, { bucketYears }) => timeline(a, '?src crm:P67_refers_to ?smell ; schema:dateCreated/time:hasBeginning', bucketYears),
   emission_timeline: (a, { bucketYears }) => timeline(a, '?emission time:hasTime/time:hasBeginning', bucketYears),
@@ -60,12 +60,18 @@ SELECT ?q ?n (SAMPLE(?pl) AS ?label) (SAMPLE(?rl) AS ?rlabel) WHERE {
   FILTER(STRSTARTS(STR(?space), "${FRAGRANT_SPACES_BASE}"))
   OPTIONAL { GRAPH <${KG_BASE}vocabulary/fragrant-spaces> { ?space skos:prefLabel ?sl FILTER(LANG(?sl) = "en") } }`,
     'space', top, '(SAMPLE(?sl) AS ?label)'),
+  smell_sources: (a, { top, exclude }) => topN(a,
+    `?emission od:F3_had_source ?o .
+  FILTER(STRSTARTS(STR(?o), "${OLFACTORY_OBJECTS_BASE}")${exclude ? ` && ?o != <${exclude}>` : ''})
+  OPTIONAL { GRAPH <${KG_BASE}vocabulary/olfactory-objects> { ?o skos:prefLabel ?ol FILTER(LANG(?ol) = "en") } }`,
+    'o', top, '(SAMPLE(?ol) AS ?label)'),
   places: (a, { top }) => topN(a, '?ex od:F2_perceived ?smell ; crm:P7_took_place_at ?p . ?p rdfs:label ?pl .', 'pl', top),
   carriers: (a, { top }) => topN(a, '?emission od:F4_had_carrier ?car . ?car rdfs:label ?cl .', 'cl', top),
 };
 
-export function profileFacetQuery(facet, anchor, { bucketYears = 20, top = 10 } = {}) {
+/** `exclude` is the concept URI to leave out of smell_sources (the anchor's own object concept). */
+export function profileFacetQuery(facet, anchor, { bucketYears = 20, top = 10, exclude } = {}) {
   const build = FACETS[facet];
   if (!build) throw new Error(`Unknown profile facet: ${facet}`);
-  return build(anchor, { bucketYears, top });
+  return build(anchor, { bucketYears, top, exclude });
 }

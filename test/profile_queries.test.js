@@ -17,6 +17,7 @@ const DISTINCT = {
   qualities: 'crm:P141_assigned ?q',
   emotions: 'reo:readP27',
   fragrant_spaces: 'crm:P137_exemplifies ?space',
+  smell_sources: 'od:F3_had_source ?o',
   places: 'od:F2_perceived ?smell ; crm:P7_took_place_at ?p',
   carriers: 'od:F4_had_carrier',
 };
@@ -95,4 +96,21 @@ test('gesture anchor binds the experience to the gesture and the smell it percei
   assert.ok(!a.includes('F3_had_source'));
   assert.ok(anchorPattern(G, 'olfactory-gestures', { narrower: true }).includes(`?c skos:broader* <${G}>`));
   assert.ok(anchorPattern(G, 'olfactory-gestures', { language: 'fr' }).includes('schema:inLanguage "fr"'));
+});
+
+// Failure modes: a wikidata twin takes a top-N slot (the filter sits after LIMIT or is missing); the concept ranks
+// against itself; a fragrant space or gesture is asked to exclude an object that is not its own.
+test('smell_sources: anchored, filtered to olfactory-objects before GROUP BY, graph-bound label', () => {
+  const q = profileFacetQuery('smell_sources', anchor, { top: 10, exclude: ROSE });
+  assert.ok(q.includes(anchor));
+  const at = q.indexOf('STRSTARTS(STR(?o), "http://data.odeuropa.eu/vocabulary/olfactory-objects/")');
+  assert.ok(at >= 0 && at < q.indexOf('GROUP BY') && at < q.indexOf('LIMIT'));
+  assert.ok(q.includes('GRAPH <http://data.odeuropa.eu/vocabulary/olfactory-objects> { ?o skos:prefLabel ?ol FILTER(LANG(?ol) = "en") }'));
+  assert.equal(q.match(/\?o skos:prefLabel/g).length, 1);
+});
+
+test('smell_sources excludes the concept itself only when asked', () => {
+  assert.ok(profileFacetQuery('smell_sources', anchor, { top: 10, exclude: ROSE }).includes(`?o != <${ROSE}>`));
+  const g = anchorPattern(GARDEN, 'fragrant-spaces');
+  assert.ok(!profileFacetQuery('smell_sources', g, { top: 10 }).includes('?o !='));
 });

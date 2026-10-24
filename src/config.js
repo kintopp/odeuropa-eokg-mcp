@@ -137,10 +137,10 @@ export const ANNOTATION_ORIGINS = Object.freeze({
 });
 
 // Profiles (eokg_smell_profile) and visual search (eokg_find_visual_smells).
-export const PROFILE_FACETS = Object.freeze(['timeline', 'emission_timeline', 'languages', 'datasets', 'qualities', 'emotions', 'fragrant_spaces', 'places', 'carriers']);
+export const PROFILE_FACETS = Object.freeze(['timeline', 'emission_timeline', 'languages', 'datasets', 'qualities', 'emotions', 'fragrant_spaces', 'smell_sources', 'places', 'carriers']);
 export const PROFILE_DEFAULT_FACETS = Object.freeze(['timeline', 'languages', 'datasets', 'qualities', 'emotions', 'fragrant_spaces']);
 export const PROFILE_NARROWER_DEFAULT_FACETS = Object.freeze(['timeline', 'languages', 'datasets']);
-export const PROFILE_GESTURE_DEFAULT_FACETS = Object.freeze(['timeline', 'datasets', 'emotions']);
+export const PROFILE_GESTURE_DEFAULT_FACETS = Object.freeze(['timeline', 'datasets', 'smell_sources', 'emotions']);
 export const PROFILE_GESTURE_NARROWER_DEFAULT_FACETS = Object.freeze(['timeline', 'datasets']);
 export const PROFILE_MAX_NARROWER_FACETS = 3;
 export const PROFILE_CALL_DEADLINE_MS = 50_000; // whole-call budget; plan 008's HTTP guard is 120 s

@@ -31,6 +31,10 @@ const FACET_ROWS = {
   ],
   emotions: [{ word: 'nostalgia', n: '7' }],
   fragrant_spaces: [{ space: uri(`${KG}vocabulary/fragrant-spaces/27`), label: en('Garden'), n: '50' }],
+  smell_sources: [
+    { o: uri(`${KG}vocabulary/olfactory-objects/20`), label: en('Gas'), n: '16' },
+    { o: uri(`${KG}vocabulary/olfactory-objects/72`), label: en('Flower  \n pot'), n: '10' },
+  ],
   places: [{ pl: 'jardin', n: '4' }],
   carriers: [{ cl: 'the', n: '3' }],
 };
@@ -334,10 +338,10 @@ const GESTURE = 'olfactory-gestures/2';
 
 // Failure modes: the vocabulary is still rejected; the default facets are the object ones (languages, qualities);
 // the reason languages are missing is not stated; the label comes from the wrong graph.
-test('a gesture concept profiles with timeline, datasets and emotions, and explains the missing languages', async () => {
+test('a gesture concept profiles with timeline, datasets, smell_sources and emotions, and explains the missing languages', async () => {
   await start(baseRoutes({ concept_label: ok([{ l: en("Holding one's nose") }]) }));
   const s = valid(await profile({ concept: GESTURE }));
-  assert.deepEqual(facetLabels().sort(), ['profile_datasets', 'profile_emotions', 'profile_timeline']);
+  assert.deepEqual(facetLabels().sort(), ['profile_datasets', 'profile_emotions', 'profile_smell_sources', 'profile_timeline']);
   assert.equal(s.concept.vocab, 'olfactory-gestures');
   assert.equal(s.languages, undefined);
   assert.ok(s.warnings.some((w) => w.includes('Gesture smells come almost entirely from images, which have no language')));
@@ -411,4 +415,32 @@ test('image-share warning: 251 of 1000 warns, 250 of 1000 and an absent datasets
   assert.equal(valid(await profile({ facets: ['datasets'] })).warnings, undefined);
   clearSparqlCache();
   assert.equal(valid(await profile({ facets: ['timeline'] })).warnings, undefined);
+});
+
+test('smell_sources: shaped with ids and collapsed labels, twins dropped, rendered, concept excluded only for objects', async () => {
+  const rows = [{ o: uri('http://www.wikidata.org/entity/Q5'), n: '99' }, ...FACET_ROWS.smell_sources];
+  await start(baseRoutes({ profile_smell_sources: ok(rows) }));
+  const res = await profile({ facets: ['smell_sources'] });
+  const s = valid(res);
+  assert.deepEqual(s.smell_sources, [
+    { id: 'olfactory-objects/20', label: 'Gas', lang: 'en', count: 16 },
+    { id: 'olfactory-objects/72', label: 'Flower pot', lang: 'en', count: 10 },
+  ]);
+  assert.ok(res.content[0].text.includes('Smell sources in the same smells: Gas 16 · Flower pot 10'), res.content[0].text);
+  const q = stub.router.calls.find((c) => c.label === 'profile_smell_sources').query;
+  assert.ok(q.includes(`?o != <${KG}vocabulary/${ROSE}>`));
+
+  clearSparqlCache();
+  stub.router.calls.length = 0;
+  valid(await profile({ concept: GARDEN, facets: ['smell_sources'] }));
+  assert.ok(!stub.router.calls.find((c) => c.label === 'profile_smell_sources').query.includes('?o !='));
+});
+
+test('smell_sources is opt-in for objects and spaces and named in the facets description', async () => {
+  await start(baseRoutes());
+  valid(await profile());
+  assert.ok(!facetLabels().includes('profile_smell_sources'));
+  const { tools } = await client.listTools();
+  const d = tools.find((t) => t.name === 'eokg_smell_profile').inputSchema.properties.facets.description;
+  assert.ok(d.includes('smell_sources') && d.includes('other smell sources extracted from the same smell events'));
 });
