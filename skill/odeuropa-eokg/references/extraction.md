@@ -1,6 +1,6 @@
 # Extraction: how reliable are the labels
 
-Condensed from Odeuropa deliverables (CC-BY 4.0), https://odeuropa.eu/deliverables/, and the Odeuropa knowledge-graph repository (Apache-2.0), commit 4c188f7, https://github.com/Odeuropa/knowledge-graph, cited as "KG repo" with a file path. Figures describe the pipeline as reported at the time.
+Condensed from Odeuropa deliverables (CC-BY 4.0), https://odeuropa.eu/deliverables/, and the Odeuropa knowledge-graph repository (Apache-2.0), commit 4c188f7, https://github.com/Odeuropa/knowledge-graph, cited as "KG repo" with a file path. Also from Zenodo records cited by DOI and "Odeuropa project records", the consortium's internal working documents; "verified live" means checked against the live graph on the date given. Figures describe the pipeline as reported at the time.
 
 Read this before judging how reliable a count, an emotion or an image label is. Deliverables cited: D3.2 (benchmark), D3.3 to D3.5 (text), D2.4 and D2.5 (images), D4.1 to D4.3 (graph and vocabularies), D4.4 (linking in the current graph). Page numbers are the printed ones.
 
@@ -75,7 +75,7 @@ Meaning for an answer: on the gold set about seven in ten nostalgia, gratitude, 
 
 ## Images
 
-Objects were found by a detector trained on the Odeuropa Dataset of Smell-Related Objects. Version 2 has 4,969 annotated artworks, 36,663 boxes and 170 categories (D2.4 p. 4). Annotators drew the boxes by hand in CVAT; flower species were also labelled by crowd workers on Mechanical Turk (D2.5 p. 9; D2.4 p. 4). Pre-annotating with a detector was planned and not used, because detection was not accurate enough (D2.4 p. 12).
+Objects were found by a detector trained on the Odeuropa Dataset of Smell-Related Objects. Version 2 has 4,696 annotated images, 36,663 boxes and 169 categories (Zenodo 10.5281/zenodo.7125961; D2.4 abstract); the graph's hand-drawn boxes are the later v3 (see `datasets.md`). Annotators drew the boxes by hand in CVAT; flower species were also labelled by crowd workers on Mechanical Turk (D2.5 p. 9; D2.4 p. 4). Pre-annotating with a detector was planned and not used, because detection was not accurate enough (D2.4 p. 12).
 
 Smell gestures are scarce in the training data (D2.4 p. 9, Table 4):
 

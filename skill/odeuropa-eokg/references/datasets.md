@@ -42,7 +42,7 @@ How `text-annotation` was made: annotators in each language, at least two per la
 
 ## Image datasets
 
-| Dataset | What the deliverables say | Source |
+| Dataset | What the sources say | Source |
 |---|---|---|
 | `odor` | The hand-annotated ODOR dataset. The graph's hand-drawn object boxes are ODOR v3, the set released on Zenodo in October 2023 as "The Object Detection for Olfactory References (ODOR) Dataset": 38,116 boxes on 4,712 images in 139 categories (10.5281/zenodo.10027116; 3.0.2, 10.5281/zenodo.11070878). The KG repo's README describes the earlier v2 (10.5281/zenodo.7125961: 36,663 boxes, 4,696 images, 169 categories). D2.4 gives v2 as 4,696 images in its abstract and 4,969 images and 170 categories on p. 4; the Zenodo record and its files agree with the abstract, so 4,969 is a slip. The only image dataset with hand-drawn object boxes (`annotations.json`) and gesture boxes (`annotations_gesture.json`); it also has detector boxes (`annotations_automatic.json`). Version 1 (24,391 boxes in 2,937 artworks) was the training set of the ODOR challenge. D4.3 put the ODOR images of its time in one `image-annotation` graph with 23,870 smells | Zenodo records above; KG repo, populate/input/odor/; D2.4 abstract, pp. 4, 7; D2.5 p. 8; D4.3 pp. 9–10 |
 | `europeana` | Detector boxes only. Items from several institutions, such as the Wellcome Collection and the Rijksmuseum, reached through data.europeana.eu | KG repo, populate/input/europeana/ |
