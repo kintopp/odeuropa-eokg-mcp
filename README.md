@@ -1,5 +1,7 @@
 # odeuropa-eokg-mcp
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 An MCP server for the European Olfactory Knowledge Graph (EOKG): about 2.4 million smell references machine-extracted from European texts (English, French, Italian, Slovenian, German, Dutch) and from roughly 109,000 images of artworks, mostly 1600–1920. It lets an AI assistant search passages, resolve vocabulary concepts, profile a smell source over time, and look at artworks with detected smell-related objects.
 
 The data is the work of the [Odeuropa](https://odeuropa.eu) project (EU Horizon 2020, grant 101004469). Browse it in the [Smell Explorer](https://explorer.odeuropa.eu). The knowledge-graph repository, [Odeuropa/knowledge-graph](https://github.com/Odeuropa/knowledge-graph), is licensed Apache-2.0; individual sources carry their own licence in the graph. This server is an independent client of the public endpoint and is not affiliated with Odeuropa.
@@ -91,3 +93,7 @@ Excerpts are raw OCR text; emotions come from a classifier; dates mix the docume
 ## Fair use
 
 The public endpoint has no SLA and a hard 60-second gateway timeout. Anchored lookups take well under a second, but `eokg_smell_profile` with `include_narrower` can take 15–30 seconds per facet. Use heavy profile calls considerately, and do not loop them.
+
+## License
+
+The code is released under the [MIT License](LICENSE). The EOKG data it queries is not covered by this licence; see the Odeuropa terms above.
