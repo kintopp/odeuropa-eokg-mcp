@@ -29,6 +29,7 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 - Every tool lives in `src/tools/<name>.js`, is registered in `src/server.js` and is listed in `REQUIRED_PROPS` in `test/smoke.test.js`.
 - Every SPARQL query is sent through `sparqlSelect(name, body)` with a unique `eokg:<name>` label; the offline stub router depends on it.
 - Committed files never reference `plans/` or `research/` by path (both are gitignored).
+- **A push to `main` that touches `src/`, `package.json` or `package-lock.json` redeploys the public Railway service.** Push only when the user asks.
 - Test rules are in `test/CLAUDE.md`. Never delete or weaken a failing test.
 
 ## Architecture
@@ -84,4 +85,5 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 - **Skosmos `lang` restricts matching:** it is not a display preference; pass it only to filter.
 - **Lucene: a lone `NOT` matches nothing and `/` opens a regex:** both are handled in `scopedLuceneQuery`; keep its tests.
 - **Malformed related URIs in fragrant-spaces:** `http://data.odeuropa.eu/olfactory_objects/<n>` means `vocabulary/olfactory-objects/<n>`; `get_concept` maps it.
+- **Skill `name:` must equal its folder name:** renaming the skill means renaming `skill/<name>/`, `SKILL_NAME` in `scripts/build-skill.mjs` and the bundle, then re-uploading it to claude.ai.
 - **Gestures link through experiences:** `od:F5_involved_gesture` (experience) and `oa:hasBody` / `crm:P138_represents` (images), not `crm:P137_exemplifies`.
