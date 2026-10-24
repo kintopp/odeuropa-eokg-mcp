@@ -28,7 +28,7 @@ Many other clients also support remotely hosted MCP servers, such as ChatGPT, Mi
 
 ### Local (stdio)
 
-Requirements: Node.js ≥ 24 < 25 (no native dependencies).
+Requirements: Node.js ≥ 24.22.1 < 25 (no native dependencies).
 
 ```bash
 git clone https://github.com/kintopp/odeuropa-eokg-mcp.git

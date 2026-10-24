@@ -27,7 +27,7 @@ All variables are optional.
 | `EOKG_LOG` | off | `1` writes one JSON line per tool call to stderr. |
 | `EOKG_LOG_INPUT` | off | `1` adds the tool arguments to that line. Off by default on HTTP because search text is user content. |
 
-The Origin check allows a missing Origin, `null`, non-http(s) schemes and loopback on any port. Requests larger than 1 MiB get 413.
+The Origin check allows a missing Origin, `null`, non-http(s) schemes and loopback on any port. Requests larger than 1 MiB get 413, and compressed request bodies (any `Content-Encoding` but `identity`) get 415. Railpack installs the Node version in `.nvmrc`.
 
 The other variables in the README configuration table apply too.
 

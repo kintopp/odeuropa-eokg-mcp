@@ -35,7 +35,7 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 ## Architecture
 
 - `src/index.js`, `src/server.js`: stdio entry point and tool registration.
-- `src/http.js`, `src/lib/webbridge.js`, `src/lib/origin.js`: stateless Streamable HTTP entry (`npm run serve`) over `node:http`. Guards, in order: Host, Origin, in-flight cap, 1 MiB body, 120 s wall-clock response guard (details in `docs/deploy.md`). Never add a flag or `PORT` sniff to `src/index.js`.
+- `src/http.js`, `src/lib/webbridge.js`, `src/lib/origin.js`: stateless Streamable HTTP entry (`npm run serve`) over `node:http`. Guards, in order: Host, Origin, compressed-body refusal, in-flight cap, 1 MiB body, 120 s wall-clock response guard (details in `docs/deploy.md`). Never add a flag or `PORT` sniff to `src/index.js`.
 - `src/config.js`: every backend constant, the dataset snapshot and `SERVER_INSTRUCTIONS`.
 - `src/tools/`: one file per tool (schemas, description, handler, shaping).
 - `src/sparql/`: SPARQL client, Lucene query building, prefixes and `queries/`.

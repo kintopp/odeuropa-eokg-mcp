@@ -54,6 +54,12 @@ function handlePreflight(req, res) {
 }
 
 async function handlePost(req, res) {
+  // Nothing here decodes bodies; refusing them keeps any later decoder off the request path.
+  const encoding = req.headers['content-encoding']?.trim().toLowerCase();
+  if (encoding && encoding !== 'identity') {
+    sendJson(res, 415, { error: 'Compressed request bodies are not accepted' }, { 'Accept-Encoding': 'identity', Connection: 'close' });
+    return;
+  }
   if (inflight >= HTTP_MAX_INFLIGHT) {
     sendJson(res, 503, { error: 'Server busy' }, { 'Retry-After': '5' });
     return;

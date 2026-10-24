@@ -219,6 +219,19 @@ test('a body over 1 MiB is 413', async () => {
   });
 });
 
+test('a compressed body is 415 and is never decoded', async () => {
+  await withServer({}, async (server) => {
+    const body = { jsonrpc: '2.0', id: 1, method: 'tools/list', params: { _meta: envelope() } };
+    for (const encoding of ['gzip', 'br', 'deflate, gzip']) {
+      const res = await post(server, { ...modernHeaders('tools/list'), 'content-encoding': encoding }, body);
+      assert.equal(res.status, 415, encoding);
+      assert.deepEqual(res.body, { error: 'Compressed request bodies are not accepted' });
+    }
+    const plain = await post(server, { ...modernHeaders('tools/list'), 'content-encoding': 'identity' }, body);
+    assert.equal(plain.status, 200);
+  });
+});
+
 test('response guard: a slow 2026-07-28 call is cut with 504 JSON', async () => {
   stubDelayMs = 2000;
   await withServer({ EOKG_HTTP_RESPONSE_TIMEOUT_MS: '300' }, async (server) => {
