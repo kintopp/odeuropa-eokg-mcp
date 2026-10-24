@@ -3,6 +3,10 @@
 The Skosmos service at vocab.odeuropa.eu serves 20 vocabularies. `eokg_find_concepts`
 searches the first three by default; `vocab: "all"` adds the rest.
 
+D4.3 (p. 8) and D4.6 (December 2023, p. 10) list 17 vocabularies; the three
+`expert-taxonomy` vocabularies are the later additions, named in neither deliverable
+(https://vocab.odeuropa.eu/rest/v1/vocabularies?lang=en).
+
 | Vocabulary | What it is | Linked to smells |
 |---|---|---|
 | `olfactory-objects` | What smells: ~1,150 concepts (Flora, Body, Artefact, Matter, Food, Fumes, ...), multi-parent hierarchy, labels in de, en, fr, it, nl, sl | yes (smell sources; image sources) |
