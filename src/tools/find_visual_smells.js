@@ -57,6 +57,7 @@ const description =
   'Find paintings and prints in which a smell source was detected or catalogued. ' +
   'Lists image sources linked to an olfactory-objects concept, best box score first: images with hand-drawn boxes (score 1) come first, then images ranked by the object detector\'s confidence, then catalogue-only links with no box. ' +
   `Images whose boxes all score below min_score (default ${FRAGMENT_MIN_SCORE_DEFAULT}) are hidden and counted; boxes and best_score count only the boxes shown. ` +
+  'Images are linked to the objects they show, so substances often have none; try a related object concept. ' +
   'Year filters use the artwork date and exclude undated works. Pass a result id to eokg_inspect_image to look at it.';
 
 const fmt = (n) => n.toLocaleString('en-US');
@@ -127,7 +128,9 @@ export function registerFindVisualSmellsTool(server) {
       if (total === 0) {
         warnings.push(hidden > 0
           ? `All ${fmt(hidden)} linked images have only boxes scoring below ${args.min_score}; lower min_score to see them.`
-          : 'No image sources are linked to this concept in this date range.');
+          : years.yearFrom != null || years.yearTo != null
+            ? 'No image sources are linked to this concept in this date range.'
+            : 'No image sources are linked to this concept. Images are linked to depicted objects, so a substance (Coffee, Incense, Sulphur) often has none; eokg_get_concept lists related objects (Coffee → Coffeepot) to try instead.');
       }
       const res = withWarnings({ structured, text: renderText(structured) }, warnings);
       return { content: [{ type: 'text', text: res.text }], structuredContent: res.structured };

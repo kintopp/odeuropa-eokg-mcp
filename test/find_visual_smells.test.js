@@ -76,6 +76,27 @@ test('everything hidden: zero total, specific warning', async () => {
   assert.ok(s.warnings.some((w) => w.includes('All 300 linked images have only boxes scoring below 0.7')));
 });
 
+test('an empty result names the date range only when a year is set', async () => {
+  const none = routes([], 0, 0);
+  const dated = await call({ year_from: 1700 }, none);
+  assert.ok(dated.structuredContent.warnings.includes('No image sources are linked to this concept in this date range.'));
+  await stub.close();
+  const undated = await call({}, none);
+  const w = undated.structuredContent.warnings.join(' ');
+  assert.ok(!w.includes('date range'));
+  assert.match(w, /No image sources are linked to this concept\. Images are linked to depicted objects, so a substance \(Coffee, Incense, Sulphur\) often has none/);
+  assert.match(w, /eokg_get_concept lists related objects \(Coffee → Coffeepot\) to try instead/);
+  assert.ok(undated.content[0].text.includes('Coffeepot'));
+});
+
+test('the description says substances often have no images', async () => {
+  await withClient('visual', async (c) => {
+    const { tools } = await c.listTools();
+    const t = tools.find((x) => x.name === 'eokg_find_visual_smells');
+    assert.ok(t.description.includes('Images are linked to the objects they show, so substances often have none; try a related object concept.'));
+  });
+});
+
 test('min_score out of range is rejected', async () => {
   const res = await call({ min_score: 1.5 });
   assert.equal(res.isError, true);

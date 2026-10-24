@@ -160,7 +160,7 @@ Lists paintings and prints linked to an olfactory-objects concept, images with h
 ### Tool description
 
 <!-- generated:eokg_find_visual_smells:description -->
-> Find paintings and prints in which a smell source was detected or catalogued. Lists image sources linked to an olfactory-objects concept, best box score first: images with hand-drawn boxes (score 1) come first, then images ranked by the object detector's confidence, then catalogue-only links with no box. Images whose boxes all score below min_score (default 0.7) are hidden and counted; boxes and best_score count only the boxes shown. Year filters use the artwork date and exclude undated works. Pass a result id to eokg_inspect_image to look at it.
+> Find paintings and prints in which a smell source was detected or catalogued. Lists image sources linked to an olfactory-objects concept, best box score first: images with hand-drawn boxes (score 1) come first, then images ranked by the object detector's confidence, then catalogue-only links with no box. Images whose boxes all score below min_score (default 0.7) are hidden and counted; boxes and best_score count only the boxes shown. Images are linked to the objects they show, so substances often have none; try a related object concept. Year filters use the artwork date and exclude undated works. Pass a result id to eokg_inspect_image to look at it.
 <!-- /generated -->
 
 ### Parameters
