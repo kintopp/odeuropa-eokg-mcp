@@ -12,8 +12,9 @@ const VOCAB_PREFIX = `${KG_BASE}vocabulary/`;
 const CONCEPT_RE = /^https?:\/\/data\.odeuropa\.eu\/vocabulary\/([a-z0-9][a-z0-9_-]*)((?:\/[A-Za-z0-9_.-]+)+)\/?$/;
 const SHORT_CONCEPT_RE = /^([a-z0-9][a-z0-9_-]*)((?:\/[A-Za-z0-9_.-]+)+)\/?$/;
 
-const EXPLORER_CONCEPT_RE = /^https?:\/\/explorer\.odeuropa\.eu\/(smell-sources|fragrant-spaces)\/(\d+)\/?$/i;
-const EXPLORER_VOCAB = { 'smell-sources': 'olfactory-objects', 'fragrant-spaces': 'fragrant-spaces' };
+const EXPLORER_SEGMENT = Object.fromEntries(VOCABS.filter((vo) => vo.explorer).map((vo) => [vo.name, vo.explorer]));
+const EXPLORER_VOCAB = Object.fromEntries(Object.entries(EXPLORER_SEGMENT).map(([name, seg]) => [seg, name]));
+const EXPLORER_CONCEPT_RE = new RegExp(`^https?://explorer\\.odeuropa\\.eu/(${Object.keys(EXPLORER_VOCAB).join('|')})/(\\d+)/?$`, 'i');
 
 function matchConcept(raw) {
   const ex = EXPLORER_CONCEPT_RE.exec(raw);
@@ -84,7 +85,7 @@ export function vocabOf(conceptUri) {
 /** Explorer permalink for smells and linked-vocabulary concepts; null otherwise. */
 export function explorerUrl(kind, uri) {
   if (kind === 'concept') {
-    const seg = { 'olfactory-objects': 'smell-sources', 'fragrant-spaces': 'fragrant-spaces' }[schemeOf(uri)];
+    const seg = EXPLORER_SEGMENT[schemeOf(uri)];
     const local = String(uri).slice(VOCAB_PREFIX.length).split('/').slice(1);
     return seg && local.length === 1 ? `${EXPLORER_BASE_URL}/${seg}/${local[0]}` : null;
   }

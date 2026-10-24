@@ -59,6 +59,7 @@ const description =
   'Alternatively pass iconclass (a notation such as 25G41(ROSE), e.g. from an Iconclass or Rijksmuseum server) instead of query, to find the concepts Odeuropa mapped to that notation or to broader or narrower ones.';
 
 const shortId = (uri) => uri.slice(VOCAB_PREFIX.length);
+const labelIn = (terms, lang) => terms?.find((t) => t['xml:lang'] === lang);
 
 function resolveVocabs(vocab) {
   if (vocab === undefined) return VOCABS.filter((x) => DEFAULT_CONCEPT_VOCABS.includes(x.name));
@@ -141,7 +142,7 @@ async function findByIconclass(args, signal) {
     const uris = [...new Set(cands.map((c) => c.uri))];
     const terms = await fetchConceptTerms(uris, signal);
     for (const [uri, list] of terms) {
-      const wanted = args.lang && list.find((t) => t['xml:lang'] === args.lang);
+      const wanted = args.lang && labelIn(list, args.lang);
       labels.set(uri, wanted?.value ?? pickLabel(list));
     }
     const resolved = [];
@@ -204,7 +205,7 @@ async function findByLabel(args, signal) {
   if (args.lang && results.length) {
     const terms = await fetchConceptTerms(results.map((r) => r.id), signal);
     for (const r of results) {
-      const wanted = terms.get(r.id)?.find((t) => t['xml:lang'] === args.lang);
+      const wanted = labelIn(terms.get(r.id), args.lang);
       if (wanted) { r.label = wanted.value; r.lang = args.lang; }
     }
   }

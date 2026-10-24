@@ -162,7 +162,7 @@ test('only year_from emits only the lower bound; no years emits no date filter',
 test('year_from after year_to and a fragrant-spaces concept fail with zero queries', async () => {
   let res = await call({ year_from: 1700, year_to: 1600 });
   assert.equal(res.isError, true);
-  assert.match(res.content[0].text, /year_from is after year_to/);
+  assert.match(res.content[0].text, /`year_from` is later than `year_to`/);
   assert.equal(stub.router.calls.length, 0);
   await stub.close();
   res = await call({ concept: 'fragrant-spaces/27' });

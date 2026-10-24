@@ -2,8 +2,8 @@
 
 import { z } from 'zod';
 import { withTool } from '../lib/tool.js';
-import { ToolError } from '../lib/errors.js';
-import { parseId, schemeOf, uuidOf, KG_BASE } from '../lib/ids.js';
+import { ToolError, assertYearRange } from '../lib/errors.js';
+import { parseId, vocabOf, uuidOf, KG_BASE } from '../lib/ids.js';
 import { pickLabel } from '../lib/rdf.js';
 import { capArrays, truncateText } from '../lib/budget.js';
 import { withWarnings } from '../lib/warnings.js';
@@ -99,24 +99,22 @@ export function registerFindVisualSmellsTool(server) {
     withTool(FIND_VISUAL_SMELLS_TOOL_NAME, 'Finding images failed', async (args, ctx) => {
       const signal = ctx?.mcpReq?.signal;
       const concept = parseId('concept', args.concept);
-      const scheme = schemeOf(concept);
-      if (scheme !== 'olfactory-objects' && scheme !== 'olfactory-gestures') {
+      const vocab = vocabOf(concept);
+      if (!vocab?.images) {
         throw new ToolError('Only olfactory-objects and olfactory-gestures concepts have images.', 'Find one with eokg_find_concepts.');
       }
       const { limit, offset } = args;
       const years = { yearFrom: args.year_from, yearTo: args.year_to };
-      if (years.yearFrom != null && years.yearTo != null && years.yearFrom > years.yearTo) {
-        throw new ToolError('year_from is after year_to.', 'Swap them or widen the range.');
-      }
+      assertYearRange(years.yearFrom, years.yearTo);
       const q = (name, text) => sparqlSelect(name, text, { signal });
       const [countRows, pageRows, labelRows] = await Promise.all([
         q('visual_count', visualCountQuery(concept, years, args.min_score)),
         q('visual_page', visualPageQuery(concept, years, args.min_score, limit, offset)),
-        q('concept_label', conceptLabelQuery(concept, scheme)),
+        q('concept_label', conceptLabelQuery(concept, vocab.name)),
       ]);
-      const n = countRows.length ? Math.round(num(countRows[0], 'n') ?? 0) : 0;
-      const hidden = countRows.length ? Math.round(num(countRows[0], 'hidden') ?? 0) : 0;
-      const total = Math.max(0, n - hidden);
+      const int = (key) => Math.round(num(countRows[0] ?? {}, key) ?? 0);
+      const hidden = int('hidden');
+      const total = int('n') - hidden;
       const label = pickLabel(labelRows.map((r) => r.l));
       const results = pageRows.slice(0, limit).map(shapeRow);
 
@@ -126,12 +124,12 @@ export function registerFindVisualSmellsTool(server) {
       };
       const structured = capArrays(full, ['results'], PER_CHANNEL_RESULT_BUDGET);
       const warnings = [];
-      if (total === 0) {
-        warnings.push(hidden > 0
-          ? `All ${fmt(hidden)} linked images have only boxes scoring below ${args.min_score}; lower min_score to see them.`
-          : years.yearFrom != null || years.yearTo != null
-            ? 'No image sources are linked to this concept in this date range.'
-            : 'No image sources are linked to this concept. Images are linked to depicted objects, so a substance (Coffee, Incense, Sulphur) often has none; eokg_get_concept lists related objects (Coffee → Coffeepot) to try instead.');
+      if (total === 0 && hidden > 0) {
+        warnings.push(`All ${fmt(hidden)} linked images have only boxes scoring below ${args.min_score}; lower min_score to see them.`);
+      } else if (total === 0 && (years.yearFrom != null || years.yearTo != null)) {
+        warnings.push('No image sources are linked to this concept in this date range.');
+      } else if (total === 0) {
+        warnings.push('No image sources are linked to this concept. Images are linked to depicted objects, so a substance (Coffee, Incense, Sulphur) often has none; eokg_get_concept lists related objects (Coffee → Coffeepot) to try instead.');
       }
       const res = withWarnings({ structured, text: renderText(structured) }, warnings);
       return { content: [{ type: 'text', text: res.text }], structuredContent: res.structured };

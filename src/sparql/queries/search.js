@@ -3,8 +3,7 @@
 
 import { sparqlString } from '../lucene.js';
 import { DATASET_GRAPH_BASE, OLFACTORY_OBJECTS_GRAPH } from '../../config.js';
-
-const pad4 = (y) => String(y).padStart(4, '0');
+import { yearBounds } from './years.js';
 
 export const searchCountQuery = (lq) => `
 SELECT ?total WHERE { ?search a luc-index:search ; luc:query "${sparqlString(lq)}" ; luc:limit "1" ; luc:totalHits ?total ; luc:entities ?id . }`;
@@ -21,10 +20,7 @@ SELECT ?id ?score ?total ?field ?snip WHERE {
 // Filtered: window W, no snippets (Lucene computes them for the whole window).
 export const searchWindowQuery = (lq, W, { language, yearFrom, yearTo, dataset }, limit, offset) => {
   const dated = yearFrom != null || yearTo != null;
-  const bounds = [
-    yearFrom != null && `?b >= "${pad4(yearFrom)}"^^xsd:gYear`,
-    yearTo != null && `?b <= "${pad4(yearTo)}"^^xsd:gYear`,
-  ].filter(Boolean).join(' && ');
+  const bounds = yearBounds('?b', yearFrom, yearTo);
   return `
 SELECT DISTINCT ?id ?score WHERE {
   { SELECT ?id ?score WHERE { ?search a luc-index:search ; luc:query "${sparqlString(lq)}" ; luc:limit "${W}" ; luc:entities ?id . ?id luc:score ?score . } }

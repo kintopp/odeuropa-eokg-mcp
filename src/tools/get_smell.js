@@ -135,7 +135,7 @@ export function registerGetSmellTool(server) {
       ]);
       if (!core.length) {
         const uuid = uuidOf(id);
-        const asSource = uuid && await sparqlSelect('source_exists', sourceExistsQuery(`${KG_BASE}source/${uuid}`), { signal });
+        const asSource = uuid && await sparqlSelect('source_exists', sourceExistsQuery(parseId('source', uuid)), { signal });
         if (asSource?.length) {
           throw new ToolError(`${uuid} is a source id, not a smell id.`, 'Use eokg_get_source to list its smells.');
         }

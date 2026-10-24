@@ -5,18 +5,14 @@ import { registerAppTool } from '@modelcontextprotocol/ext-apps/server';
 import { withTool } from '../lib/tool.js';
 import { parseId } from '../lib/ids.js';
 import { mirrorWarnings } from '../lib/warnings.js';
-import { sparqlSelect } from '../sparql/client.js';
-import { imageFragmentsQuery } from '../sparql/queries/source.js';
-import { shapeFragments, lookupHostedImage } from './get_source.js';
-import { READ_ONLY_ANNOTATIONS, FRAGMENT_MIN_SCORE_DEFAULT } from '../config.js';
+import { lookupHostedImage, scoredFragments, imageInputFields, imageLinkLines } from './get_source.js';
+import { READ_ONLY_ANNOTATIONS } from '../config.js';
 
 export const VIEW_IMAGE_TOOL_NAME = 'eokg_view_image';
 export const VIEWER_RESOURCE_URI = 'ui://odeuropa/image-viewer.html';
 
 const inputSchema = z.object({
-  id: z.string().min(1).max(300).describe('Image source id: a http://data.odeuropa.eu/source/<uuid> URI or bare uuid.'),
-  min_score: z.number().min(0).max(1).default(FRAGMENT_MIN_SCORE_DEFAULT)
-    .describe(`Hide detector boxes scoring below this (0-1, default ${FRAGMENT_MIN_SCORE_DEFAULT}). Hand-drawn boxes score 1 but are not verified and can carry the wrong label.`),
+  ...imageInputFields(),
   show_boxes: z.boolean().default(false)
     .describe('Draw the object boxes on the image. Leave false unless the user asks to see the boxes; many carry the wrong label.'),
 }).strict();
@@ -62,9 +58,7 @@ function renderText(s) {
   const who = s.artist ? ` by ${s.artist}` : '';
   const when = s.date ? ` (${s.date})` : '';
   const lines = [`"${s.title ?? '(untitled)'}"${who}${when} — opened in the image viewer, boxes ${s.show_boxes ? 'shown' : 'hidden'}.`];
-  if (s.url) lines.push(`Record: ${s.url}`);
-  lines.push(`Image: ${s.image_url}`);
-  if (s.original_image_url) lines.push(`Original: ${s.original_image_url}`);
+  lines.push(...imageLinkLines(s));
   const shown = s.show_boxes ? '' : ', not shown to the user';
   let objects = s.objects.length
     ? `Objects boxed in the graph (score ≥ ${s.min_score}${shown}): ${labelSummary(s.objects)}.`
@@ -89,22 +83,14 @@ export function registerViewImageTool(server) {
     },
     withTool(VIEW_IMAGE_TOOL_NAME, 'Opening the image viewer failed', async (args, ctx) => {
       const signal = ctx?.mcpReq?.signal;
-      const { id, imageUrl, originalImageUrl, meta, warnings } = await lookupHostedImage(parseId('source', args.id), signal);
-      const fragRows = await sparqlSelect('image_fragments', imageFragmentsQuery(id), { signal });
-      const all = shapeFragments(fragRows);
-      const objects = all.filter((o) => o.score >= args.min_score);
+      const { header, warnings } = await lookupHostedImage(parseId('source', args.id), signal);
+      const { objects, hidden } = await scoredFragments(header.id, args.min_score, signal);
 
       const structured = {
-        id,
-        ...(meta.title && { title: meta.title }),
-        ...(meta.artist && { artist: meta.artist }),
-        ...(meta.date && { date: meta.date }),
-        image_url: imageUrl,
-        ...(meta.url && { url: meta.url }),
-        ...(originalImageUrl && { original_image_url: originalImageUrl }),
+        ...header,
         min_score: args.min_score, show_boxes: args.show_boxes,
         objects,
-        hidden_below_min_score: all.length - objects.length,
+        hidden_below_min_score: hidden,
         ...(warnings.length && { warnings }),
       };
       const content = [{ type: 'text', text: mirrorWarnings(renderText(structured), warnings) }];

@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { withTool } from '../lib/tool.js';
-import { ToolError } from '../lib/errors.js';
+import { ToolError, assertYearRange } from '../lib/errors.js';
 import { parseId, vocabOf, KG_BASE } from '../lib/ids.js';
 import { pickLabel, labelFromUri } from '../lib/rdf.js';
 import { withWarnings } from '../lib/warnings.js';
@@ -123,6 +123,9 @@ function localEntry(r, key, base) {
   };
 }
 
+const localOnly = (key, base) => (rows) => rows.map((r) => localEntry(r, key, base))
+  .filter((e) => e?.local).map(({ local: _local, ...e }) => e);
+
 const SHAPERS = {
   languages: plain('lang'),
   emotions: plain('word'),
@@ -132,10 +135,8 @@ const SHAPERS = {
     .map((r) => ({ label: tidy(v(r, 'g').slice(DATASET_GRAPH_BASE.length)), count: count(r) })),
   qualities: (rows) => rows.map((r) => localEntry(r, 'q', VOCAB_PREFIX)).filter(Boolean)
     .map(({ local: _local, ...e }) => e),
-  fragrant_spaces: (rows) => rows.map((r) => localEntry(r, 'space', FRAGRANT_SPACES_BASE))
-    .filter((e) => e?.local).map(({ local: _local, ...e }) => e),
-  smell_sources: (rows) => rows.map((r) => localEntry(r, 'o', OLFACTORY_OBJECTS_BASE))
-    .filter((e) => e?.local).map(({ local: _local, ...e }) => e),
+  fragrant_spaces: localOnly('space', FRAGRANT_SPACES_BASE),
+  smell_sources: localOnly('o', OLFACTORY_OBJECTS_BASE),
 };
 
 function shapeFacet(facet, rows, bucketYears) {
@@ -156,15 +157,16 @@ function renderTimeline(t, title) {
 }
 
 function yearPhrase({ year_from: from, year_to: to }) {
-  if (from != null && to != null) return `, dated ${from}–${to}`;
-  if (from != null) return `, dated ${from} or later`;
-  if (to != null) return `, dated ${to} or earlier`;
+  if (from != null && to != null) return ` dated ${from}–${to}`;
+  if (from != null) return ` dated ${from} or later`;
+  if (to != null) return ` dated ${to} or earlier`;
   return '';
 }
 
 function renderText(s) {
+  const years = yearPhrase(s);
   const head = `${s.concept.label ?? s.concept.id} [${shortId(s.concept.id)}]: ${fmt(s.total_smells)} smells` +
-    (s.include_narrower ? ', including narrower concepts' : '') + (s.language ? `, in ${s.language}` : '') + yearPhrase(s);
+    (s.include_narrower ? ', including narrower concepts' : '') + (s.language ? `, in ${s.language}` : '') + (years && `,${years}`);
   const lines = [head];
   if (s.timeline) lines.push(renderTimeline(s.timeline, 'By document date'));
   if (s.emission_timeline) lines.push(renderTimeline(s.emission_timeline, 'By emission date'));
@@ -191,18 +193,15 @@ export function registerSmellProfileTool(server) {
       }
       const { include_narrower: narrower, language, bucket_years: bucketYears, top } = args;
       const { year_from: yearFrom, year_to: yearTo } = args;
-      if (yearFrom != null && yearTo != null && yearFrom > yearTo) {
-        throw new ToolError('`year_from` is later than `year_to`.', 'Swap them or widen the range.');
-      }
+      assertYearRange(yearFrom, yearTo);
       if (narrower && language) {
         throw new ToolError(
           '`language` cannot be combined with include_narrower.',
           'Drop one of them: the combination is too slow for the endpoint.',
         );
       }
-      const gesture = vocab.name === 'olfactory-gestures';
-      let defaults = narrower ? PROFILE_NARROWER_DEFAULT_FACETS : PROFILE_DEFAULT_FACETS;
-      if (gesture && !narrower) defaults = PROFILE_GESTURE_DEFAULT_FACETS;
+      const defaults = narrower ? PROFILE_NARROWER_DEFAULT_FACETS
+        : vocab.anchor === 'gesture' ? PROFILE_GESTURE_DEFAULT_FACETS : PROFILE_DEFAULT_FACETS;
       let facets = [...new Set(args.facets ?? defaults)];
       if (narrower && facets.length > PROFILE_MAX_NARROWER_FACETS) {
         throw new ToolError(
@@ -212,14 +211,15 @@ export function registerSmellProfileTool(server) {
       }
 
       const warnings = [];
-      if (vocab.name === 'fragrant-spaces' && facets.includes('fragrant_spaces')) {
+      if (vocab.anchor === 'place' && facets.includes('fragrant_spaces')) {
         facets = facets.filter((f) => f !== 'fragrant_spaces');
         warnings.push('The fragrant_spaces facet was dropped: it would only repeat the concept itself.');
       }
 
       const deadline = Date.now() + PROFILE_CALL_DEADLINE_MS;
       const timeoutLeft = () => Math.floor(Math.min(REQUEST_TIMEOUT_MS, deadline - Date.now()));
-      const anchor = anchorPattern(concept, vocab.name, { narrower, language, yearFrom, yearTo });
+      const anchor = anchorPattern(concept, vocab.anchor, { narrower, language, yearFrom, yearTo });
+      const exclude = vocab.anchor === 'source' ? concept : undefined;
 
       const [totalRows, labelRows] = await Promise.all([
         sparqlSelect('profile_total', profileTotalQuery(anchor), { signal, timeoutMs: timeoutLeft() }),
@@ -241,7 +241,7 @@ export function registerSmellProfileTool(server) {
       if (totalSmells === 0) {
         for (const f of facets) out[f] = shapeFacet(f, [], bucketYears);
         const lang = language ? `${LANGUAGE_NAMES[language]} ` : '';
-        warnings.push(`No ${lang}smells${yearPhrase(out).replace(/^,/, '')} are linked to this concept.`);
+        warnings.push(`No ${lang}smells${yearPhrase(out)} are linked to this concept.`);
       } else {
         const report = progressReporter(ctx);
         let done = 0;
@@ -252,7 +252,7 @@ export function registerSmellProfileTool(server) {
             warnings.push(skipWarning(facet));
           } else {
             try {
-              const rows = await sparqlSelect(`profile_${facet}`, profileFacetQuery(facet, anchor, { bucketYears, top, exclude: vocab.name === 'olfactory-objects' ? concept : undefined }), {
+              const rows = await sparqlSelect(`profile_${facet}`, profileFacetQuery(facet, anchor, { bucketYears, top, exclude }), {
                 signal, timeoutMs: left,
               });
               out[facet] = shapeFacet(facet, rows, bucketYears);

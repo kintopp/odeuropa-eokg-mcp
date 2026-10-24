@@ -2,7 +2,8 @@ import {
   App, applyDocumentTheme, applyHostStyleVariables, applyHostFonts,
 } from '@modelcontextprotocol/ext-apps/app-with-deps';
 import {
-  parseResult, errorText, isAllowedImageUrl, initialBoxesOn, toggleContext, labelGroups, selectionContext, clampView,
+  parseResult, errorText, isAllowedImageUrl, initialBoxesOn, toggleContext, labelGroups, groupText, boxLabel,
+  selectionContext, clampView, MIN_SCALE, MAX_SCALE,
 } from './model.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -75,7 +76,7 @@ function applyView() {
 
 function zoomAt(factor, cx, cy) {
   const f = nodes.frame;
-  const next = Math.min(8, Math.max(1, view.scale * factor));
+  const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, view.scale * factor));
   const k = next / view.scale;
   const x = cx ?? f.clientWidth / 2;
   const y = cy ?? f.clientHeight / 2;
@@ -114,9 +115,8 @@ function syncBoxes() {
   nodes.selection.replaceChildren();
   if (selected != null) {
     const o = source.objects[selected];
-    const text = `${o.label}${o.origin === 'manual' ? ' (hand-drawn)' : ` (${o.score.toFixed(2)})`}`;
     nodes.selection.append(
-      el('span', {}, `Selected: ${text}`),
+      el('span', {}, `Selected: ${boxLabel(o)}`),
       el('button', { type: 'button', onclick: () => sendToChat(o) }, 'Send to chat'),
     );
   }
@@ -145,7 +145,7 @@ function drawBoxes(svg, groups) {
     g.style.color = colourOf(o.label, groups);
     const rect = svgEl('rect', { class: 'outline', x, y, width: w, height: h, stroke: 'currentColor' });
     const title = svgEl('title');
-    title.textContent = o.origin === 'manual' ? `${o.label} (hand-drawn)` : `${o.label} (${o.score.toFixed(2)})`;
+    title.textContent = boxLabel(o);
     // Tab above the box, or just inside it when the box touches the top edge.
     const tabY = y >= tabH ? y - tabH : y;
     const tab = svgEl('rect', { class: 'tab', x: x - 1, y: tabY, width: measure.measureText(o.label).width + 8, height: tabH, rx: 2 });
@@ -192,7 +192,7 @@ function wireInteraction(frame) {
     } else if (pointers.size === 1) {
       const dx = cur.x - prev.x;
       const dy = cur.y - prev.y;
-      if (Math.abs(dx) + Math.abs(dy) > 0) dragMoved = dragMoved || Math.hypot(dx, dy) > 2;
+      dragMoved ||= Math.hypot(dx, dy) > 2;
       if (view.scale > 1) {
         frame.classList.add('dragging');
         view = { ...view, tx: view.tx + dx, ty: view.ty + dy };
@@ -255,7 +255,7 @@ function render(result) {
   const legend = el('div', { class: 'legend' },
     el('ul', {}, ...groups.map((g) => el('li', { 'data-label': g.label },
       el('span', { class: 'swatch', style: `background:${colourOf(g.label, groups)}` }),
-      `${g.label}${g.count > 1 ? ` ×${g.count}` : ''}${g.manual ? ' (hand-drawn)' : ''}`))),
+      groupText(g, 'hand-drawn')))),
     el('p', {}, FOOTNOTE));
   const selection = el('div', { class: 'selection' });
 

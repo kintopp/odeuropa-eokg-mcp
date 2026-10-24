@@ -2,28 +2,27 @@
 // Concept URIs come from parseId; `scheme` from vocabOf (never user text); `language`, years and `bucketYears` from zod.
 
 import { KG_BASE } from '../../lib/ids.js';
-import { DATASET_GRAPH_BASE, FRAGRANT_SPACES_BASE, OLFACTORY_OBJECTS_BASE } from '../../config.js';
+import {
+  DATASET_GRAPH_BASE, FRAGRANT_SPACES_BASE, FRAGRANT_SPACES_GRAPH, OLFACTORY_OBJECTS_BASE, OLFACTORY_OBJECTS_GRAPH,
+} from '../../config.js';
+import { yearBounds } from './years.js';
 
-const pad4 = (y) => String(y).padStart(4, '0');
+// Keyed by the VOCABS `anchor` of the concept's vocabulary.
+const ANCHOR_BODY = {
+  source: '?emission od:F3_had_source ?c ; od:F1_generated ?smell .',
+  place: '?place crm:P137_exemplifies ?c . ?emission crm:P7_took_place_at ?place ; od:F1_generated ?smell .',
+  gesture: '?ex od:F5_involved_gesture ?c ; od:F2_perceived ?smell . ?emission od:F1_generated ?smell .',
+};
 
-/** The graph pattern binding ?smell for a concept. `scheme` is 'olfactory-objects', 'fragrant-spaces' or 'olfactory-gestures'. */
-export function anchorPattern(conceptUri, scheme, { narrower = false, language, yearFrom, yearTo } = {}) {
-  const bounds = [
-    yearFrom != null && `?yb >= "${pad4(yearFrom)}"^^xsd:gYear`,
-    yearTo != null && `?yb <= "${pad4(yearTo)}"^^xsd:gYear`,
-  ].filter(Boolean).join(' && ');
+/** The graph pattern binding ?smell for a concept whose vocabulary has the VOCABS `anchor` given. */
+export function anchorPattern(conceptUri, anchor, { narrower = false, language, yearFrom, yearTo } = {}) {
+  // Fragrant-spaces states its hierarchy in either direction; the others use skos:broader only.
+  const path = anchor === 'place' ? '(skos:broader|^skos:narrower)*' : 'skos:broader*';
+  const head = narrower ? `?c ${path} <${conceptUri}> .` : `VALUES ?c { <${conceptUri}> }`;
+  const bounds = yearBounds('?yb', yearFrom, yearTo);
   const years = bounds ? ` ?ysrc crm:P67_refers_to ?smell ; schema:dateCreated/time:hasBeginning ?yb . FILTER(${bounds})` : '';
   const filters = (language ? ` ?lsrc crm:P67_refers_to ?smell ; schema:inLanguage "${language}" .` : '') + years;
-  if (scheme === 'fragrant-spaces') {
-    const head = narrower ? `?c (skos:broader|^skos:narrower)* <${conceptUri}> .` : `VALUES ?c { <${conceptUri}> }`;
-    return `${head} ?place crm:P137_exemplifies ?c . ?emission crm:P7_took_place_at ?place ; od:F1_generated ?smell .${filters}`;
-  }
-  if (scheme === 'olfactory-gestures') {
-    const head = narrower ? `?c skos:broader* <${conceptUri}> .` : `VALUES ?c { <${conceptUri}> }`;
-    return `${head} ?ex od:F5_involved_gesture ?c ; od:F2_perceived ?smell . ?emission od:F1_generated ?smell .${filters}`;
-  }
-  const head = narrower ? `?c skos:broader* <${conceptUri}> .` : `VALUES ?c { <${conceptUri}> }`;
-  return `${head} ?emission od:F3_had_source ?c ; od:F1_generated ?smell .${filters}`;
+  return `${head} ${ANCHOR_BODY[anchor]}${filters}`;
 }
 
 export const profileTotalQuery = (anchor) => `
@@ -58,12 +57,12 @@ SELECT ?q ?n (SAMPLE(?pl) AS ?label) (SAMPLE(?rl) AS ?rlabel) WHERE {
   fragrant_spaces: (a, { top }) => topN(a,
     `?emission crm:P7_took_place_at ?fplace . ?fplace crm:P137_exemplifies ?space .
   FILTER(STRSTARTS(STR(?space), "${FRAGRANT_SPACES_BASE}"))
-  OPTIONAL { GRAPH <${KG_BASE}vocabulary/fragrant-spaces> { ?space skos:prefLabel ?sl FILTER(LANG(?sl) = "en") } }`,
+  OPTIONAL { GRAPH <${FRAGRANT_SPACES_GRAPH}> { ?space skos:prefLabel ?sl FILTER(LANG(?sl) = "en") } }`,
     'space', top, '(SAMPLE(?sl) AS ?label)'),
   smell_sources: (a, { top, exclude }) => topN(a,
     `?emission od:F3_had_source ?o .
   FILTER(STRSTARTS(STR(?o), "${OLFACTORY_OBJECTS_BASE}")${exclude ? ` && ?o != <${exclude}>` : ''})
-  OPTIONAL { GRAPH <${KG_BASE}vocabulary/olfactory-objects> { ?o skos:prefLabel ?ol FILTER(LANG(?ol) = "en") } }`,
+  OPTIONAL { GRAPH <${OLFACTORY_OBJECTS_GRAPH}> { ?o skos:prefLabel ?ol FILTER(LANG(?ol) = "en") } }`,
     'o', top, '(SAMPLE(?ol) AS ?label)'),
   places: (a, { top }) => topN(a, '?ex od:F2_perceived ?smell ; crm:P7_took_place_at ?p . ?p rdfs:label ?pl .', 'pl', top),
   carriers: (a, { top }) => topN(a, '?emission od:F4_had_carrier ?car . ?car rdfs:label ?cl .', 'cl', top),

@@ -7,7 +7,7 @@ import { PROFILE_FACETS } from '../src/config.js';
 
 const ROSE = 'http://data.odeuropa.eu/vocabulary/olfactory-objects/138';
 const GARDEN = 'http://data.odeuropa.eu/vocabulary/fragrant-spaces/27';
-const anchor = anchorPattern(ROSE, 'olfactory-objects');
+const anchor = anchorPattern(ROSE, 'source');
 
 const DISTINCT = {
   timeline: 'schema:dateCreated/time:hasBeginning',
@@ -51,14 +51,14 @@ test('fragrant_spaces and datasets filter to local URIs inside the WHERE clause,
 test('anchors: exact, narrower, fragrant-spaces', () => {
   assert.ok(anchor.includes(`VALUES ?c { <${ROSE}> }`));
   assert.ok(!anchor.includes('skos:broader*'));
-  assert.ok(anchorPattern(ROSE, 'olfactory-objects', { narrower: true }).includes(`?c skos:broader* <${ROSE}>`));
-  const g = anchorPattern(GARDEN, 'fragrant-spaces');
+  assert.ok(anchorPattern(ROSE, 'source', { narrower: true }).includes(`?c skos:broader* <${ROSE}>`));
+  const g = anchorPattern(GARDEN, 'place');
   assert.ok(g.includes('crm:P137_exemplifies ?c') && g.includes('od:F1_generated ?smell'));
-  assert.ok(anchorPattern(GARDEN, 'fragrant-spaces', { narrower: true }).includes('(skos:broader|^skos:narrower)*'));
+  assert.ok(anchorPattern(GARDEN, 'place', { narrower: true }).includes('(skos:broader|^skos:narrower)*'));
 });
 
 test('language appears only as a quoted literal', () => {
-  const a = anchorPattern(ROSE, 'olfactory-objects', { language: 'fr' });
+  const a = anchorPattern(ROSE, 'source', { language: 'fr' });
   assert.ok(a.includes('schema:inLanguage "fr"'));
   assert.equal(a.match(/\bfr\b/g).length, 1);
   assert.ok(!anchor.includes('inLanguage'));
@@ -89,13 +89,13 @@ test('fragrant_spaces binds the label inside the fragrant-spaces graph, so sameA
 // Invariant: a gesture count is anchored on the concept through experiences, never on od:F3_had_source (0 rows for gestures).
 test('gesture anchor binds the experience to the gesture and the smell it perceived', () => {
   const G = 'http://data.odeuropa.eu/vocabulary/olfactory-gestures/2';
-  const a = anchorPattern(G, 'olfactory-gestures');
+  const a = anchorPattern(G, 'gesture');
   assert.ok(a.includes(`VALUES ?c { <${G}> }`));
   assert.ok(a.includes('od:F5_involved_gesture ?c') && a.includes('od:F2_perceived ?smell'));
   assert.ok(a.includes('od:F1_generated ?smell'));
   assert.ok(!a.includes('F3_had_source'));
-  assert.ok(anchorPattern(G, 'olfactory-gestures', { narrower: true }).includes(`?c skos:broader* <${G}>`));
-  assert.ok(anchorPattern(G, 'olfactory-gestures', { language: 'fr' }).includes('schema:inLanguage "fr"'));
+  assert.ok(anchorPattern(G, 'gesture', { narrower: true }).includes(`?c skos:broader* <${G}>`));
+  assert.ok(anchorPattern(G, 'gesture', { language: 'fr' }).includes('schema:inLanguage "fr"'));
 });
 
 // Failure modes: a wikidata twin takes a top-N slot (the filter sits after LIMIT or is missing); the concept ranks
@@ -111,6 +111,6 @@ test('smell_sources: anchored, filtered to olfactory-objects before GROUP BY, gr
 
 test('smell_sources excludes the concept itself only when asked', () => {
   assert.ok(profileFacetQuery('smell_sources', anchor, { top: 10, exclude: ROSE }).includes(`?o != <${ROSE}>`));
-  const g = anchorPattern(GARDEN, 'fragrant-spaces');
+  const g = anchorPattern(GARDEN, 'place');
   assert.ok(!profileFacetQuery('smell_sources', g, { top: 10 }).includes('?o !='));
 });

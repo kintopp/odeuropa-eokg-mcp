@@ -4,12 +4,10 @@ import { outputSchema } from '../src/tools/get_source.js';
 import { EXCERPT_INJECTION_BOUNDARY } from '../src/config.js';
 import { startStubServer, bindings } from './stub-backend.js';
 import { withClient, assertWireValid, LIVE } from './helpers.js';
-import { FRAGMENT_ROWS, MANUAL, IMAGE_SOURCE, uri } from './source-fixtures.js';
+import { FRAGMENT_ROWS, MANUAL, IMAGE_SOURCE, uri, TYPE_TEXT, TYPE_IMAGE } from './source-fixtures.js';
 
 const KG = 'http://data.odeuropa.eu/';
 const TEXT_SOURCE = `${KG}source/638ff424-2531-5bc8-959e-9951e2c42697`;
-const TYPE_TEXT = 'http://erlangen-crm.org/current/E33_Linguistic_Object';
-const TYPE_IMAGE = 'http://erlangen-crm.org/current/E36_Visual_Item';
 const en = (value) => ({ type: 'literal', value, 'xml:lang': 'en' });
 
 const textMeta = bindings([

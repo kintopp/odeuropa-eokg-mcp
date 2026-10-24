@@ -13,17 +13,9 @@ import { clearImageCache } from '../src/image/client.js';
 import { MAX_IMAGE_BYTES } from '../src/config.js';
 import { installFetchStub, bindings } from './stub-backend.js';
 import { assertWireValid, makeJpeg, withClient, LIVE } from './helpers.js';
-import { FRAGMENT_ROWS, MANUAL, IMAGE_SOURCE, uri } from './source-fixtures.js';
-
-const TYPE_TEXT = 'http://erlangen-crm.org/current/E33_Linguistic_Object';
-const TYPE_IMAGE = 'http://erlangen-crm.org/current/E36_Visual_Item';
-const IMAGE_URL = 'https://data.odeuropa.eu/image/e90fb725-7275-db43-a805-c109d9b4f9c3.jpg';
-const RKD_URL = 'https://images.rkd.nl/rkd/thumb/650x650/e90fb725-7275-db43-a805-c109d9b4f9c3.jpg';
-
-const imageMeta = (...images) => bindings(images.map((image) => ({
-  type: uri(TYPE_IMAGE), title: 'Still life with fruit', artist: 'Pieter van den Bosch', date: '1650/55XX', image,
-  url: 'https://rkd.nl/explore/images/56354',
-})));
+import {
+  FRAGMENT_ROWS, MANUAL, IMAGE_SOURCE, uri, TYPE_TEXT, TYPE_IMAGE, IMAGE_URL, RKD_URL, imageMeta,
+} from './source-fixtures.js';
 
 const jpegResponse = (w = 650, h = 568, init = {}) => new Response(makeJpeg(w, h), {
   status: 200, headers: { 'content-type': 'image/jpeg' }, ...init,

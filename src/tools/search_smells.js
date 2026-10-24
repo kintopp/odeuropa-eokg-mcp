@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { withTool } from '../lib/tool.js';
-import { ToolError } from '../lib/errors.js';
+import { ToolError, assertYearRange } from '../lib/errors.js';
 import { explorerUrl, uuidOf } from '../lib/ids.js';
 import { pickLabel, uniqueStrings } from '../lib/rdf.js';
 import { capArrays } from '../lib/budget.js';
@@ -175,9 +175,7 @@ export function registerSearchSmellsTool(server) {
       const { limit, offset, language, dataset } = args;
       const yearFrom = args.year_from;
       const yearTo = args.year_to;
-      if (yearFrom != null && yearTo != null && yearFrom > yearTo) {
-        throw new ToolError('`year_from` is later than `year_to`.', 'Swap them or widen the range.');
-      }
+      assertYearRange(yearFrom, yearTo);
       const lq = scopedLuceneQuery(args.text, args.in);
       const filtered = Boolean(language || dataset || yearFrom != null || yearTo != null);
       if (filtered && offset + limit > SEARCH_MAX_FILTERED_DEPTH) {

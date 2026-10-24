@@ -10,6 +10,12 @@ export class ToolError extends Error {
   }
 }
 
+export function assertYearRange(yearFrom, yearTo) {
+  if (yearFrom != null && yearTo != null && yearFrom > yearTo) {
+    throw new ToolError('`year_from` is later than `year_to`.', 'Swap them or widen the range.');
+  }
+}
+
 // Normalize any thrown value into user/LLM-facing text.
 export function formatErrorText(err) {
   if (err instanceof ToolError) {

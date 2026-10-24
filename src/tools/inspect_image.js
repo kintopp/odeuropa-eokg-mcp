@@ -5,21 +5,13 @@ import { withTool } from '../lib/tool.js';
 import { parseId } from '../lib/ids.js';
 import { jpegDimensions } from '../lib/jpeg.js';
 import { mirrorWarnings } from '../lib/warnings.js';
-import { sparqlSelect } from '../sparql/client.js';
-import { imageFragmentsQuery } from '../sparql/queries/source.js';
 import { fetchKgImage } from '../image/client.js';
-import { shapeFragments, lookupHostedImage } from './get_source.js';
-import {
-  READ_ONLY_ANNOTATIONS, VISION_MAX_EDGE, FRAGMENT_MIN_SCORE_DEFAULT,
-} from '../config.js';
+import { lookupHostedImage, scoredFragments, imageInputFields, imageLinkLines } from './get_source.js';
+import { READ_ONLY_ANNOTATIONS, VISION_MAX_EDGE } from '../config.js';
 
 export const INSPECT_IMAGE_TOOL_NAME = 'eokg_inspect_image';
 
-const inputSchema = z.object({
-  id: z.string().min(1).max(300).describe('Image source id: a http://data.odeuropa.eu/source/<uuid> URI or bare uuid.'),
-  min_score: z.number().min(0).max(1).default(FRAGMENT_MIN_SCORE_DEFAULT)
-    .describe(`Hide detector boxes scoring below this (0-1, default ${FRAGMENT_MIN_SCORE_DEFAULT}). Hand-drawn boxes score 1 but are not verified and can carry the wrong label.`),
-}).strict();
+const inputSchema = z.object(imageInputFields()).strict();
 
 const box = () => z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() });
 
@@ -60,9 +52,7 @@ function renderText(s) {
   const when = s.date ? ` (${s.date})` : '';
   const size = s.width ? `${s.width}×${s.height} px, ` : '';
   const lines = [`"${s.title ?? '(untitled)'}"${who}${when}, ${size}${Math.round(s.byte_size / 1000)} KB.`];
-  if (s.url) lines.push(`Record: ${s.url}`);
-  lines.push(`Image: ${s.image_url}`);
-  if (s.original_image_url) lines.push(`Original: ${s.original_image_url}`);
+  lines.push(...imageLinkLines(s));
   lines.push('The picture above is for your own analysis; the user does not see it. To show it, call eokg_view_image; never embed these links as Markdown images, which display blank.');
   const framing = s.width ? 'boxes as % x,y,w,h from top-left' : 'boxes in pixels x,y,w,h from top-left';
   lines.push(`Detected objects (score ≥ ${s.min_score}; ${framing}):`);
@@ -81,15 +71,13 @@ export function registerInspectImageTool(server) {
     { title: INSPECT_IMAGE_TOOL_NAME, description, inputSchema, outputSchema, annotations: READ_ONLY_ANNOTATIONS },
     withTool(INSPECT_IMAGE_TOOL_NAME, 'Inspecting the image failed', async (args, ctx) => {
       const signal = ctx?.mcpReq?.signal;
-      const { id, imageUrl, originalImageUrl, meta, warnings } = await lookupHostedImage(parseId('source', args.id), signal);
+      const { header, warnings } = await lookupHostedImage(parseId('source', args.id), signal);
 
-      const [fragRows, { buffer, mimeType }] = await Promise.all([
-        sparqlSelect('image_fragments', imageFragmentsQuery(id), { signal }),
-        fetchKgImage(imageUrl, { signal }),
+      const [{ objects: kept, hidden }, { buffer, mimeType }] = await Promise.all([
+        scoredFragments(header.id, args.min_score, signal),
+        fetchKgImage(header.image_url, { signal }),
       ]);
       const dims = jpegDimensions(buffer);
-      const all = shapeFragments(fragRows);
-      const kept = all.filter((o) => o.score >= args.min_score);
       const objects = kept.map((o) => (dims ? { ...o, box_pct: toPct(o, dims) } : o));
       if (!dims) {
         warnings.push('Image dimensions could not be read; boxes are given in pixels only.');
@@ -105,17 +93,11 @@ export function registerInspectImageTool(server) {
       }
 
       const structured = {
-        id,
-        ...(meta.title && { title: meta.title }),
-        ...(meta.artist && { artist: meta.artist }),
-        ...(meta.date && { date: meta.date }),
-        image_url: imageUrl,
-        ...(meta.url && { url: meta.url }),
-        ...(originalImageUrl && { original_image_url: originalImageUrl }),
+        ...header,
         ...(dims && { width: dims.width, height: dims.height }),
         byte_size: buffer.length, mime_type: mimeType, min_score: args.min_score,
         objects,
-        hidden_below_min_score: all.length - kept.length,
+        hidden_below_min_score: hidden,
         ...(warnings.length && { warnings }),
       };
       return {

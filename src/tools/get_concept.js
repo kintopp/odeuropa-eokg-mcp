@@ -119,13 +119,16 @@ export function registerGetConceptTool(server) {
       const signal = ctx?.mcpReq?.signal;
       const row = vocabOf(id);
       const q = (name, text) => sparqlSelect(name, text, { signal });
+      const countQuery = {
+        source: ['concept_smell_count', conceptSmellCountQuery(id)],
+        place: ['space_smell_count', spaceSmellCountQuery(id)],
+        gesture: ['gesture_smell_count', gestureSmellCountQuery(id)],
+      }[row?.anchor];
       const [detail, narrowerRows, smellRows, imageRows] = await Promise.all([
         q('concept_detail', conceptDetailQuery(id)),
         q('concept_narrower', conceptNarrowerQuery(id, CONCEPT_MAX_NARROWER)),
-        row?.name === 'olfactory-gestures' ? q('gesture_smell_count', gestureSmellCountQuery(id))
-          : row?.linked === 'smells' ? q('concept_smell_count', conceptSmellCountQuery(id))
-          : row?.linked === 'places' ? q('space_smell_count', spaceSmellCountQuery(id)) : [],
-        row?.linked === 'smells' ? q('concept_image_count', conceptImageCountQuery(id)) : [],
+        countQuery ? q(...countQuery) : [],
+        row?.images ? q('concept_image_count', conceptImageCountQuery(id)) : [],
       ]);
       if (!detail.length) {
         throw new ToolError(

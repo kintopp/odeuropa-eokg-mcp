@@ -65,14 +65,14 @@ export const DATASETS_SNAPSHOT_DATE = '2026-10-23';
 export const DATASETS = Object.freeze([
   ['medical-heritage', 898458], ['gallica', 811633], ['british-library', 328828],
   ['wikisource', 110917], ['eebo', 81038], ['dbnl', 39642], ['gutenberg', 36766],
-  ['liberliber', 30228], ['odor', 24351], ['dlib', 22270], ['europeana', 17530],
+  ['liberliber', 30228], ['odor', 24351, 'images'], ['dlib', 22270], ['europeana', 17530, 'images'],
   ['dta', 14776], ['ecco', 8435], ['text-annotation', 7125], ['pulse', 6562],
-  ['royal-society-corpus', 3627], ['nuk', 1752], ['old-bailey-corpus', 1170],
-  ['bibbleue', 495], ['grimm', 64], ['rijksmuseum', 46],
-].map(([name, smells]) => Object.freeze({ name, smells })));
+  ['royal-society-corpus', 3627], ['nuk', 1752, 'images'], ['old-bailey-corpus', 1170],
+  ['bibbleue', 495], ['grimm', 64], ['rijksmuseum', 46, 'images'],
+].map(([name, smells, images]) => Object.freeze({ name, smells, images: images === 'images' })));
 export const DATASET_NAMES = Object.freeze(DATASETS.map((d) => d.name));
 // Every source in these graphs is an image (E36); none holds a text.
-export const IMAGE_DATASETS = Object.freeze(['odor', 'europeana', 'nuk', 'rijksmuseum']);
+export const IMAGE_DATASETS = Object.freeze(DATASETS.filter((d) => d.images).map((d) => d.name));
 export const TOTAL_SMELLS = 2445713;
 export const TEXT_LANGUAGES = Object.freeze(['en', 'fr', 'it', 'sl', 'de', 'nl']);
 export const LANGUAGE_NAMES = Object.freeze({
@@ -96,10 +96,20 @@ export const EXCERPT_INJECTION_BOUNDARY =
 export const EXCERPT_MAX_CHARS = 4000; // per excerpt
 export const SMELL_MAX_EXCERPTS = 5;
 export const OLFACTORY_OBJECTS_GRAPH = 'http://data.odeuropa.eu/vocabulary/olfactory-objects';
+export const FRAGRANT_SPACES_GRAPH = 'http://data.odeuropa.eu/vocabulary/fragrant-spaces';
+export const OLFACTORY_OBJECTS_BASE = `${OLFACTORY_OBJECTS_GRAPH}/`;
+export const FRAGRANT_SPACES_BASE = `${FRAGRANT_SPACES_GRAPH}/`;
 
 export const SKOSMOS_BASE = process.env.EOKG_SKOSMOS_BASE?.trim() || 'https://vocab.odeuropa.eu/rest/v1/';
 // [model-facing name, Skosmos id, what it is linked to in the KG]. The tool schema enum is built
 // from this table: an unknown id makes Skosmos answer HTTP 200 with an HTML PHP fatal error.
+// Linked vocabularies also carry `anchor` (how a concept reaches its smells: emission source,
+// emission place, or perceiving experience), `images` (depicted in artworks) and their Explorer path segment.
+const LINKED_VOCABS = {
+  'olfactory-objects': { anchor: 'source', images: true, explorer: 'smell-sources' },
+  'fragrant-spaces': { anchor: 'place', images: false, explorer: 'fragrant-spaces' },
+  'olfactory-gestures': { anchor: 'gesture', images: true, explorer: null },
+};
 export const VOCABS = Object.freeze([
   ['olfactory-objects', 'olfactory_objects', 'smells'], ['fragrant-spaces', 'fragrant-spaces', 'places'],
   ['dhsv-sw', 'dhsv-sw', null], ['dravnieks', 'dravnieks', null], ['dravnieks-odorants', 'dravnieks-odorants', null],
@@ -109,7 +119,9 @@ export const VOCABS = Object.freeze([
   ['historic-book', 'historic-book', null], ['historical-scent', 'historical-scent', null], ['noses', 'noses', null],
   ['olfactory-gestures', 'olfactory-gestures', 'smells'], ['plutchik', 'plutchik', null],
   ['vdi-hedonic', 'vdi-hedonic', null], ['vdi-intensity', 'vdi-intensity', null], ['zwaardemaker', 'zwaardemaker', null],
-].map(([name, skosmos, linked]) => Object.freeze({ name, skosmos, linked })));
+].map(([name, skosmos, linked]) => Object.freeze({
+  name, skosmos, linked, anchor: null, images: false, explorer: null, ...LINKED_VOCABS[name],
+})));
 export const VOCAB_NAMES = Object.freeze(VOCABS.map((v) => v.name));
 export const DEFAULT_CONCEPT_VOCABS = Object.freeze(['olfactory-objects', 'fragrant-spaces', 'olfactory-gestures']);
 export const CONCEPT_MAX_NARROWER = 100;
@@ -130,7 +142,7 @@ export const IMAGE_CACHE_MAX = 16;
 export const SOURCE_DEFAULT_LIMIT = 20;
 export const SOURCE_MAX_LIMIT = 100;
 export const SOURCE_EXCERPT_CHARS = 300;
-// Below 0.7 about a quarter of detector labels were wrong in a blind check.
+// Below this, detector labels are too often wrong to show by default.
 export const FRAGMENT_MIN_SCORE_DEFAULT = 0.7;
 // prov:wasGeneratedBy activities of image fragments → the `origin` field
 export const ANNOTATION_ORIGINS = Object.freeze({
@@ -152,8 +164,6 @@ export const TIMELINE_MIN_YEAR = 1000;
 export const TIMELINE_MAX_YEAR = 2100;
 export const VISUAL_DEFAULT_LIMIT = 10;
 export const VISUAL_MAX_LIMIT = 50;
-export const FRAGRANT_SPACES_BASE = 'http://data.odeuropa.eu/vocabulary/fragrant-spaces/';
-export const OLFACTORY_OBJECTS_BASE = 'http://data.odeuropa.eu/vocabulary/olfactory-objects/';
 
 // Streamable HTTP entry (src/http.js). PORT is set by Railway.
 export const HTTP_PORT = posIntEnv('PORT', 3000, { min: 0, max: 65535 });

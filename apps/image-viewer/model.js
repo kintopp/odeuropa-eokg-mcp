@@ -37,12 +37,14 @@ export function labelGroups(objects) {
   return [...groups.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
 
-const groupText = (g) => `${g.label}${g.count > 1 ? ` ×${g.count}` : ''}${g.manual ? ' (manual)' : ''}`;
+// `manualNote` marks labels drawn only by hand: 'manual' for the model, 'hand-drawn' for the user.
+export const groupText = (g, manualNote = 'manual') => `${g.label}${g.count > 1 ? ` ×${g.count}` : ''}${g.manual ? ` (${manualNote})` : ''}`;
+export const boxLabel = (o) => `${o.label} (${o.origin === 'manual' ? 'hand-drawn' : o.score.toFixed(2)})`;
 const named = (source) => `"${source.title ?? '(untitled)'}" (${source.id})`;
 
 export function toggleContext(source, on, objects) {
   if (!on) return `User turned the boxes off in the image viewer for ${named(source)}.`;
-  return `User turned the boxes on in the image viewer for ${named(source)}: ${labelGroups(objects).map(groupText).join(', ')}.`;
+  return `User turned the boxes on in the image viewer for ${named(source)}: ${labelGroups(objects).map((g) => groupText(g)).join(', ')}.`;
 }
 
 export function selectionContext(source, obj) {

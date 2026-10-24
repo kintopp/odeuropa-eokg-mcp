@@ -1,13 +1,10 @@
 // Queries for eokg_find_visual_smells. `c` is a parseId-validated concept URI; years are pre-validated integers; `minScore` is a zod-validated number in 0–1.
 
-const pad4 = (y) => String(y).padStart(4, '0');
+import { yearBounds } from './years.js';
 
 // Undated images are excluded when a year filter is given, so the count and the page agree.
 export function dateFilter(v, yearFrom, yearTo) {
-  const bounds = [
-    yearFrom != null && `?vb >= "${pad4(yearFrom)}"^^xsd:gYear`,
-    yearTo != null && `?vb <= "${pad4(yearTo)}"^^xsd:gYear`,
-  ].filter(Boolean).join(' && ');
+  const bounds = yearBounds('?vb', yearFrom, yearTo);
   return bounds ? `${v} schema:dateCreated/time:hasBeginning ?vb . FILTER(${bounds})` : '';
 }
 
