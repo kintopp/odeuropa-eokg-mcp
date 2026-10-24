@@ -45,6 +45,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .pan { position: relative; transform-origin: 0 0; width: 100%; }
 .pan img { display: block; width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
 .pan svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.frame.boxes-off svg { display: none; }
 .box rect { fill: transparent; stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: all; cursor: pointer; }
 .box.manual rect { stroke-dasharray: 6 4; }
 .box.selected rect { stroke-width: 4; fill: color-mix(in srgb, currentColor 18%, transparent); }

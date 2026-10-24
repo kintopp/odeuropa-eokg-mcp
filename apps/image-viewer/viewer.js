@@ -104,7 +104,7 @@ function select(i) {
 // Updates the parts that depend on boxesOn / selected without rebuilding the image.
 function syncBoxes() {
   if (!nodes) return;
-  nodes.svg.hidden = !boxesOn;
+  nodes.frame.classList.toggle('boxes-off', !boxesOn); // SVGElement has no `hidden` property
   nodes.legend.hidden = !boxesOn;
   nodes.toggle.setAttribute('aria-pressed', String(boxesOn));
   nodes.svg.querySelectorAll('.box').forEach((g, i) => g.classList.toggle('selected', i === selected));
@@ -244,8 +244,7 @@ function render(result) {
     el('button', { type: 'button', onclick: () => zoomAt(1.4), title: 'Zoom in (+)' }, '+'),
     el('button', { type: 'button', onclick: () => zoomAt(1 / 1.4), title: 'Zoom out (−)' }, '−'),
     el('button', { type: 'button', onclick: resetView, title: 'Reset (0)' }, 'Reset'),
-    result.url ? el('button', { type: 'button', onclick: () => openLink(result.url) }, 'Record') : null,
-    result.original_image_url ? el('button', { type: 'button', onclick: () => openLink(result.original_image_url) }, 'Original') : null,
+    result.url ? el('button', { type: 'button', onclick: () => openLink(result.url), title: 'The original record, with its metadata and image' }, 'Original') : null,
     app ? el('button', { type: 'button', onclick: toggleFullscreen }, 'Fullscreen') : null,
   );
 

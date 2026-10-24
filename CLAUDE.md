@@ -78,4 +78,5 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 - **luc:snippets over a window:** snippets are computed for every hit in luc:limit; only request them when the window is the page (24 s at 5k hits).
 - **Skosmos 200 + HTML:** an unknown vocab id returns a PHP fatal-error page with status 200; the VOCABS enum prevents it.
 - **railway.json is not read:** Railway's Config as Code is deprecated (new services cannot use it; existing ones stop on 2026-12-01). Service config lives in .railway/railway.ts and is applied with railway config apply; code is deployed separately.
+- **`svg.hidden = true` does nothing:** `hidden` is an HTML element property; on an SVGElement it is a plain JS expando. Hide SVG with a class and `display: none`.
 - **closeMatch is corrupt:** never read skos:closeMatch for Iconclass; use src/data/iconclass.json.
