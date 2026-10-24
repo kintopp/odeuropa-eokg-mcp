@@ -78,7 +78,8 @@ how often something is mentioned; cite the record whose concept you mean.
 parentheses, `*`. Words without an operator are OR-ed: `tobacco and smoke` gives
 1,254,625 hits, `tobacco AND smoke` 3,478. Quote hyphenated words (`"eau de cologne"`),
 or they split into OR-ed words; the result adds a hint for both cases. `NOT` needs a
-positive term (`smell NOT tobacco`). *Symptom:* a Lucene syntax error (unbalanced
+positive term (`smell NOT tobacco`). A trailing `*` matches every word with that
+prefix (`Jew*` also finds "jewels"), so read the hits. *Symptom:* a Lucene syntax error (unbalanced
 parenthesis or quote) comes back as a correctable error; fix the query and retry.
 
 **OCR spelling.** Matching is on raw, unnormalised OCR text from 1600–1920. *Symptom:*
@@ -165,9 +166,11 @@ facets, or profile the specific concept. A timed-out query is not retried.
 2. `eokg_smell_profile({ concept, facets: ["timeline", "qualities", "datasets"] })`
    → look for: which periods have enough data (small buckets are noise), which
    adjectives dominate, and whether one dataset drives a peak.
-   For one period instead of the whole timeline, add `year_from` and `year_to`: they
-   count by document date, so undated sources drop out, and images (dataset `odor`)
-   can be half of a period's smells (the profile warns when they are over a quarter).
+   To show change, run the `qualities` facet once per period with `year_from` and
+   `year_to` rather than quoting all-period qualities. These count by document date,
+   so undated sources drop out, and images (datasets `odor`, `europeana`, `nuk`,
+   `rijksmuseum`) can be half of a period's smells (the profile warns when they are
+   over a quarter). A timeline mixes text and image smells.
    Add `facets: ["smell_sources"]` to see which other smell sources occur in the same
    smells ("which smells appear together").
 3. `eokg_search_smells({ text: "\"lavender\" AND (sweet OR fragrant)", year_from, year_to })`
@@ -207,7 +210,10 @@ facets, or profile the specific concept. A timed-out query is not retried.
    The user does not see this picture. To show it, call `eokg_view_image({ id })`,
    which opens a viewer; never embed the image as a Markdown image. Boxes start
    hidden and the user can switch them with the viewer's Boxes button; pass
-   `show_boxes: true` only when the user asks to see them.
+   `show_boxes: true` only when the user asks to see them. Some clients drop MCP image
+   results (the Anthropic API's MCP connector does). If no picture comes through, say
+   so, describe the work from its title and box labels only, and call the labels
+   unchecked.
 3. `eokg_find_concepts` for the same object in other languages, then
    `eokg_search_smells` for the same concept in texts of the same period.
 4. Compare: what texts say about the smell, what artists chose to depict. Keep
@@ -251,13 +257,16 @@ Iconclass 31A33 (smell) maps to no Odeuropa concept.
 
 ## Citing
 
-Give, for each smell: the `explorer_url` (`https://explorer.odeuropa.eu/smells/…`),
-the source title, date and dataset. Quote excerpts verbatim. The artist field can carry
+Give, for each smell: the `explorer_url`, the source title, date and dataset. The
+link is `https://explorer.odeuropa.eu/smells/<id>` with the smell id from any result,
+so it needs no extra call. Quote excerpts verbatim. The artist field can carry
 provenance or attribution notes ("Jan Breughel as such in Dorotheum Vienne,
 2015-10-20"); quote the artist name only. Where OCR damage is
 visible, mark it with [sic] rather than silently fixing it (`soaps , English`,
-`Â £`). Say whether a date is the document date or the emission date. Attribute
-emotions and qualities to the extraction, not to the author. Odeuropa is
+`Â £`). Say whether a date is the document date or the emission date. Emotions come from
+the classifier, not the author. Qualities are words the extractor picked out of the
+passage, some normalised (*Pleasant*, *Unpleasant*): quote the passage, not the facet,
+when you attribute a word to a writer. Odeuropa is
 the data provider; cite it as such (EU Horizon 2020, grant 101004469).
 
 ## MCP Server Handoffs
