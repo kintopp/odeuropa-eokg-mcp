@@ -46,9 +46,12 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .pan img { display: block; width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
 .pan svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .frame.boxes-off svg { display: none; }
-.box rect { fill: transparent; stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: all; cursor: pointer; }
-.box.manual rect { stroke-dasharray: 6 4; }
-.box.selected rect { stroke-width: 4; fill: color-mix(in srgb, currentColor 18%, transparent); }
+.box { cursor: pointer; }
+.box .outline { fill: transparent; stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: all; }
+.box.manual .outline { stroke-dasharray: 6 4; }
+.box.selected .outline { stroke-width: 4; fill: color-mix(in srgb, currentColor 18%, transparent); }
+.box .tab { fill: currentColor; }
+.box text { fill: #fff; font-weight: 600; }
 
 .legend { margin-top: 8px; }
 .legend ul { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; }

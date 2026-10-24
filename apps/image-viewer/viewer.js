@@ -135,19 +135,23 @@ async function sendToChat(o) {
 
 function drawBoxes(svg, groups) {
   const fontSize = Math.max(10, Math.round(svg.viewBox.baseVal.width / 45));
+  const tabH = fontSize + 4;
+  // The layer may be display:none, where getComputedTextLength() is 0, so measure on a canvas.
+  const measure = document.createElement('canvas').getContext('2d');
+  measure.font = `600 ${fontSize}px ${getComputedStyle(svg).fontFamily}`;
   source.objects.forEach((o, i) => {
     const { x, y, w, h } = o.box_px;
     const g = svgEl('g', { class: `box ${o.origin === 'manual' ? 'manual' : 'detector'}` });
     g.style.color = colourOf(o.label, groups);
-    const rect = svgEl('rect', { x, y, width: w, height: h, stroke: 'currentColor' });
+    const rect = svgEl('rect', { class: 'outline', x, y, width: w, height: h, stroke: 'currentColor' });
     const title = svgEl('title');
     title.textContent = o.origin === 'manual' ? `${o.label} (hand-drawn)` : `${o.label} (${o.score.toFixed(2)})`;
-    const tag = svgEl('text', {
-      x, y: Math.max(fontSize, y - 3), fill: 'currentColor', 'font-size': fontSize, stroke: '#fff',
-      'stroke-width': fontSize / 4, 'paint-order': 'stroke', 'pointer-events': 'none',
-    });
+    // Tab above the box, or just inside it when the box touches the top edge.
+    const tabY = y >= tabH ? y - tabH : y;
+    const tab = svgEl('rect', { class: 'tab', x: x - 1, y: tabY, width: measure.measureText(o.label).width + 8, height: tabH, rx: 2 });
+    const tag = svgEl('text', { x: x + 3, y: tabY + tabH - 4, 'font-size': fontSize, 'pointer-events': 'none' });
     tag.textContent = o.label;
-    g.append(title, rect, tag);
+    g.append(title, rect, tab, tag);
     g.addEventListener('click', (ev) => { ev.stopPropagation(); if (!dragMoved) select(i); });
     svg.append(g);
   });
