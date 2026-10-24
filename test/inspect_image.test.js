@@ -144,6 +144,18 @@ test('min_score 0.94 keeps the three top boxes and counts the rest as hidden', a
   assert.ok(res.content[1].text.includes('3 lower-scoring detections hidden.'));
 });
 
+// Failure modes: the default is still 0.5 (0.6 box shown); the default is too high (0.75 box hidden);
+// hidden_below_min_score ignores the default cut-off.
+test('default min_score hides a 0.6 detector box and keeps a 0.75 one', async () => {
+  fragRows = [...FRAGMENT_ROWS, { ...FRAGMENT_ROWS[0], score: '0.75' }, { ...FRAGMENT_ROWS[0], score: '0.6' }];
+  const res = await inspect();
+  const s = res.structuredContent;
+  assert.equal(s.min_score, 0.7);
+  assert.equal(s.hidden_below_min_score, 1);
+  assert.equal(s.objects.filter((o) => o.score === 0.75).length, 1);
+  assert.equal(s.objects.filter((o) => o.score === 0.6).length, 0);
+});
+
 test('origin: manual prints (manual) without a score; unbound provenance is unknown; twins dropped', async () => {
   const noProv = { ...FRAGMENT_ROWS[1] };
   delete noProv.prov;

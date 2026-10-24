@@ -13,8 +13,8 @@ const row = (n, over = {}) => ({
   source: uri(sid(n)), title: en(`Work ${n}`), image: `https://data.odeuropa.eu/image/img-${n}.jpg`,
   date: '1618', artist: 'Pieter Lastman', best: '1', boxes: '21', ...over,
 });
-const routes = (rows, total = 4013) => ({
-  visual_count: () => ({ body: bindings([{ n: String(total) }]) }),
+const routes = (rows, total = 4013, hidden = 0) => ({
+  visual_count: () => ({ body: bindings([{ n: String(total), hidden: String(hidden) }]) }),
   visual_page: () => ({ body: bindings(rows) }),
   concept_label: () => ({ body: bindings([{ l: en('Rose') }]) }),
 });
@@ -34,7 +34,51 @@ test('the description tells the model hand-drawn boxes rank first', async () => 
     const { tools } = await c.listTools();
     const t = tools.find((x) => x.name === 'eokg_find_visual_smells');
     assert.ok(t.description.includes('hand-drawn boxes (score 1) come first'));
+    assert.ok(t.description.includes('Images whose boxes all score below min_score (default 0.7) are hidden'));
   });
+});
+
+// Failure modes: the cut-off is missing from the count or the page query (total and page disagree);
+// a box-less image is dropped; boxes/best_score still count boxes below the cut-off; total still includes
+// hidden images or hidden_below_min_score is missing; the default is still 0.5; the filter sits after LIMIT.
+test('default cut-off 0.7 filters the ranked images and their box count', async () => {
+  await call({});
+  assert.ok(queryOf('visual_count').includes('?best < 0.7'));
+  const q = queryOf('visual_page');
+  assert.ok(q.includes('BIND(IF(?score >= 0.7, ?f, ?unset) AS ?kf)'));
+  assert.ok(q.includes('HAVING(!BOUND(?best) || ?best >= 0.7)'));
+  const g = q.indexOf('GROUP BY ?source');
+  const h = q.indexOf('HAVING(');
+  const o = q.indexOf('ORDER BY');
+  assert.ok(g >= 0 && h > g && o > h, 'HAVING must sit between GROUP BY and ORDER BY, before LIMIT');
+});
+
+test('min_score 0.9 is passed through', async () => {
+  await call({ min_score: 0.9 });
+  assert.ok(queryOf('visual_count').includes('?best < 0.9'));
+  assert.ok(queryOf('visual_page').includes('?best >= 0.9'));
+  assert.ok(queryOf('visual_page').includes('?score >= 0.9'));
+});
+
+test('hidden images leave total and are reported', async () => {
+  const res = await call({}, routes([row(1)], 4013, 529));
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.equal(s.total, 3484);
+  assert.equal(s.hidden_below_min_score, 529);
+  assert.equal(s.min_score, 0.7);
+  assert.ok(res.content[0].text.includes('529 more images have only boxes scoring below 0.7; pass min_score 0 to include them.'));
+});
+
+test('everything hidden: zero total, specific warning', async () => {
+  const res = await call({}, routes([], 300, 300));
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.equal(s.total, 0);
+  assert.ok(s.warnings.some((w) => w.includes('All 300 linked images have only boxes scoring below 0.7')));
+});
+
+test('min_score out of range is rejected', async () => {
+  const res = await call({ min_score: 1.5 });
+  assert.equal(res.isError, true);
 });
 
 test('page shaping, text and has_more from the extra row', async () => {
@@ -109,6 +153,8 @@ test('year_from after year_to and a fragrant-spaces concept fail with zero queri
 test('live: Rose images', { skip: !LIVE }, async () => {
   const res = await withClient('visual-live', (c) => c.callTool({ name: 'eokg_find_visual_smells', arguments: { concept: ROSE } }));
   const s = assertWireValid(outputSchema, res.structuredContent);
-  assert.ok(s.total > 4000);
+  assert.equal(s.min_score, 0.7);
+  assert.ok(s.hidden_below_min_score > 0);
+  assert.ok(s.total + s.hidden_below_min_score > 4000);
   assert.ok(s.results[0].image_url.startsWith('https://data.odeuropa.eu/image/'));
 });

@@ -112,7 +112,9 @@ is a placeholder meaning "with NAME". *Fix:* fill the name only as a candidate
 
 **Image boxes can be wrong, hand-drawn ones included.** A detector box has a
 confidence below 1; boxes scoring exactly 1 were drawn by hand (`origin: manual`).
-Both kinds can carry the wrong label. *Symptom:* a "Peach" box over a lemon; a
+Both kinds can carry the wrong label. Score 1 means drawn by hand, not checked.
+Below 0.7, about one detector label in four is wrong, so both image tools hide those
+boxes by default (`min_score`). *Symptom:* a "Peach" box over a lemon; a
 manual "Meat" box on a bread roll. *Fix:* call `eokg_inspect_image`, look at the
 picture, and report what you see against each label, whatever its origin.
 
@@ -160,6 +162,7 @@ facets, or profile the specific concept. A timed-out query is not retried.
 1. `eokg_find_visual_smells({ concept: "olfactory-objects/138", year_from, year_to })`
    → artworks with hand-drawn boxes first, then by detector confidence; note title,
    artist and date. Hundreds of hand-drawn images can precede the first detector-only one.
+   Images with only low-confidence boxes are hidden and counted; `min_score: 0` brings them back.
 2. `eokg_inspect_image({ id })` → look at the picture; compare boxes with what you see.
    The user does not see the picture: when they want to, give them the Record and
    Image links from the result.

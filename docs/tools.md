@@ -155,12 +155,12 @@ Counts the smells linked to one concept by period, language, dataset, qualities,
 
 ## `eokg_find_visual_smells`
 
-Lists paintings and prints linked to an olfactory-objects concept, images with hand-drawn boxes first, then by the detector's best confidence for it, then catalogue-only links. Year filters use the artwork date and exclude undated works.
+Lists paintings and prints linked to an olfactory-objects concept, images with hand-drawn boxes first, then by the detector's best confidence for it, then catalogue-only links. Year filters use the artwork date and exclude undated works. Images whose boxes all score below `min_score` (default 0.7) are hidden and counted.
 
 ### Tool description
 
 <!-- generated:eokg_find_visual_smells:description -->
-> Find paintings and prints in which a smell source was detected or catalogued. Lists image sources linked to an olfactory-objects concept, best box score first: images with hand-drawn boxes (score 1) come first, then images ranked by the object detector's confidence, then catalogue-only links with no box. Year filters use the artwork date and exclude undated works. Pass a result id to eokg_inspect_image to look at it.
+> Find paintings and prints in which a smell source was detected or catalogued. Lists image sources linked to an olfactory-objects concept, best box score first: images with hand-drawn boxes (score 1) come first, then images ranked by the object detector's confidence, then catalogue-only links with no box. Images whose boxes all score below min_score (default 0.7) are hidden and counted; boxes and best_score count only the boxes shown. Year filters use the artwork date and exclude undated works. Pass a result id to eokg_inspect_image to look at it.
 <!-- /generated -->
 
 ### Parameters
@@ -173,11 +173,12 @@ Lists paintings and prints linked to an olfactory-objects concept, images with h
 | `year_to` | int (1000–2100) | — | Latest artwork date (inclusive). Undated works are excluded. |
 | `limit` | int (1–50) | `10` | Same as `eokg_search_smells`. |
 | `offset` | int (0–5000) | `0` | Results to skip. |
+| `min_score` | number (0–1) | `0.7` | Hide images whose boxes for this concept all score below this (0-1, default 0.7); boxes and best_score count only boxes at or above it. Hand-drawn boxes score 1. Pass 0 for every image. |
 <!-- /generated -->
 
 ## `eokg_inspect_image`
 
-Fetches the picture of an image source together with its annotated objects: concept, bounding box in percent, and whether a person drew the box or the detector produced it. Detector boxes can be wrong, so compare them with what you see.
+Fetches the picture of an image source together with its annotated objects: concept, bounding box in percent, and whether a person drew the box or the detector produced it. Detector boxes below `min_score` (default 0.7) are hidden; boxes of either origin can be wrong, so compare them with what you see.
 
 ### Tool description
 
@@ -191,7 +192,7 @@ Fetches the picture of an image source together with its annotated objects: conc
 | Param | Type | Default | Description |
 |---|---|---|---|
 | `id` | string (≤ 300) | **required** | Image source id: a http://data.odeuropa.eu/source/<uuid> URI or bare uuid. |
-| `min_score` | number (0–1) | `0.5` | Hide detector boxes scoring below this (0-1, default 0.5). Manual boxes always score 1. |
+| `min_score` | number (0–1) | `0.7` | Hide detector boxes scoring below this (0-1, default 0.7). Hand-drawn boxes score 1 but are not verified and can carry the wrong label. |
 <!-- /generated -->
 
 ## Data caveats

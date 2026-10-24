@@ -19,7 +19,7 @@ export const INSPECT_IMAGE_TOOL_NAME = 'eokg_inspect_image';
 const inputSchema = z.object({
   id: z.string().min(1).max(300).describe('Image source id: a http://data.odeuropa.eu/source/<uuid> URI or bare uuid.'),
   min_score: z.number().min(0).max(1).default(FRAGMENT_MIN_SCORE_DEFAULT)
-    .describe(`Hide detector boxes scoring below this (0-1, default ${FRAGMENT_MIN_SCORE_DEFAULT}). Manual boxes always score 1.`),
+    .describe(`Hide detector boxes scoring below this (0-1, default ${FRAGMENT_MIN_SCORE_DEFAULT}). Hand-drawn boxes score 1 but are not verified and can carry the wrong label.`),
 }).strict();
 
 const box = () => z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() });

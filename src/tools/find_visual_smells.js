@@ -10,7 +10,9 @@ import { withWarnings } from '../lib/warnings.js';
 import { sparqlSelect, v, num } from '../sparql/client.js';
 import { conceptLabelQuery } from '../sparql/queries/profile.js';
 import { visualCountQuery, visualPageQuery } from '../sparql/queries/visual.js';
-import { READ_ONLY_ANNOTATIONS, PER_CHANNEL_RESULT_BUDGET, VISUAL_DEFAULT_LIMIT, VISUAL_MAX_LIMIT } from '../config.js';
+import {
+  READ_ONLY_ANNOTATIONS, PER_CHANNEL_RESULT_BUDGET, VISUAL_DEFAULT_LIMIT, VISUAL_MAX_LIMIT, FRAGMENT_MIN_SCORE_DEFAULT,
+} from '../config.js';
 
 export const FIND_VISUAL_SMELLS_TOOL_NAME = 'eokg_find_visual_smells';
 
@@ -25,13 +27,18 @@ const inputSchema = z.object({
   year_to: z.number().int().min(1000).max(2100).optional().describe('Latest artwork date (inclusive). Undated works are excluded.'),
   limit: z.number().int().min(1).max(VISUAL_MAX_LIMIT).default(VISUAL_DEFAULT_LIMIT).describe('Results per page.'),
   offset: z.number().int().min(0).max(5000).default(0).describe('Results to skip.'),
+  min_score: z.number().min(0).max(1).default(FRAGMENT_MIN_SCORE_DEFAULT).describe(
+    `Hide images whose boxes for this concept all score below this (0-1, default ${FRAGMENT_MIN_SCORE_DEFAULT}); boxes and best_score count only boxes at or above it. Hand-drawn boxes score 1. Pass 0 for every image.`,
+  ),
 }).strict();
 
 export const outputSchema = z.object({
   concept: z.object({ id: z.string(), label: z.string().optional() }),
   total: z.number().int(),
+  hidden_below_min_score: z.number().int(),
   offset: z.number().int(),
   limit: z.number().int(),
+  min_score: z.number(),
   has_more: z.boolean(),
   results: z.array(z.object({
     id: z.string(),
@@ -49,6 +56,7 @@ export const outputSchema = z.object({
 const description =
   'Find paintings and prints in which a smell source was detected or catalogued. ' +
   'Lists image sources linked to an olfactory-objects concept, best box score first: images with hand-drawn boxes (score 1) come first, then images ranked by the object detector\'s confidence, then catalogue-only links with no box. ' +
+  `Images whose boxes all score below min_score (default ${FRAGMENT_MIN_SCORE_DEFAULT}) are hidden and counted; boxes and best_score count only the boxes shown. ` +
   'Year filters use the artwork date and exclude undated works. Pass a result id to eokg_inspect_image to look at it.';
 
 const fmt = (n) => n.toLocaleString('en-US');
@@ -71,14 +79,16 @@ function shapeRow(r) {
 
 function renderText(s) {
   const name = s.concept.label ?? s.concept.id.slice(VOCAB_PREFIX.length);
-  if (!s.results.length) return `${fmt(s.total)} image sources represent ${name}; none on this page.`;
+  const hiddenLine = s.hidden_below_min_score > 0 &&
+    `${fmt(s.hidden_below_min_score)} more images have only boxes scoring below ${s.min_score}; pass min_score 0 to include them.`;
+  if (!s.results.length) return [`${fmt(s.total)} image sources represent ${name}; none on this page.`, hiddenLine].filter(Boolean).join('\n');
   const head = `${fmt(s.total)} image sources represent ${name}; showing ${s.offset + 1}–${s.offset + s.results.length} (best detection first):`;
   const lines = s.results.map((r, i) => {
     const who = [r.artist, r.date && `(${r.date})`].filter(Boolean).join(' ');
     const det = r.best_score === null ? 'catalogued only' : `best ${r.best_score.toFixed(2)}, ${r.boxes} boxes`;
     return `${s.offset + i + 1}. "${r.title ?? '(untitled)'}"${who ? `, ${who}` : ''} — ${det} — id ${uuidOf(r.id) ?? r.id}`;
   });
-  return [head, ...lines].join('\n');
+  return [head, ...lines, hiddenLine].filter(Boolean).join('\n');
 }
 
 export function registerFindVisualSmellsTool(server) {
@@ -98,20 +108,27 @@ export function registerFindVisualSmellsTool(server) {
       }
       const q = (name, text) => sparqlSelect(name, text, { signal });
       const [countRows, pageRows, labelRows] = await Promise.all([
-        q('visual_count', visualCountQuery(concept, years)),
-        q('visual_page', visualPageQuery(concept, years, limit, offset)),
+        q('visual_count', visualCountQuery(concept, years, args.min_score)),
+        q('visual_page', visualPageQuery(concept, years, args.min_score, limit, offset)),
         q('concept_label', conceptLabelQuery(concept, 'olfactory-objects')),
       ]);
-      const total = countRows.length ? Math.round(num(countRows[0], 'n') ?? 0) : 0;
+      const n = countRows.length ? Math.round(num(countRows[0], 'n') ?? 0) : 0;
+      const hidden = countRows.length ? Math.round(num(countRows[0], 'hidden') ?? 0) : 0;
+      const total = Math.max(0, n - hidden);
       const label = pickLabel(labelRows.map((r) => r.l));
       const results = pageRows.slice(0, limit).map(shapeRow);
 
       const full = {
         concept: { id: concept, ...(label && { label }) },
-        total, offset, limit, has_more: pageRows.length > limit, results,
+        total, hidden_below_min_score: hidden, offset, limit, min_score: args.min_score, has_more: pageRows.length > limit, results,
       };
       const structured = capArrays(full, ['results'], PER_CHANNEL_RESULT_BUDGET);
-      const warnings = total === 0 ? ['No image sources are linked to this concept in this date range.'] : [];
+      const warnings = [];
+      if (total === 0) {
+        warnings.push(hidden > 0
+          ? `All ${fmt(hidden)} linked images have only boxes scoring below ${args.min_score}; lower min_score to see them.`
+          : 'No image sources are linked to this concept in this date range.');
+      }
       const res = withWarnings({ structured, text: renderText(structured) }, warnings);
       return { content: [{ type: 'text', text: res.text }], structuredContent: res.structured };
     }),

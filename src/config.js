@@ -123,7 +123,8 @@ export const IMAGE_CACHE_MAX = 16;
 export const SOURCE_DEFAULT_LIMIT = 20;
 export const SOURCE_MAX_LIMIT = 100;
 export const SOURCE_EXCERPT_CHARS = 300;
-export const FRAGMENT_MIN_SCORE_DEFAULT = 0.5;
+// Below 0.7 about a quarter of detector labels were wrong in a blind check.
+export const FRAGMENT_MIN_SCORE_DEFAULT = 0.7;
 // prov:wasGeneratedBy activities of image fragments → the `origin` field
 export const ANNOTATION_ORIGINS = Object.freeze({
   'http://data.odeuropa.eu/provenance/db29c010-6542-531f-aea4-8d066a16ad70': 'detector',
