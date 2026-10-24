@@ -59,6 +59,13 @@ test('vocab all sends every Skosmos id', async () => {
 test('Rose is deduped across languages and labelled in the requested lang; linked sort first', async () => {
   const res = await call({ query: 'rose', lang: 'it' }, {
     skosmos_search: () => ({ body: { results: [TAXON, ...ROSE] } }),
+    concept_labels: () => ({
+      body: bindings([
+        { c: uri(`${KG}olfactory-objects/138`), l: en('Rose') },
+        { c: uri(`${KG}olfactory-objects/138`), l: { type: 'literal', value: 'Rosa', 'xml:lang': 'it' } },
+        { c: uri(`${KG}expert-taxonomy/flower/other_flowers/rose`), l: en('rose') },
+      ]),
+    }),
   });
   const s = assertWireValid(outputSchema, res.structuredContent);
   assert.equal(s.results.length, 2);
@@ -69,7 +76,52 @@ test('Rose is deduped across languages and labelled in the requested lang; linke
   assert.equal(s.results[0].explorer_url, 'https://explorer.odeuropa.eu/smell-sources/138');
   assert.equal(s.results[1].vocab, 'expert-taxonomy');
   assert.equal(s.results[1].linked_to, null);
-  assert.ok(res.content[0].text.includes('- Rosa [olfactory-objects/138] — linked to smells'));
+  assert.equal(s.results[0].lang, 'it');
+  assert.equal(s.results[1].label, 'rose', 'no Italian label: the matched label stays');
+  assert.ok(res.content[0].text.includes('- Rosa [olfactory-objects/138]'));
+  assert.ok(!res.content[0].text.includes('- Rosa [olfactory-objects/138] —'));
+});
+
+test('lang never reaches Skosmos: a concept matched only in another language is kept', async () => {
+  const tabak = [hit('olfactory-objects/55', 'Tabak', 'nl', 'olfactory_objects')];
+  const res = await call({ query: 'Tabak', lang: 'de' }, {
+    skosmos_search: () => ({ body: { results: tabak } }),
+    concept_labels: () => ({ body: bindings([{ c: uri(`${KG}olfactory-objects/55`), l: en('Tobacco') }]) }),
+  });
+  assert.equal(searchUrls()[0].searchParams.has('lang'), false);
+  const r = res.structuredContent.results[0];
+  assert.equal(r.label, 'Tabak', 'no German label: the matched label is shown');
+  assert.equal(r.lang, 'nl');
+});
+
+test('without lang there is no labels query', async () => {
+  await call({ query: 'rose' }, { skosmos_search: () => ({ body: { results: ROSE } }) });
+  assert.ok(!stub.router.calls.some((c) => c.label === 'concept_labels'));
+});
+
+test('only unlinked vocabularies read "not linked to smells"; "linked to" never appears', async () => {
+  const res = await call({ query: 'rose', vocab: 'all' }, { skosmos_search: () => ({ body: { results: [TAXON, ...ROSE] } }) });
+  const lines = res.content[0].text.split('\n');
+  assert.ok(lines.find((l) => l.includes('olfactory-objects/138')) && !lines.find((l) => l.includes('olfactory-objects/138')).includes('not linked'));
+  assert.ok(lines.find((l) => l.includes('expert-taxonomy')).endsWith('— not linked to smells'));
+  assert.ok(!/(?<!not )linked to/.test(res.content[0].text));
+});
+
+test('a lower-case Iconclass notation is upper-cased outside parentheses', async () => {
+  const res = await call({ iconclass: '25g41(rose)' }, { concept_labels: labelsRoute });
+  assert.equal(res.structuredContent.iconclass, '25G41(rose)');
+  assert.equal(res.structuredContent.results[0].id, `${KG}olfactory-objects/138`);
+  await stub.close();
+  const bare = await call({ iconclass: '25g41' }, { concept_labels: labelsRoute });
+  assert.equal(bare.structuredContent.iconclass, '25G41');
+  assert.ok(bare.structuredContent.results.length > 0);
+});
+
+test('the lang parameter says labels are shown, matching covers all languages', async () => {
+  const stubTools = await withClient('find-concepts', (c) => c.listTools(), { env: {} });
+  const t = stubTools.tools.find((x) => x.name === 'eokg_find_concepts');
+  assert.match(t.inputSchema.properties.lang.description, /Show labels in this language where the concept has one/);
+  assert.match(t.inputSchema.properties.lang.description, /Matching always covers all six languages/);
 });
 
 test('without lang, en is preferred', async () => {
@@ -108,7 +160,7 @@ test('iconclass 25G41(ROSE): exact Rose first, broader Flower; no Skosmos reques
   // Placeholder siblings (27, 92, …) are other named notations, not matches at all.
   for (const n of [27, 92, 170, 223, 226, 236, 257, 327, 391]) assert.equal(pick(n), undefined, String(n));
   assert.equal(searchUrls().length, 0);
-  assert.ok(res.content[0].text.includes('- Rose [olfactory-objects/138] — 25G41(...) (exact) — linked to smells'));
+  assert.ok(res.content[0].text.includes('- Rose [olfactory-objects/138] — 25G41(...) (exact)\n'));
 });
 
 test('iconclass 25G41(TULIP): no concept is named Tulip, so only Flower (broader)', async () => {

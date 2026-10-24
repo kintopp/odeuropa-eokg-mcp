@@ -108,7 +108,7 @@ Looks up vocabulary concepts by label in six languages, or by Iconclass notation
 | `query` | string (≤ 100) | — | Label to search for, in any of de, en, fr, it, nl, sl (e.g. "rose", "jardin"). A trailing * is added unless present. |
 | `iconclass` | string (≤ 100) | — | Iconclass notation (e.g. 25G41(ROSE)) instead of query: finds concepts mapped to it or to broader or narrower notations. |
 | `vocab` | undefined | — | Vocabulary or vocabularies to search. Default: olfactory-objects and fragrant-spaces, the two linked to smells. "all" searches every vocabulary. |
-| `lang` | enum: `en` · `fr` · `it` · `sl` · `de` · `nl` | — | Prefer labels in this language. |
+| `lang` | enum: `en` · `fr` · `it` · `sl` · `de` · `nl` | — | Show labels in this language where the concept has one. Matching always covers all six languages. |
 | `limit` | int (1–50) | `10` | Maximum results (default 10). |
 <!-- /generated -->
 

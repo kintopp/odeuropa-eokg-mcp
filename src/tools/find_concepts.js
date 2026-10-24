@@ -6,8 +6,7 @@ import { ToolError } from '../lib/errors.js';
 import { parseId, explorerUrl, KG_BASE } from '../lib/ids.js';
 import { pickLabel, labelFromUri } from '../lib/rdf.js';
 import { withWarnings } from '../lib/warnings.js';
-import { sparqlSelect, v, lang as langOf } from '../sparql/client.js';
-import { conceptLabelsQuery } from '../sparql/queries/concept.js';
+import { fetchConceptTerms } from '../lib/concept_labels.js';
 import { skosmosSearch } from '../skosmos/client.js';
 import iconclassData from '../data/iconclass.json' with { type: 'json' };
 import {
@@ -34,7 +33,7 @@ const inputSchema = z.object({
   ]).optional().describe(
     'Vocabulary or vocabularies to search. Default: olfactory-objects and fragrant-spaces, the two linked to smells. "all" searches every vocabulary.',
   ),
-  lang: z.enum([...TEXT_LANGUAGES]).optional().describe('Prefer labels in this language.'),
+  lang: z.enum([...TEXT_LANGUAGES]).optional().describe('Show labels in this language where the concept has one. Matching always covers all six languages.'),
   limit: z.number().int().min(1).max(FIND_CONCEPTS_MAX_LIMIT).default(10).describe('Maximum results (default 10).'),
 }).strict();
 
@@ -126,27 +125,21 @@ function renderText(heading, results) {
   const lines = results.map((r) => {
     const parts = [`- ${r.label} [${shortId(r.id)}]`];
     if (r.iconclass_match) parts.push(`${r.notation} (${r.iconclass_match})`);
-    if (r.linked_to) parts.push(`linked to ${r.linked_to}`);
+    if (!r.linked_to) parts.push('not linked to smells');
     return parts.join(' — ');
   });
   return [heading, ...lines].join('\n');
 }
 
 async function findByIconclass(args, signal) {
-  const q = args.iconclass.trim();
+  const q = args.iconclass.trim().replace(/(\([^)]*\))|[^(]+/g, (m, paren) => (paren ? m : m.toUpperCase()));
   const cands = iconclassCandidates(q, resolveVocabs(args.vocab));
   const warnings = [];
   const labels = new Map();
   let found = [];
   if (cands.length) {
     const uris = [...new Set(cands.map((c) => c.uri))];
-    const rows = await sparqlSelect('concept_labels', conceptLabelsQuery(uris), { signal });
-    const terms = new Map();
-    for (const r of rows) {
-      const uri = v(r, 'c');
-      if (!terms.has(uri)) terms.set(uri, []);
-      terms.get(uri).push({ value: v(r, 'l'), 'xml:lang': langOf(r, 'l') });
-    }
+    const terms = await fetchConceptTerms(uris, signal);
     for (const [uri, list] of terms) {
       const wanted = args.lang && list.find((t) => t['xml:lang'] === args.lang);
       labels.set(uri, wanted?.value ?? pickLabel(list));
@@ -182,7 +175,7 @@ async function findByLabel(args, signal) {
   const vocabRows = resolveVocabs(args.vocab);
   const query = args.query.includes('*') ? args.query : `${args.query}*`;
   const hits = await skosmosSearch({
-    query, vocabs: vocabRows.map((x) => x.skosmos), lang: args.lang,
+    query, vocabs: vocabRows.map((x) => x.skosmos),
     maxhits: Math.min(args.limit * 6, 300),
   }, { signal });
 
@@ -199,7 +192,7 @@ async function findByLabel(args, signal) {
   for (const [rawUri, list] of byUri) {
     let uri;
     try { uri = parseId('concept', rawUri); } catch { dropped++; continue; }
-    const pick = (args.lang && list.find((h) => h.lang === args.lang)) || list.find((h) => h.lang === 'en') || list[0];
+    const pick = list.find((h) => h.lang === 'en') || list[0];
     const vocabName = bySkosmos.get(pick.vocab)?.name ?? pick.vocab ?? uri.slice(VOCAB_PREFIX.length).split('/')[0];
     shaped.push(shapeResult({
       uri, label: pick.prefLabel ?? labelFromUri(uri), lang: pick.lang, vocabName,
@@ -208,6 +201,13 @@ async function findByLabel(args, signal) {
   }
   const ordered = [...shaped.filter((r) => r.linked_to), ...shaped.filter((r) => !r.linked_to)];
   const results = ordered.slice(0, args.limit);
+  if (args.lang && results.length) {
+    const terms = await fetchConceptTerms(results.map((r) => r.id), signal);
+    for (const r of results) {
+      const wanted = terms.get(r.id)?.find((t) => t['xml:lang'] === args.lang);
+      if (wanted) { r.label = wanted.value; r.lang = args.lang; }
+    }
+  }
   const warnings = dropped ? [`${dropped} result${dropped > 1 ? 's' : ''} skipped: the id could not be read as a concept.`] : [];
   const structured = { query, results, has_more: ordered.length > args.limit };
   return withWarnings({ structured, text: renderText(`${results.length} concepts for "${query}":`, results) }, warnings);
