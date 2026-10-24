@@ -2,7 +2,7 @@
 
 Each tool below is documented three ways: a prose summary for human readers, the **tool description** the server actually sends over MCP, and its parameters.
 
-The tool descriptions (from `src/tools/*.js`) are the only per-tool guidance a model gets when deciding which tool to call. They are complemented by the **server instructions** below (from `src/config.js`), sent once when a client initialises the connection, and by the optional [SKILL.md](../skill/odeuropa-smells/SKILL.md), which teaches research patterns. Everything in a generated block is rendered from the running server by `npm run build:docs`; the prose around it is hand-written.
+The tool descriptions (from `src/tools/*.js`) are the only per-tool guidance a model gets when deciding which tool to call. They are complemented by the **server instructions** below (from `src/config.js`), sent once when a client initialises the connection, and by the optional [SKILL.md](../skill/odeuropa-eokg/SKILL.md), which teaches research patterns. Everything in a generated block is rendered from the running server by `npm run build:docs`; the prose around it is hand-written.
 
 ## Server instructions
 

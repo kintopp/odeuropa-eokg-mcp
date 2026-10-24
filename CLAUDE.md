@@ -43,7 +43,7 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 - `src/lib/`: shared helpers (tool wrapper, errors, budgets, caching, CSV, ids, warnings).
 - `apps/image-viewer/`: MCP App source; `npm run build:viewer` writes the committed `src/apps/image-viewer.html`.
 - `src/data/iconclass.json`: curated Iconclass sidecar, built by `npm run build:iconclass`.
-- `scripts/`: build and measurement scripts. `docs/tools.md` and `skill/odeuropa-smells.skill` are generated or checked artefacts.
+- `scripts/`: build and measurement scripts. `docs/tools.md` and `skill/odeuropa-eokg.skill` are generated or checked artefacts.
 
 ## Adding a tool touches these places
 
@@ -51,7 +51,7 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 2. `src/server.js` (register it)
 3. `REQUIRED_PROPS` in `test/smoke.test.js`
 4. `docs/tools.md`: add a `## \`eokg_<name>\`` section with the three generated markers, then run `npm run build:docs`
-5. `skill/odeuropa-smells/SKILL.md` if it changes a workflow (then `npm run build:skill`)
+5. `skill/odeuropa-eokg/SKILL.md` if it changes a workflow (then `npm run build:skill`)
 6. The tools table in `README.md`
 
 ## Backend facts that drive the whole design

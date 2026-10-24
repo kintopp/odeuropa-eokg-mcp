@@ -57,7 +57,7 @@ To check the install without a client, run `npm test`.
 
 ### Skill
 
-The skill file [skill/odeuropa-smells.skill](skill/odeuropa-smells.skill) gives the AI assistant guidance in natural language on how to use this server well: which tool to choose for a given question, how to combine them, and the traps in this data. [Skills](https://support.claude.com/en/articles/12512176-what-are-skills) were developed by Anthropic and are now an [open standard](https://agentskills.io/home). To install it in Claude, follow [these instructions](https://claude.com/resources/tutorials/teach-claude-your-way-of-working-using-skills).
+The skill file [skill/odeuropa-eokg.skill](skill/odeuropa-eokg.skill) gives the AI assistant guidance in natural language on how to use this server well: which tool to choose for a given question, how to combine them, and the traps in this data. [Skills](https://support.claude.com/en/articles/12512176-what-are-skills) were developed by Anthropic and are now an [open standard](https://agentskills.io/home). To install it in Claude, follow [these instructions](https://claude.com/resources/tutorials/teach-claude-your-way-of-working-using-skills).
 
 ## Tools
 
@@ -125,7 +125,7 @@ npm run lint             # ESLint (flat config, Node 24)
 npm test                 # offline suite
 npm run test:live        # also run the live tests (= EOKG_LIVE=1 npm test)
 npm run build:docs       # regenerate docs/tools.md's generated blocks from the server
-npm run build:skill      # repack skill/odeuropa-smells/ into the committed .skill zip
+npm run build:skill      # repack skill/odeuropa-eokg/ into the committed .skill zip
 npm run build:viewer     # rebuild the committed viewer page after editing apps/image-viewer/
 npm run dev:viewer       # preview the image viewer in a browser
 npm run build:iconclass  # rebuild the Iconclass table

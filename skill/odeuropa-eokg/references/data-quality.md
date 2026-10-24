@@ -19,13 +19,6 @@ title; `XXXX-09-08` counts as undated.
 5,000 keeps 9, 20,000 keeps 37. Using the Italian word (`rosa OR rose`) reaches
 far more hits than filtering English-ranked ones.
 
-**OR and accents.** `tobacco and smoke` gives 1,254,625 hits, `tobacco AND smoke` 3,478.
-`égouts` gives 594 hits, `egouts` 22. `fmell` alone gives 36,672: OCR reads the long s as f.
-
-**Language coverage.** Rose has 0 German smells and Tobacco 2; Flower with narrower
-concepts has 142 German smells of 168,243. Profile counts for German undercount the
-text; full-text search does not.
-
 **Same passage, several datasets.** Kostanjevec's *Noč* (1902) appears in `dlib`, in
 *Ljubljanski zvon* and in `text-annotation`, each copy with different roles. Three
 results are one passage.

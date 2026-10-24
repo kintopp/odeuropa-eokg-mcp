@@ -79,7 +79,7 @@ function readZip(buf) {
 // Hosts reject a skill whose folded `description` exceeds 1,024 characters;
 // 1,000 leaves headroom.
 test('SKILL.md\'s folded description is at most 1,000 characters', () => {
-  const md = readFileSync(join(ROOT, 'skill', 'odeuropa-smells', 'SKILL.md'), 'utf8');
+  const md = readFileSync(join(ROOT, 'skill', 'odeuropa-eokg', 'SKILL.md'), 'utf8');
   const lines = md.split('\n');
   const end = lines.indexOf('---', 1);
   const front = lines.slice(1, end);

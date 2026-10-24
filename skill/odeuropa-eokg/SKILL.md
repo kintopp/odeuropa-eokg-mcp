@@ -1,10 +1,10 @@
 ---
-name: odeuropa-smells
+name: odeuropa-eokg
 last_updated: 2026-10-24
 description: Research guidance for the Odeuropa European Olfactory Knowledge Graph (about 2.4 million machine-extracted smell references from European texts and artworks, mostly 1600–1920, in English, French, Italian, Slovenian, German and Dutch). Use whenever the user asks about smells, scents, odours, perfume, fragrance, stench or olfactory history, historical sensory history, the Odeuropa Smell Explorer, how a smell source (rose, lavender, tobacco, a garden, a church) was described over time or across languages, or smells in paintings and prints, including in French, German, Italian or Dutch (odeur, parfum, Geruch, Duft, odore, profumo, geur), and any time an eokg_ tool is about to be called.
 ---
 
-# Odeuropa smells
+# European Olfactory Knowledge Graph (EOKG)
 
 The `eokg_*` tools search the European Olfactory Knowledge Graph (EOKG), built by
 the Odeuropa project. The tool descriptions document the parameters; this skill
@@ -54,8 +54,9 @@ A **smell** is one extracted reference, not a documented odour event. It has:
   8,393 dated Tobacco smells differ). Both include noise. For an event (Waterloo in
   1815, described in an 1870 edition of Charles Bell's letters), date the experience
   from the passage itself.
-- **emotions** assigned by a classifier. They are not in the text; never quote them
-  as what the writer felt.
+- **emotions** assigned by a classifier. They are not in the text and are a weak
+  signal: use them to compare concepts or periods, never quote them as what the
+  writer felt.
 
 ## Traps
 
@@ -76,7 +77,8 @@ how often something is mentioned; cite the record whose concept you mean.
 (`in`: excerpt, title or both). Lucene operators work: `"phrase"`, `AND`/`OR`,
 parentheses, `*`. Words without an operator are OR-ed: `tobacco and smoke` gives
 1,254,625 hits, `tobacco AND smoke` 3,478. Quote hyphenated words (`"eau de cologne"`),
-or they split into OR-ed words. *Symptom:* a Lucene syntax error (unbalanced
+or they split into OR-ed words; the result adds a hint for both cases. `NOT` needs a
+positive term (`smell NOT tobacco`). *Symptom:* a Lucene syntax error (unbalanced
 parenthesis or quote) comes back as a correctable error; fix the query and retry.
 
 **OCR spelling.** Matching is on raw, unnormalised OCR text from 1600–1920. *Symptom:*
@@ -94,10 +96,10 @@ before counting it as a smell.
 **Undated sources.** Text search keeps sources with no date when you give
 `year_from`/`year_to`; visual search drops them. Some Old Bailey sessions have no date
 field and carry the date only in their long title, and dates such as `XXXX-09-08`
-count as undated. *Symptom:* a period-filtered text
-search includes records with no date at all, but an artwork search for the same
-period seems smaller. *Fix:* read the date on each result, and say so when a
-time-bounded claim rests on a mixed set.
+count as undated. *Symptom:* a period-filtered text search lists results marked
+"undated" (the result says how many), and an artwork search for the same period
+seems smaller. *Fix:* read the date on each result, and say so when a time-bounded
+claim rests on a mixed set.
 
 **One passage in several datasets.** `text-annotation` holds hand-annotated copies of
 passages that also sit in other datasets (Kostanjevec's *Noč*, 1902, appears in
@@ -113,8 +115,7 @@ languages among the top values. *Fix:* use `fragrant_spaces` (vocabulary-linked)
 in size, so almost every concept rises over time. *Symptom:* a timeline that looks
 like a historical trend. *Fix:* compare concepts, languages or periods with each
 other (shares, not raw counts), and never present one concept's raw curve as how
-often people smelled it. Emotions are only a weak signal: a classifier assigns
-them, so use them only to compare, never as what the writer felt.
+often people smelled it.
 
 **Timeline noise.** Years like -1000, 180, 2100 and 4830 appear, and the occasional
 20th-century journal. The profile reports such years as `out_of_range` instead of
@@ -122,10 +123,9 @@ bucketing them. *Fix:* quote the in-range counts, mention out-of-range counts, a
 never read a spike in one bucket as history before checking which dataset produced it.
 
 **The expert taxonomy is not linked.** `expert-taxonomy` (and the other descriptive
-vocabularies) have a "rose" too, but no smell points at it. `olfactory-gestures` is
-linked to image smells and can be profiled. *Symptom:* a concept id from
-`vocab: "all"` gives zero smells. *Fix:* use `olfactory-objects` ids for what smells
-`fragrant-spaces` ids for where and `olfactory-gestures` ids for how.
+vocabularies) have a "rose" too, but no smell points at it. *Symptom:* a concept id
+from `vocab: "all"` gives zero smells. *Fix:* use `olfactory-objects` ids for what
+smells, `fragrant-spaces` ids for where, and `olfactory-gestures` ids for how.
 
 **German and Slovenian are barely linked to concepts.** Rose has 0 German smells,
 Tobacco 2, and Flower with its narrower concepts 142 of 168,243. Many Slovenian smells
@@ -236,6 +236,10 @@ Aim for two tool calls.
    Lazarus come first for holding one's nose.
 3. `eokg_inspect_image({ id })` → look at the picture.
 
+For a gesture found mostly in texts (Perfuming, `olfactory-gestures/29`), use
+`eokg_smell_profile` instead: its default `smell_sources` facet shows which smell
+sources occur with the gesture. Then search passages in the source language.
+
 Check where a gesture's evidence comes from before comparing gestures: Holding one's
 nose is almost all images, Perfuming almost all French texts. The `datasets` facet of
 `eokg_smell_profile` shows which.
@@ -256,7 +260,7 @@ visible, mark it with [sic] rather than silently fixing it (`soaps , English`,
 emotions and qualities to the extraction, not to the author. Odeuropa is
 the data provider; cite it as such (EU Horizon 2020, grant 101004469).
 
-## Handoffs
+## MCP Server Handoffs
 
 - **Iconclass.** A candidate notation from `(...)` placeholders must be checked
   with an Iconclass server (`resolve`/`search`) before you present it as valid.

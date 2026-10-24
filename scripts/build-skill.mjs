@@ -14,7 +14,7 @@
 // Node's bundled one compress the same input to different byte counts, which is
 // exactly a CI-vs-laptop mismatch. Content in, bytes out.
 //
-// Usage: npm run build:skill   →   skill/odeuropa-smells.skill
+// Usage: npm run build:skill   →   skill/odeuropa-eokg.skill
 
 import { crc32 } from 'node:zlib';
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-export const SKILL_NAME = 'odeuropa-smells';
+export const SKILL_NAME = 'odeuropa-eokg';
 export const SKILL_DIR = join('skill', SKILL_NAME);
 export const SKILL_SOURCE = join(SKILL_DIR, 'SKILL.md');
 export const SKILL_BUNDLE = join('skill', `${SKILL_NAME}.skill`);
