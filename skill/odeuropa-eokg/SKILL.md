@@ -17,8 +17,8 @@ holds the dated snapshot, and `eokg_get_concept` gives live per-concept counts.
 - **What was extracted.** NLP pipelines read digitised European texts and picked out
   passages that describe a smell; an object detector (plus some manual annotation)
   found smell-related objects in artworks. Nothing is hand-curated except the
-  vocabularies and the manual image boxes. Treat every record as a model's reading
-  of a source.
+  vocabularies, the manual image boxes and the `text-annotation` benchmark. Treat
+  every record as a model's reading of a source.
 - **Scale and period.** About 2.4 million smell references in 21 datasets (named
   graphs), mostly 1600–1920. Two datasets (`medical-heritage`, `gallica`) hold
   well over half; ask `eokg_list_datasets` rather than trusting this paragraph.

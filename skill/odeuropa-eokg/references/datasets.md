@@ -46,7 +46,7 @@ The annotated image sets were drawn from museum collections found by search term
 ## Reading the `datasets` facet
 
 - Image-only: `odor`, `europeana`, `nuk`, `rijksmuseum`. Every source in them is an image (verified live). A peak that comes from one of them is a peak in pictures.
-- Hand-annotated: only `text-annotation`. Its passages also sit in the corpus datasets, so count passages, not records.
+- Hand-annotated: only `text-annotation`. Its excerpts were taken from the same corpora (D3.2 p. 4), so a passage may also appear under a corpus dataset.
 - Single-language collections: `gallica` is French, `british-library`, `pulse`, `royal-society-corpus` and `old-bailey-corpus` are English, `dbnl` is Dutch, `liberliber` is Italian, `dta` is German, `dlib` is Slovenian. A profile for Dutch, Italian, German or Slovenian therefore mostly describes one collection. Check the facet before calling a difference national.
 - Overlap: Italian Gutenberg mostly repeats Wikisource and LiberLiber, and the Italian repositories overlap each other (D3.4 p. 12). Expect the same text under several dataset ids.
 - Genre follows the collection: `pulse` is public-health reports, `royal-society-corpus` is science, `old-bailey-corpus` is court records, `dlib` is Slovenian books and periodicals. A concept that peaks in one of these reflects the genre.
