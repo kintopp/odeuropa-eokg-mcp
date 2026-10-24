@@ -409,12 +409,16 @@ test('the heading states the period', async () => {
   assert.ok(from.startsWith('Rose [olfactory-objects/138]: 1,479 smells, dated 1700 or later'), from);
 });
 
-// Boundary: a quarter exactly is not "more than a quarter".
-test('image-share warning: 251 of 1000 warns, 250 of 1000 and an absent datasets facet do not', async () => {
-  const datasets = (odor) => ok([{ g: uri(`${KG}odor`), n: String(odor) }, { g: uri(`${KG}gallica`), n: '500' }]);
+// Boundary: a quarter exactly is not "more than a quarter". Failure mode: counting only odor misses europeana, nuk
+// and rijksmuseum, which also hold only images.
+test('image-share warning sums all image datasets: 251 of 1000 warns, 250 of 1000 and an absent datasets facet do not', async () => {
+  const datasets = (odor) => ok([
+    { g: uri(`${KG}odor`), n: String(odor - 111) }, { g: uri(`${KG}gallica`), n: '500' },
+    { g: uri(`${KG}europeana`), n: '100' }, { g: uri(`${KG}nuk`), n: '10' }, { g: uri(`${KG}rijksmuseum`), n: '1' },
+  ]);
   await start(baseRoutes({ profile_total: ok([{ n: '1000' }]), profile_datasets: datasets(251) }));
   const s = valid(await profile({ facets: ['datasets'] }));
-  assert.ok(s.warnings.includes('251 of these smells come from images (odor); compare text and image evidence separately.'), String(s.warnings));
+  assert.ok(s.warnings.includes('251 of these smells come from images (odor, europeana, nuk, rijksmuseum); compare text and image evidence separately.'), String(s.warnings));
   clearSparqlCache();
   stub.restore();
   await client.close();

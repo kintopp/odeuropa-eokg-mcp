@@ -17,7 +17,7 @@ import {
   FRAGRANT_SPACES_BASE, OLFACTORY_OBJECTS_BASE, PROFILE_FACETS, PROFILE_DEFAULT_FACETS, PROFILE_NARROWER_DEFAULT_FACETS,
   PROFILE_GESTURE_DEFAULT_FACETS,
   PROFILE_MAX_NARROWER_FACETS, PROFILE_CALL_DEADLINE_MS, PROFILE_MIN_FACET_BUDGET_MS, PROFILE_DEFAULT_TOP,
-  PROFILE_MAX_TOP, TIMELINE_MIN_YEAR, TIMELINE_MAX_YEAR, LANGUAGE_NAMES,
+  PROFILE_MAX_TOP, TIMELINE_MIN_YEAR, TIMELINE_MAX_YEAR, LANGUAGE_NAMES, IMAGE_DATASETS,
 } from '../config.js';
 
 export const SMELL_PROFILE_TOOL_NAME = 'eokg_smell_profile';
@@ -266,9 +266,10 @@ export function registerSmellProfileTool(server) {
           report(done, facets.length, `Facet ${done}/${facets.length}: ${facet}`);
         });
       }
-      const odor = out.datasets?.find((d) => d.label === 'odor')?.count ?? 0;
-      if (odor * 4 > totalSmells) {
-        warnings.push(`${fmt(odor)} of these smells come from images (odor); compare text and image evidence separately.`);
+      const imageRows = (out.datasets ?? []).filter((d) => IMAGE_DATASETS.includes(d.label));
+      const images = imageRows.reduce((n, d) => n + d.count, 0);
+      if (images * 4 > totalSmells) {
+        warnings.push(`${fmt(images)} of these smells come from images (${imageRows.map((d) => d.label).join(', ')}); compare text and image evidence separately.`);
       }
       const failedFacets = facets.filter((f) => failed.has(f));
       const structured = { ...out, ...(failedFacets.length && { failed_facets: failedFacets }) };

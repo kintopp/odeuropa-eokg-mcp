@@ -71,6 +71,8 @@ export const DATASETS = Object.freeze([
   ['bibbleue', 495], ['grimm', 64], ['rijksmuseum', 46],
 ].map(([name, smells]) => Object.freeze({ name, smells })));
 export const DATASET_NAMES = Object.freeze(DATASETS.map((d) => d.name));
+// Every source in these graphs is an image (E36); none holds a text.
+export const IMAGE_DATASETS = Object.freeze(['odor', 'europeana', 'nuk', 'rijksmuseum']);
 export const TOTAL_SMELLS = 2445713;
 export const TEXT_LANGUAGES = Object.freeze(['en', 'fr', 'it', 'sl', 'de', 'nl']);
 export const LANGUAGE_NAMES = Object.freeze({
