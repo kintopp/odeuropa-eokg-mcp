@@ -73,6 +73,13 @@ own record. *Symptom:* two results with the same excerpt but different ids and
 concepts (Lavender and Essence). *Fix:* count passages, not results, when you say
 how often something is mentioned; cite the record whose concept you mean.
 
+**Emotions are missing for whole datasets.** The classifier was never run on
+`medical-heritage`, `royal-society-corpus`, `old-bailey-corpus` or the benchmark, and
+there is no German or Slovenian model, so `dta` and `dlib` have none. *Symptom:* an
+emotion profile for a German or Slovenian concept is nearly empty, and an English one
+ignores the largest English dataset. *Fix:* compare emotions only across concepts or
+periods drawn from the same datasets; check the `datasets` facet first.
+
 **No field prefixes.** Do not write `source_value:rose`; the server picks the field
 (`in`: excerpt, title or both). Lucene operators work: `"phrase"`, `AND`/`OR`,
 parentheses, `*`. Words without an operator are OR-ed: `tobacco and smoke` gives
