@@ -2,7 +2,7 @@
 
 Condensed from Odeuropa deliverables (CC-BY 4.0), https://odeuropa.eu/deliverables/, and the Odeuropa knowledge-graph repository (Apache-2.0), commit 4c188f7, https://github.com/Odeuropa/knowledge-graph, cited as "KG repo" with a file path. Figures describe the pipeline as reported at the time.
 
-Read this before judging how reliable a count, an emotion or an image label is. Deliverables cited: D3.2 (benchmark), D3.3 to D3.5 (text), D2.4 and D2.5 (images), D4.1 to D4.3 (graph and vocabularies). Page numbers are the printed ones.
+Read this before judging how reliable a count, an emotion or an image label is. Deliverables cited: D3.2 (benchmark), D3.3 to D3.5 (text), D2.4 and D2.5 (images), D4.1 to D4.3 (graph and vocabularies), D4.4 (linking in the current graph). Page numbers are the printed ones.
 
 ## Text extraction
 
@@ -39,6 +39,8 @@ The conversion code shows the method (KG repo, populate/entities/SmellSource.py,
 
 In the graph of June 2023, of 1,048,284 Material Substantial instances 483,342 were linked to a vocabulary (46 per cent). Of 53,512 places, 8,215 were linked to a vocabulary and 1,181 to an external source such as GeoNames (15 and 2 per cent). Of 83,601 persons, 8,709 were linked externally (10 per cent). All 483 gestures and all 74 animals were linked (D4.3 p. 10, Table 5). Places linked to GeoNames share one instance, and persons with the same name and surname are merged (D4.3 p. 9).
 
+D4.4 (December 2023) describes today's graph: 448,294,839 triples and 2,420,145 smells (D4.4 p. 6). Mentions linked to a vocabulary, by role: odour sources 678,249 (Olfactory Objects), qualities 509,886 (smell classifications, hedonic tone, intensity), emotions 158,005 (Plutchik plus an Odeuropa extension), carriers 86,707 (Olfactory Objects), places 79,106 (Fragrant Spaces), evoked odorants 64,671 (Olfactory Objects), agents 8,868 (Noses), gestures 3,066 (Olfactory Gestures) (D4.4 p. 7, Table 1).
+
 German explanation: in D4.3, 239 of the 574 olfactory-objects concepts have a German label, against 567 English, 550 French, 540 Italian and 542 Dutch. Only 10 of 115 fragrant spaces and none of the 35 gestures have one (D4.3 p. 8, Table 2). D4.1 had reported 172 of 417 (D4.1 p. 12). Many German words had no concept to match. The 0.7 weight makes this worse: a German word scored against a label in another language never reaches 0.8, and reaches 0.7 only when it is spelled identically and is longer than seven characters (KG repo, populate/entities/vocabularies/lemma.py and VocabularyManager.py).
 
 Slovenian has labels (568 for objects in the same table) but its words are not lemmatised, so an inflected form must match a label as it stands (KG repo, populate/entities/vocabularies/VocabularyManager.py). This is the likely reason few Slovenian smells are linked, read from the code rather than measured.
@@ -67,7 +69,9 @@ Per-label precision on the gold set varies widely (D3.5 p. 25, Table 8, hard lab
 
 A hand-annotated benchmark with 12 emotion labels also exists for English, Italian, French and Dutch. Most of its cells hold fewer than 30 examples, the largest being 169 (English disgust), and it was not used for the graph labels (D3.5 pp. 13–14, Table 4).
 
-Meaning for an answer: on the gold set about seven in ten nostalgia, gratitude, grief and envy predictions were wrong, so large counts for them include many false alarms. Say "tagged with", compare concepts rather than quoting totals, and be more careful still with German and Slovenian, which have no reported score.
+Whole datasets have no emotions at all: `medical-heritage`, `royal-society-corpus`, `old-bailey-corpus`, `dlib`, `dta` and `text-annotation` (verified live, October 2026, from samples of 300 smells per dataset and 900 for `medical-heritage`). The classifier was not run on the first three (Odeuropa project records). D3.5 names classifier versions for English, Italian, French and Dutch only (pp. 17, 22), which explains `dta` (German) and `dlib` (Slovenian). The benchmark's own emotion labels, described above, were not loaded as smell emotions.
+
+Meaning for an answer: on the gold set about seven in ten nostalgia, gratitude, grief and envy predictions were wrong, so large counts for them include many false alarms. Say "tagged with", compare concepts rather than quoting totals, and be more careful still with German and Slovenian, which have no reported score. An emotion profile for an English concept leaves out every `medical-heritage` smell, and German and Slovenian concepts have almost no emotions to profile.
 
 ## Images
 
