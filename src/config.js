@@ -73,6 +73,9 @@ export const DATASETS = Object.freeze([
 export const DATASET_NAMES = Object.freeze(DATASETS.map((d) => d.name));
 export const TOTAL_SMELLS = 2445713;
 export const TEXT_LANGUAGES = Object.freeze(['en', 'fr', 'it', 'sl', 'de', 'nl']);
+export const LANGUAGE_NAMES = Object.freeze({
+  en: 'English', fr: 'French', it: 'Italian', sl: 'Slovenian', de: 'German', nl: 'Dutch',
+});
 export const SERVER_INSTRUCTIONS = [
   'Search the European Olfactory Knowledge Graph (Odeuropa): ~2.4M smell references machine-extracted from European texts (en, fr, it, sl, de, nl) and from ~109,000 images of artworks, mostly 1600–1920.',
   'A "smell" is one extracted reference: a passage or image plus its roles — smell source (a vocabulary concept and the words used), carrier, time, place, perceiver, emotions, qualities.',

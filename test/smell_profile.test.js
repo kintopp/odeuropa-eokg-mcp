@@ -302,3 +302,30 @@ test('live: Garden profile drops the fragrant_spaces facet', { skip: !LIVE }, as
   assert.equal(s.fragrant_spaces, undefined);
   assert.ok(s.warnings.some((w) => w.includes('fragrant_spaces')));
 });
+
+test('zero smells with language names the language', async () => {
+  await start(baseRoutes({ profile_total: ok([{ n: '0' }]) }));
+  const res = await profile({ language: 'nl' });
+  const s = valid(res);
+  assert.ok(s.warnings.includes('No Dutch smells are linked to this concept.'));
+  assert.ok(res.content[0].text.includes('No Dutch smells are linked to this concept.'));
+  assert.ok(!s.warnings.includes('No smells are linked to this concept.'));
+});
+
+test('multi-line facet labels are collapsed to single spaces', async () => {
+  await start(baseRoutes({
+    profile_fragrant_spaces: ok([{ space: uri(`${KG}vocabulary/fragrant-spaces/14`), label: en('seat of a first-order\n            administrative   division'), n: '24' }]),
+    profile_places: ok([{ pl: 'the\n  garden', n: '4' }]),
+  }));
+  const s = valid(await profile({ facets: ['fragrant_spaces', 'places'] }));
+  assert.equal(s.fragrant_spaces[0].label, 'seat of a first-order administrative division');
+  assert.equal(s.places[0].label, 'the garden');
+});
+
+test('the description carries the language-facet and emission-date caveats', async () => {
+  await start(baseRoutes());
+  const t = (await client.listTools()).tools.find((x) => x.name === 'eokg_smell_profile');
+  assert.match(t.description, /languages facet counts text smells only; image smells are in the total and the timeline but have no language/);
+  assert.match(t.description, /in almost every record equals the document date, so emission_timeline rarely differs from timeline/);
+  assert.match(t.inputSchema.properties.bucket_years.description, /Timeline bucket width: 10, 20 or 50 years\./);
+});

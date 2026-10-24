@@ -78,3 +78,9 @@ test('total and concept label queries', () => {
 test('unknown facet throws', () => {
   assert.throws(() => profileFacetQuery('nope', anchor), /Unknown profile facet/);
 });
+
+test('fragrant_spaces binds the label inside the fragrant-spaces graph, so sameAs twin labels cannot reach the facet', () => {
+  const sp = profileFacetQuery('fragrant_spaces', anchor, { top: 10 });
+  assert.match(sp, /GRAPH <http:\/\/data\.odeuropa\.eu\/vocabulary\/fragrant-spaces> \{ \?space skos:prefLabel \?sl FILTER\(LANG\(\?sl\) = "en"\) \}/);
+  assert.equal(sp.match(/\?space skos:prefLabel/g).length, 1, 'no second, ungraphed label pattern');
+});

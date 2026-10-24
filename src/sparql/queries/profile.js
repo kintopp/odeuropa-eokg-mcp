@@ -46,7 +46,8 @@ SELECT ?q ?n (SAMPLE(?pl) AS ?label) (SAMPLE(?rl) AS ?rlabel) WHERE {
   emotions: (a, { top }) => topN(a, '?ex od:F2_perceived ?smell . ?emo reo:readP27 ?ex ; rdfs:label ?word .', 'word', top),
   fragrant_spaces: (a, { top }) => topN(a,
     `?emission crm:P7_took_place_at ?fplace . ?fplace crm:P137_exemplifies ?space .
-  FILTER(STRSTARTS(STR(?space), "${FRAGRANT_SPACES_BASE}")) OPTIONAL { ?space skos:prefLabel ?sl FILTER(LANG(?sl) = "en") }`,
+  FILTER(STRSTARTS(STR(?space), "${FRAGRANT_SPACES_BASE}"))
+  OPTIONAL { GRAPH <${KG_BASE}vocabulary/fragrant-spaces> { ?space skos:prefLabel ?sl FILTER(LANG(?sl) = "en") } }`,
     'space', top, '(SAMPLE(?sl) AS ?label)'),
   places: (a, { top }) => topN(a, '?ex od:F2_perceived ?smell ; crm:P7_took_place_at ?p . ?p rdfs:label ?pl .', 'pl', top),
   carriers: (a, { top }) => topN(a, '?emission od:F4_had_carrier ?car . ?car rdfs:label ?cl .', 'cl', top),

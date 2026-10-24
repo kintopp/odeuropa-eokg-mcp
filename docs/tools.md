@@ -137,7 +137,7 @@ Counts the smells linked to one concept by period, language, dataset, qualities,
 ### Tool description
 
 <!-- generated:eokg_smell_profile:description -->
-> Profile how one smell source or fragrant space appears across the whole graph. Counts smells linked to an olfactory-objects or fragrant-spaces concept (from eokg_find_concepts) by 20-year period of document date (bucket_years changes it), language, dataset, qualities, emotions and fragrant spaces; emission dates, raw place labels and carriers on request. All values are machine-extracted: dates include OCR noise (reported as out_of_range), and emotions are inferred by a classifier. include_narrower adds sub-concepts (e.g. all flowers) but takes 15–30 s per facet; facets that do not fit the time budget are listed in failed_facets.
+> Profile how one smell source or fragrant space appears across the whole graph. Counts smells linked to an olfactory-objects or fragrant-spaces concept (from eokg_find_concepts) by 20-year period of document date (bucket_years changes it), language, dataset, qualities, emotions and fragrant spaces; emission dates, raw place labels and carriers on request. The languages facet counts text smells only; image smells are in the total and the timeline but have no language. The emission date is extracted from the text but in almost every record equals the document date, so emission_timeline rarely differs from timeline. All values are machine-extracted: dates include OCR noise (reported as out_of_range), and emotions are inferred by a classifier. include_narrower adds sub-concepts (e.g. all flowers) but takes 15–30 s per facet; facets that do not fit the time budget are listed in failed_facets.
 <!-- /generated -->
 
 ### Parameters
@@ -148,7 +148,7 @@ Counts the smells linked to one concept by period, language, dataset, qualities,
 | `concept` | string (≤ 300) | **required** | An olfactory-objects or fragrant-spaces concept id as eokg_find_concepts returns it (e.g. olfactory-objects/138 for Rose). |
 | `facets` | string[] | — | Which aggregates to compute. Default: timeline, languages, datasets, qualities, emotions, fragrant_spaces (with include_narrower: timeline, languages, datasets). Opt-in: emission_timeline, places, carriers. |
 | `include_narrower` | bool | `false` | Also count smells of narrower concepts (e.g. Flower for every flower). Slow: allows at most 3 facets. |
-| `bucket_years` | undefined | `20` | Timeline bucket width in years. |
+| `bucket_years` | undefined | `20` | Timeline bucket width: 10, 20 or 50 years. |
 | `top` | int (1–25) | `10` | Values per ranked facet. |
 | `language` | enum: `en` · `fr` · `it` · `sl` · `de` · `nl` | — | Only count smells from sources in this language. Not combinable with include_narrower. |
 <!-- /generated -->

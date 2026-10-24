@@ -16,7 +16,7 @@ import {
   READ_ONLY_ANNOTATIONS, REQUEST_TIMEOUT_MS, SPARQL_MAX_CONCURRENCY, TEXT_LANGUAGES, DATASET_GRAPH_BASE,
   FRAGRANT_SPACES_BASE, PROFILE_FACETS, PROFILE_DEFAULT_FACETS, PROFILE_NARROWER_DEFAULT_FACETS,
   PROFILE_MAX_NARROWER_FACETS, PROFILE_CALL_DEADLINE_MS, PROFILE_MIN_FACET_BUDGET_MS, PROFILE_DEFAULT_TOP,
-  PROFILE_MAX_TOP, TIMELINE_MIN_YEAR, TIMELINE_MAX_YEAR,
+  PROFILE_MAX_TOP, TIMELINE_MIN_YEAR, TIMELINE_MAX_YEAR, LANGUAGE_NAMES,
 } from '../config.js';
 
 export const SMELL_PROFILE_TOOL_NAME = 'eokg_smell_profile';
@@ -33,7 +33,7 @@ const inputSchema = z.object({
   include_narrower: z.boolean().default(false).describe(
     `Also count smells of narrower concepts (e.g. Flower for every flower). Slow: allows at most ${PROFILE_MAX_NARROWER_FACETS} facets.`,
   ),
-  bucket_years: z.union([z.literal(10), z.literal(20), z.literal(50)]).default(20).describe('Timeline bucket width in years.'),
+  bucket_years: z.union([z.literal(10), z.literal(20), z.literal(50)]).default(20).describe('Timeline bucket width: 10, 20 or 50 years.'),
   top: z.number().int().min(1).max(PROFILE_MAX_TOP).default(PROFILE_DEFAULT_TOP).describe('Values per ranked facet.'),
   language: z.enum([...TEXT_LANGUAGES]).optional().describe('Only count smells from sources in this language. Not combinable with include_narrower.'),
 }).strict();
@@ -72,6 +72,8 @@ export const outputSchema = z.object({
 const description =
   'Profile how one smell source or fragrant space appears across the whole graph. ' +
   'Counts smells linked to an olfactory-objects or fragrant-spaces concept (from eokg_find_concepts) by 20-year period of document date (bucket_years changes it), language, dataset, qualities, emotions and fragrant spaces; emission dates, raw place labels and carriers on request. ' +
+  'The languages facet counts text smells only; image smells are in the total and the timeline but have no language. ' +
+  'The emission date is extracted from the text but in almost every record equals the document date, so emission_timeline rarely differs from timeline. ' +
   'All values are machine-extracted: dates include OCR noise (reported as out_of_range), and emotions are inferred by a classifier. ' +
   'include_narrower adds sub-concepts (e.g. all flowers) but takes 15–30 s per facet; facets that do not fit the time budget are listed in failed_facets.';
 
@@ -97,14 +99,15 @@ function shapeTimeline(rows, basis, bucketYears) {
   return { basis, bucket_years: bucketYears, buckets, out_of_range: outOfRange, dated };
 }
 
-const plain = (key) => (rows) => rows.filter((r) => v(r, key)).map((r) => ({ label: v(r, key), count: count(r) }));
+const tidy = (s) => s.replace(/\s+/g, ' ').trim();
+const plain = (key) => (rows) => rows.filter((r) => v(r, key)).map((r) => ({ label: tidy(v(r, key)), count: count(r) }));
 
 function localEntry(r, key, base) {
   const uri = v(r, key);
   if (!uri) return null;
   const local = uri.startsWith(base);
   const term = r.label ?? r.rlabel;
-  const label = pickLabel(term ? [term] : []) ?? labelFromUri(uri);
+  const label = tidy(pickLabel(term ? [term] : []) ?? labelFromUri(uri));
   return {
     ...(local && { id: shortId(uri) }), label, ...(term?.['xml:lang'] && { lang: term['xml:lang'] }), count: count(r), local,
   };
@@ -116,7 +119,7 @@ const SHAPERS = {
   places: plain('pl'),
   carriers: plain('cl'),
   datasets: (rows) => rows.filter((r) => v(r, 'g')?.startsWith(DATASET_GRAPH_BASE))
-    .map((r) => ({ label: v(r, 'g').slice(DATASET_GRAPH_BASE.length), count: count(r) })),
+    .map((r) => ({ label: tidy(v(r, 'g').slice(DATASET_GRAPH_BASE.length)), count: count(r) })),
   qualities: (rows) => rows.map((r) => localEntry(r, 'q', VOCAB_PREFIX)).filter(Boolean)
     .map(({ local: _local, ...e }) => e),
   fragrant_spaces: (rows) => rows.map((r) => localEntry(r, 'space', FRAGRANT_SPACES_BASE))
@@ -209,7 +212,9 @@ export function registerSmellProfileTool(server) {
       const failed = new Set();
       if (totalSmells === 0) {
         for (const f of facets) out[f] = shapeFacet(f, [], bucketYears);
-        warnings.push('No smells are linked to this concept.');
+        warnings.push(language
+          ? `No ${LANGUAGE_NAMES[language]} smells are linked to this concept.`
+          : 'No smells are linked to this concept.');
       } else {
         const report = progressReporter(ctx);
         let done = 0;
