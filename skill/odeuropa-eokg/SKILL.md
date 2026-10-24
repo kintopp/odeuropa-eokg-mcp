@@ -278,4 +278,7 @@ the data provider; cite it as such (EU Horizon 2020, grant 101004469).
 - **Reverse.** Given a notation from either server, `eokg_find_concepts({ iconclass })`
   returns the Odeuropa concepts mapped to it or to broader or narrower notations.
 - **References.** `references/vocabularies.md` for the 20 vocabularies and which are
-  linked; `references/data-quality.md` for worked examples of the traps above.
+  linked; `references/data-quality.md` for worked examples of the traps above;
+  `references/datasets.md` before explaining a peak or a language difference from
+  the `datasets` facet; `references/extraction.md` before judging how reliable a
+  count, an emotion or an image label is.
