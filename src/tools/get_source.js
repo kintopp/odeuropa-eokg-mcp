@@ -86,6 +86,28 @@ export function shapeSourceMeta(id, rows) {
   };
 }
 
+/** Resolve an image source id to its metadata and locally hosted image URL, or throw the shared ToolErrors. */
+export async function lookupHostedImage(id, signal) {
+  const metaRows = await sparqlSelect('source_meta', sourceMetaQuery(id), { signal });
+  if (!metaRows.length) {
+    throw new ToolError(
+      `No source found with id ${id}.`,
+      'Pass the id exactly as an eokg tool returned it (eokg_get_smell returns it as source.id).',
+    );
+  }
+  const { isImage, imageUrl, originalImageUrl, meta } = shapeSourceMeta(id, metaRows);
+  if (!isImage) throw new ToolError('This source is a text, not an image.', 'Use eokg_get_source to read its smells.');
+  if (!imageUrl || !IMAGE_URL_RE.test(imageUrl)) {
+    throw new ToolError(
+      'No locally hosted image for this source.',
+      originalImageUrl
+        ? `The original is hosted elsewhere and is not fetched; open it yourself: ${originalImageUrl}`
+        : 'The graph records no image for it.',
+    );
+  }
+  return { imageUrl, originalImageUrl, meta };
+}
+
 function renderText(s) {
   const who = s.author ?? s.artist;
   const meta = [s.date, s.language].filter(Boolean).join(', ');

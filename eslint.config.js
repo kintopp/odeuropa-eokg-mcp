@@ -21,4 +21,12 @@ export default [
       'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
+  {
+    files: ['apps/**/*.js'],
+    languageOptions: { globals: { ...globals.browser } },
+  },
+  {
+    files: ['apps/**/*.mjs'],
+    languageOptions: { globals: { ...globals.node } },
+  },
 ];

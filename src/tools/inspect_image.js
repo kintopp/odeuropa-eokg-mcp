@@ -2,16 +2,15 @@
 
 import { z } from 'zod';
 import { withTool } from '../lib/tool.js';
-import { ToolError } from '../lib/errors.js';
 import { parseId } from '../lib/ids.js';
 import { jpegDimensions } from '../lib/jpeg.js';
 import { mirrorWarnings } from '../lib/warnings.js';
 import { sparqlSelect } from '../sparql/client.js';
-import { sourceMetaQuery, imageFragmentsQuery } from '../sparql/queries/source.js';
+import { imageFragmentsQuery } from '../sparql/queries/source.js';
 import { fetchKgImage } from '../image/client.js';
-import { shapeFragments, shapeSourceMeta } from './get_source.js';
+import { shapeFragments, lookupHostedImage } from './get_source.js';
 import {
-  READ_ONLY_ANNOTATIONS, IMAGE_URL_RE, VISION_MAX_EDGE, FRAGMENT_MIN_SCORE_DEFAULT,
+  READ_ONLY_ANNOTATIONS, VISION_MAX_EDGE, FRAGMENT_MIN_SCORE_DEFAULT,
 } from '../config.js';
 
 export const INSPECT_IMAGE_TOOL_NAME = 'eokg_inspect_image';
@@ -41,7 +40,7 @@ const description =
   'Look at an image source, with the smell-related objects detected in it. ' +
   'Returns the picture itself plus each annotated object (vocabulary concept, bounding box as % of width/height from the top-left, and origin: manual boxes were drawn by the Odeuropa team, detector boxes come from an object detector with a confidence score). ' +
   'Detector boxes can be wrong; compare them with what you see. Use these boxes rather than estimating coordinates yourself. ' +
-  'The picture is returned to you only; the chat cannot display it, so never embed an image URL as a Markdown image (![](…)). To let the user see it, say it cannot be shown here and give the Record or Image link from the result as a plain link. ' +
+  'The picture is returned to you only. To show it to the user, call eokg_view_image; never embed an image URL as a Markdown image (![](…)). ' +
   'Takes a source id from eokg_get_source, eokg_get_smell (source.id) or eokg_find_visual_smells.';
 
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -64,7 +63,7 @@ function renderText(s) {
   if (s.url) lines.push(`Record: ${s.url}`);
   lines.push(`Image: ${s.image_url}`);
   if (s.original_image_url) lines.push(`Original: ${s.original_image_url}`);
-  lines.push('The picture above is for your own analysis; the user does not see it and the chat cannot display it. Give them these as plain links; never embed them as Markdown images, which display blank.');
+  lines.push('The picture above is for your own analysis; the user does not see it. To show it, call eokg_view_image; never embed these links as Markdown images, which display blank.');
   const framing = s.width ? 'boxes as % x,y,w,h from top-left' : 'boxes in pixels x,y,w,h from top-left';
   lines.push(`Detected objects (score ≥ ${s.min_score}; ${framing}):`);
   for (const o of s.objects) {
@@ -83,23 +82,7 @@ export function registerInspectImageTool(server) {
     withTool(INSPECT_IMAGE_TOOL_NAME, 'Inspecting the image failed', async (args, ctx) => {
       const id = parseId('source', args.id);
       const signal = ctx?.mcpReq?.signal;
-      const metaRows = await sparqlSelect('source_meta', sourceMetaQuery(id), { signal });
-      if (!metaRows.length) {
-        throw new ToolError(
-          `No source found with id ${id}.`,
-          'Pass the id exactly as an eokg tool returned it (eokg_get_smell returns it as source.id).',
-        );
-      }
-      const { isImage, imageUrl, originalImageUrl, meta } = shapeSourceMeta(id, metaRows);
-      if (!isImage) throw new ToolError('This source is a text, not an image.', 'Use eokg_get_source to read its smells.');
-      if (!imageUrl || !IMAGE_URL_RE.test(imageUrl)) {
-        throw new ToolError(
-          'No locally hosted image for this source.',
-          originalImageUrl
-            ? `The original is hosted elsewhere and is not fetched; open it yourself: ${originalImageUrl}`
-            : 'The graph records no image for it.',
-        );
-      }
+      const { imageUrl, originalImageUrl, meta } = await lookupHostedImage(id, signal);
 
       const [fragRows, { buffer, mimeType }] = await Promise.all([
         sparqlSelect('image_fragments', imageFragmentsQuery(id), { signal }),

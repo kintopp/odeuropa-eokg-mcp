@@ -7,7 +7,7 @@ The tool descriptions (from `src/tools/*.js`) are the only per-tool guidance a m
 ## Server instructions
 
 <!-- generated:instructions -->
-> Search the European Olfactory Knowledge Graph (Odeuropa): ~2.4M smell references machine-extracted from European texts (en, fr, it, sl, de, nl) and from ~109,000 images of artworks, mostly 1600–1920. A "smell" is one extracted reference: a passage or image plus its roles — smell source (a vocabulary concept and the words used), carrier, time, place, perceiver, emotions, qualities. Workflow: `eokg_search_smells` for passages (Lucene syntax, no field prefixes) → `eokg_get_smell` for one reference → `eokg_get_source` for the document or image around it. For concept-level questions, resolve the concept first with `eokg_find_concepts` (olfactory-objects = what smells, fragrant-spaces = where), then `eokg_smell_profile` for counts over time, languages, datasets, qualities, emotions and spaces, and `eokg_find_visual_smells` + `eokg_inspect_image` for artworks. Read results critically: excerpts are raw OCR text; one passage can yield several smells, each its own result; emotions come from a classifier, not the text, and are a weak signal; dates mix document date and emission date and include OCR noise; profile counts compare concepts with each other and are not absolute trends; filtered searches examine only a window of the most relevant hits and say so; image boxes, including hand-drawn ones, can carry the wrong label. Only olfactory-objects and fragrant-spaces concepts are linked to smells. Iconclass notations come from Odeuropa's curated tables; a notation ending in (...) is a placeholder to be completed and verified with an Iconclass server. Artwork images cannot be displayed in the chat: never embed an image URL as a Markdown image and never write "if the image does not display"; say the picture cannot be shown here and give image and record URLs as plain links. Cite smells with their explorer_url (https://explorer.odeuropa.eu/smells/…).
+> Search the European Olfactory Knowledge Graph (Odeuropa): ~2.4M smell references machine-extracted from European texts (en, fr, it, sl, de, nl) and from ~109,000 images of artworks, mostly 1600–1920. A "smell" is one extracted reference: a passage or image plus its roles — smell source (a vocabulary concept and the words used), carrier, time, place, perceiver, emotions, qualities. Workflow: `eokg_search_smells` for passages (Lucene syntax, no field prefixes) → `eokg_get_smell` for one reference → `eokg_get_source` for the document or image around it. For concept-level questions, resolve the concept first with `eokg_find_concepts` (olfactory-objects = what smells, fragrant-spaces = where), then `eokg_smell_profile` for counts over time, languages, datasets, qualities, emotions and spaces, and `eokg_find_visual_smells` + `eokg_inspect_image` for artworks. Read results critically: excerpts are raw OCR text; one passage can yield several smells, each its own result; emotions come from a classifier, not the text, and are a weak signal; dates mix document date and emission date and include OCR noise; profile counts compare concepts with each other and are not absolute trends; filtered searches examine only a window of the most relevant hits and say so; image boxes, including hand-drawn ones, can carry the wrong label. Only olfactory-objects and fragrant-spaces concepts are linked to smells. Iconclass notations come from Odeuropa's curated tables; a notation ending in (...) is a placeholder to be completed and verified with an Iconclass server. To show an artwork to the user, call `eokg_view_image`, which opens a viewer; never embed an image URL as a Markdown image. If no viewer appears, give image and record URLs as plain links. Its object boxes start hidden, since many carry the wrong label; the user can turn them on with the viewer's Boxes button. Cite smells with their explorer_url (https://explorer.odeuropa.eu/smells/…).
 <!-- /generated -->
 
 ## `eokg_list_datasets`
@@ -183,7 +183,7 @@ Fetches the picture of an image source together with its annotated objects: conc
 ### Tool description
 
 <!-- generated:eokg_inspect_image:description -->
-> Look at an image source, with the smell-related objects detected in it. Returns the picture itself plus each annotated object (vocabulary concept, bounding box as % of width/height from the top-left, and origin: manual boxes were drawn by the Odeuropa team, detector boxes come from an object detector with a confidence score). Detector boxes can be wrong; compare them with what you see. Use these boxes rather than estimating coordinates yourself. The picture is returned to you only; the chat cannot display it, so never embed an image URL as a Markdown image (![](…)). To let the user see it, say it cannot be shown here and give the Record or Image link from the result as a plain link. Takes a source id from eokg_get_source, eokg_get_smell (source.id) or eokg_find_visual_smells.
+> Look at an image source, with the smell-related objects detected in it. Returns the picture itself plus each annotated object (vocabulary concept, bounding box as % of width/height from the top-left, and origin: manual boxes were drawn by the Odeuropa team, detector boxes come from an object detector with a confidence score). Detector boxes can be wrong; compare them with what you see. Use these boxes rather than estimating coordinates yourself. The picture is returned to you only. To show it to the user, call eokg_view_image; never embed an image URL as a Markdown image (![](…)). Takes a source id from eokg_get_source, eokg_get_smell (source.id) or eokg_find_visual_smells.
 <!-- /generated -->
 
 ### Parameters
@@ -193,6 +193,28 @@ Fetches the picture of an image source together with its annotated objects: conc
 |---|---|---|---|
 | `id` | string (≤ 300) | **required** | Image source id: a http://data.odeuropa.eu/source/<uuid> URI or bare uuid. |
 | `min_score` | number (0–1) | `0.7` | Hide detector boxes scoring below this (0-1, default 0.7). Hand-drawn boxes score 1 but are not verified and can carry the wrong label. |
+<!-- /generated -->
+
+## `eokg_view_image`
+
+Opens an interactive viewer for an image source beside the tool result, in clients that support MCP Apps. The viewer loads the picture from `data.odeuropa.eu` itself, so no image bytes pass through the server or the model's context. Zoom with the wheel or pinch, pan by dragging, double-click to reset.
+
+The graph's object boxes start hidden, because many carry the wrong label. The viewer's Boxes button (or the `b` key) shows and hides them. `show_boxes` only sets the button's starting state; an open viewer cannot be switched from the chat, so a request to show the boxes opens a new viewer with `show_boxes: true`. With boxes on, selecting one shares it with the model as context, and "Send to chat" posts it as a message. The result always lists the objects, so the model can answer questions about them. Hosts without MCP Apps get the Record and Image links as plain text.
+
+### Tool description
+
+<!-- generated:eokg_view_image:description -->
+> Show an artwork image to the user in an interactive viewer they can zoom. The viewer appears beside this result in clients that support MCP Apps (Claude, ChatGPT and others). Object boxes start hidden, and the user can turn them on and off with the viewer's Boxes button. Set show_boxes true only when the user asks to see them, since many boxes carry the wrong label. When boxes are on, the user can select one, and the selection is shared with you. Nothing is returned for you to look at; use eokg_inspect_image to see the picture yourself. If the user says no viewer appeared, give them the Record and Image links from the result as plain links. Takes a source id from eokg_search_smells (source_id), eokg_get_source or eokg_find_visual_smells.
+<!-- /generated -->
+
+### Parameters
+
+<!-- generated:eokg_view_image:parameters -->
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `id` | string (≤ 300) | **required** | Same as `eokg_inspect_image`. |
+| `min_score` | number (0–1) | `0.7` | Same as `eokg_inspect_image`. |
+| `show_boxes` | bool | `false` | Draw the object boxes on the image. Leave false unless the user asks to see the boxes; many carry the wrong label. |
 <!-- /generated -->
 
 ## Data caveats

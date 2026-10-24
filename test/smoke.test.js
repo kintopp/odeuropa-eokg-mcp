@@ -15,6 +15,7 @@ const REQUIRED_PROPS = {
   eokg_search_smells: ['text'],
   eokg_get_source: ['id'],
   eokg_inspect_image: ['id'],
+  eokg_view_image: ['id'],
   eokg_smell_profile: ['concept'],
   eokg_find_visual_smells: ['concept'],
 };
@@ -111,7 +112,7 @@ test('the model-facing description names the dataset filter', async () => {
 test('the initialize instructions carry the data-quality caveats', async () => {
   await withClient('eokg-smoke', async (client) => {
     const instructions = client.getInstructions();
-    for (const phrase of ['classifier', 'OCR', 'window', '(...)', 'weak signal', 'not absolute trends', 'hand-drawn', 'Markdown image']) {
+    for (const phrase of ['classifier', 'OCR', 'window', '(...)', 'weak signal', 'not absolute trends', 'hand-drawn', 'Markdown image', 'eokg_view_image']) {
       assert.ok(instructions.includes(phrase), `instructions must mention ${phrase}`);
     }
   });
@@ -122,5 +123,32 @@ test('serverInfo carries the machine name and no human-readable title', async ()
     const info = client.getServerVersion();
     assert.equal(info.name, 'odeuropa-eokg-mcp');
     assert.equal(info.title, undefined);
+  });
+});
+
+// Failure modes:
+// - the resource is missing, or its CSP / _meta.ui is lost on the wire;
+// - another tool points at the viewer;
+// - resources.listChanged is left to the SDK default (true).
+test('the image viewer is an MCP App resource', async () => {
+  await withClient('eokg-smoke', async (client) => {
+    const uri = 'ui://odeuropa/image-viewer.html';
+    const { resources } = await client.listResources();
+    const listed = resources.find((r) => r.uri === uri);
+    assert.ok(listed, `expected ${uri}; got: ${resources.map((r) => r.uri).join(', ')}`);
+    assert.equal(listed.mimeType, 'text/html;profile=mcp-app');
+    assert.deepEqual(listed._meta.ui.csp.resourceDomains, ['https://data.odeuropa.eu']);
+
+    const { contents } = await client.readResource({ uri });
+    assert.equal(contents.length, 1);
+    assert.deepEqual(contents[0]._meta.ui.csp.resourceDomains, ['https://data.odeuropa.eu']);
+    assert.match(contents[0].text, /^(<!doctype html|<!-- generated)/i);
+
+    const { tools } = await client.listTools();
+    for (const t of tools) {
+      const ref = t._meta?.ui?.resourceUri;
+      assert.equal(ref, t.name === 'eokg_view_image' ? uri : undefined, `${t.name} resourceUri`);
+    }
+    assert.equal(client.getServerCapabilities().resources.listChanged, false);
   });
 });

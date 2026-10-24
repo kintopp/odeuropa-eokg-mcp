@@ -12,11 +12,13 @@ import { registerGetConceptTool } from './tools/get_concept.js';
 import { registerSearchSmellsTool } from './tools/search_smells.js';
 import { registerGetSourceTool } from './tools/get_source.js';
 import { registerInspectImageTool } from './tools/inspect_image.js';
+import { registerViewImageTool } from './tools/view_image.js';
+import { registerViewerResource } from './apps/viewer_resource.js';
 import { registerSmellProfileTool } from './tools/smell_profile.js';
 import { registerFindVisualSmellsTool } from './tools/find_visual_smells.js';
 
 export function createServer() {
-  // `listChanged` must be an explicit false: the SDK fills an absent value with
+  // `listChanged` (tools and resources) must be an explicit false: the SDK fills an absent value with
   // `true`, and this server never emits notifications/tools/list_changed. A
   // client told "cached for ttlMs, and I'll ping you if that changes" has no
   // correct refresh strategy when the second half is a lie — the TTL in
@@ -25,7 +27,7 @@ export function createServer() {
   const server = new McpServer(
     { name: SERVER_NAME, version: SERVER_VERSION },
     {
-      capabilities: { tools: { listChanged: false } },
+      capabilities: { tools: { listChanged: false }, resources: { listChanged: false } },
       instructions: SERVER_INSTRUCTIONS,
       cacheHints: CACHE_HINTS,
     },
@@ -37,6 +39,8 @@ export function createServer() {
   registerSearchSmellsTool(server);
   registerGetSourceTool(server);
   registerInspectImageTool(server);
+  registerViewImageTool(server);
+  registerViewerResource(server);
   registerSmellProfileTool(server);
   registerFindVisualSmellsTool(server);
   return server;

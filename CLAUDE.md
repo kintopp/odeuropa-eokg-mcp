@@ -41,6 +41,7 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 - `src/skosmos/`: Skosmos REST client for vocabulary search.
 - `src/image/`: image fetching and size limits (`data.odeuropa.eu/image/` only).
 - `src/lib/`: shared helpers (tool wrapper, errors, budgets, caching, CSV, ids, warnings).
+- `apps/image-viewer/`: MCP App source; `npm run build:viewer` writes the committed `src/apps/image-viewer.html`.
 - `src/data/iconclass.json`: curated Iconclass sidecar, built by `npm run build:iconclass`.
 - `scripts/`: build and measurement scripts. `docs/tools.md` and `skill/odeuropa-smells.skill` are generated or checked artefacts.
 

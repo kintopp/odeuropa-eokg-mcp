@@ -164,8 +164,10 @@ facets, or profile the specific concept. A timed-out query is not retried.
    artist and date. Hundreds of hand-drawn images can precede the first detector-only one.
    Images with only low-confidence boxes are hidden and counted; `min_score: 0` brings them back.
 2. `eokg_inspect_image({ id })` → look at the picture; compare boxes with what you see.
-   The user does not see the picture, and the chat cannot display it: say so, and give
-   the Record and Image links as plain links, never as a Markdown image.
+   The user does not see this picture. To show it, call `eokg_view_image({ id })`,
+   which opens a viewer; never embed the image as a Markdown image. Boxes start
+   hidden and the user can switch them with the viewer's Boxes button; pass
+   `show_boxes: true` only when the user asks to see them.
 3. `eokg_find_concepts` for the same object in other languages, then
    `eokg_search_smells` for the same concept in texts of the same period.
 4. Compare: what texts say about the smell, what artists chose to depict. Keep
@@ -179,8 +181,9 @@ Aim for two tool calls.
    words from the title. Titles carry no artist names, and the artist is not searchable.
    Each hit is one smell, so the same work can appear several times; group hits by
    `source_id`, and keep hits with `source_type: "image"`.
-2. Pick the best title and date match and call `eokg_inspect_image({ id: source_id })`
-   directly; `eokg_get_smell` and `eokg_get_source` are not needed for this.
+2. Pick the best title and date match. To show it, call `eokg_view_image({ id: source_id })`;
+   to describe it yourself, call `eokg_inspect_image` too. `eokg_get_smell` and
+   `eokg_get_source` are not needed for this.
 3. Mention other candidates from the hit list by title and date without opening them,
    and offer to open one. Near-identical titles with the same date can be two records
    of one painting.

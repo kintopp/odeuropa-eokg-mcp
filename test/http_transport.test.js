@@ -13,7 +13,7 @@ const HTTP_ENTRY = join(ROOT, 'src', 'http.js');
 const MODERN = '2026-07-28';
 const LEGACY = '2025-06-18';
 const SMELL = 'http://data.odeuropa.eu/smell/7e932a9d-fcd7-5192-a678-ae760d6306ad';
-const TOOL_COUNT = 9;
+const TOOL_COUNT = 10;
 
 let stub;
 let stubDelayMs = 2000;

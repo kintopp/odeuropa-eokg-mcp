@@ -113,7 +113,8 @@ test('links: record page, hosted image and original appear in text and structure
   assert.ok(text.includes(`Image: ${IMAGE_URL}`));
   assert.ok(text.includes(`Original: ${RKD_URL}`));
   assert.ok(text.includes('the user does not see it'));
-  assert.ok(text.includes('never embed them as Markdown images'));
+  assert.ok(text.includes('call eokg_view_image'));
+  assert.ok(text.includes('never embed these links as Markdown images'));
 });
 
 test('links: a source without record page or original prints only the hosted image', async () => {
@@ -141,12 +142,12 @@ test('content[0] is the image; structuredContent carries no image bytes', async 
 
 // Failure modes:
 // - the description still says "may not render", which lets the model try an embed;
-// - the Markdown-image prohibition or the plain-link instruction is missing from the description.
-test('the description forbids Markdown image embeds and asks for plain links', async () => {
+// - the Markdown-image prohibition or the pointer to eokg_view_image is missing from the description.
+test('the description forbids Markdown image embeds and points to eokg_view_image', async () => {
   const { tools } = await client.listTools();
   const d = tools.find((x) => x.name === 'eokg_inspect_image').description;
   assert.ok(d.includes('never embed an image URL as a Markdown image'));
-  assert.ok(d.includes('as a plain link'));
+  assert.ok(d.includes('call eokg_view_image'));
   assert.ok(!d.includes('may not render'));
 });
 

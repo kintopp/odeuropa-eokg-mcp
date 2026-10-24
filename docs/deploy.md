@@ -45,7 +45,7 @@ Settings, Connectors, Add custom connector. Use the URL `https://<host>/mcp` and
 
 - claude.ai gives up on a tool call after 240 s. The server's own guard cuts a request at 120 s, above the slowest legitimate call (`eokg_smell_profile` with `include_narrower`, capped at 50 s).
 - Results are capped at about 150,000 characters.
-- Image rendering from `eokg_inspect_image` varies by host; ChatGPT is best-effort and may not show images.
+- The `eokg_view_image` viewer is an MCP App and needs a host that supports them; ChatGPT is best-effort. Other hosts get plain links.
 - The server is stateless: no session survives between requests.
 
 ## Etiquette

@@ -17,6 +17,7 @@ The data is the work of the [Odeuropa](https://odeuropa.eu) project (EU Horizon 
 | `eokg_smell_profile` | Counts for one concept by period, language, dataset, qualities, emotions and spaces. |
 | `eokg_find_visual_smells` | Paintings and prints in which a smell source was detected or catalogued. |
 | `eokg_inspect_image` | The picture of an image source with its annotated objects. |
+| `eokg_view_image` | Shows an image source to the user in an interactive viewer (MCP Apps). |
 
 Full descriptions and parameters: [docs/tools.md](docs/tools.md). An optional skill, [skill/odeuropa-smells.skill](skill/odeuropa-smells.skill), teaches a model the research patterns and the traps.
 
@@ -81,6 +82,8 @@ Excerpts are raw OCR text; emotions come from a classifier; dates mix the docume
 | Regenerate `docs/tools.md` from the running server | `npm run build:docs` |
 | Rebuild `skill/odeuropa-smells.skill` | `npm run build:skill` |
 | Rebuild the Iconclass table | `npm run build:iconclass` |
+| Rebuild the image viewer page after editing `apps/image-viewer/` | `npm run build:viewer` |
+| Preview the image viewer in a browser | `npm run dev:viewer` |
 | Inspector | `npm run inspector` |
 
 `npm test` fails if `docs/tools.md` or the `.skill` bundle is stale; rerun the matching build command and commit the result.
