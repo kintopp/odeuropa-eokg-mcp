@@ -152,3 +152,35 @@ test('live: The Art of Perfumery', { skip: !LIVE }, async () => {
   assert.ok(s.smell_count >= 600);
   assert.equal(s.title, 'The Art of Perfumery');
 });
+
+// Failure modes: has_more computed from the backend page before trimming; next_offset missing or
+// counting dropped smells; detected_objects cut instead of paged smells being continued.
+test('a smell page trimmed to the output budget continues at next_offset with nothing skipped or repeated', async () => {
+  const all = Array.from({ length: 100 }, (_, i) => `${KG}smell/s${String(i).padStart(3, '0')}`);
+  const longConcepts = Array.from({ length: 40 }, (_, i) => `Concept number ${i} with a long label`).join('|');
+  stub = await startStubServer({
+    source_meta: () => ({ body: textMeta }),
+    source_smell_count: () => ({ body: count(all.length) }),
+    source_smell_page: (q) => {
+      const [, limit, offset] = /LIMIT (\d+) OFFSET (\d+)/.exec(q).map(Number);
+      return { body: bindings(all.slice(offset, offset + limit).map((s) => ({ smell: uri(s), concepts: longConcepts }))) };
+    },
+  });
+  const seen = [];
+  let offset = 0;
+  let first;
+  for (let guard = 0; guard < 20; guard++) {
+    const res = await call(stub, { id: TEXT_SOURCE, limit: 100, offset });
+    const s = assertWireValid(outputSchema, res.structuredContent);
+    first ??= { s, text: res.content[0].text };
+    seen.push(...s.smells.map((m) => m.id));
+    assert.ok(JSON.stringify(s).length <= 60_000, 'over the per-channel budget');
+    if (!s.has_more) { assert.equal(s.next_offset, undefined); break; }
+    assert.ok(s.next_offset > offset);
+    offset = s.next_offset;
+  }
+  assert.ok(first.s.smells.length < 100, 'the fixture must overflow one page');
+  assert.equal(first.s.next_offset, first.s.smells.length);
+  assert.ok(first.text.includes(`offset ${first.s.next_offset}`), 'the text channel names the continuation');
+  assert.deepEqual(seen, all);
+});

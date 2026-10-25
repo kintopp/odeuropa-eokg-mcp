@@ -205,3 +205,36 @@ test('live: Rose images', { skip: !LIVE }, async () => {
   assert.ok(s.total + s.hidden_below_min_score > 4000);
   assert.ok(s.results[0].image_url.startsWith('https://data.odeuropa.eu/image/'));
 });
+
+// Failure modes: has_more taken from the extra backend row before trimming; next_offset missing or
+// counting dropped images.
+test('a page trimmed to the output budget continues at next_offset with nothing skipped or repeated', async () => {
+  const total = 50;
+  const r = {
+    ...routes([], total),
+    visual_page: (q) => {
+      const [, limit, offset] = /LIMIT (\d+) OFFSET (\d+)/.exec(q).map(Number);
+      const rows = Array.from({ length: total }, (_, i) => row(i + 1, { title: en('W'.repeat(2000)) }));
+      return { body: bindings(rows.slice(offset, offset + limit)) };
+    },
+  };
+  stub = await startStubServer(r);
+  const seen = [];
+  let offset = 0;
+  let first;
+  for (let guard = 0; guard < 20; guard++) {
+    const res = await withClient('visual', (c) => c.callTool({ name: 'eokg_find_visual_smells', arguments: { concept: ROSE, limit: 50, offset } }),
+      { env: { EOKG_SPARQL_ENDPOINT: stub.url } });
+    const s = assertWireValid(outputSchema, res.structuredContent);
+    first ??= { s, text: res.content[0].text };
+    seen.push(...s.results.map((x) => x.id));
+    assert.ok(JSON.stringify(s).length <= 60_000, 'over the per-channel budget');
+    if (!s.has_more) { assert.equal(s.next_offset, undefined); break; }
+    assert.ok(s.next_offset > offset);
+    offset = s.next_offset;
+  }
+  assert.ok(first.s.results.length < 50, 'the fixture must overflow one page');
+  assert.equal(first.s.next_offset, first.s.results.length);
+  assert.ok(first.text.includes(`offset ${first.s.next_offset}`), 'the text channel names the continuation');
+  assert.deepEqual(seen, Array.from({ length: total }, (_, i) => sid(i + 1)));
+});

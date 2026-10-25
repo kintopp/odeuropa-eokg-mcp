@@ -49,7 +49,7 @@ Full-text search over smell excerpts and source titles using Lucene syntax. Resu
 | `year_to` | int (1000–2100) | — | Latest document date, inclusive. A date range such as 1616/1678 counts by its first year. Undated sources are kept. |
 | `dataset` | enum: `medical-heritage` · `gallica` · `british-library` · `wikisource` · `eebo` · `dbnl` · `gutenberg` · `liberliber` · `odor` · `dlib` · `europeana` · `dta` · `ecco` · `text-annotation` · `pulse` · `royal-society-corpus` · `nuk` · `old-bailey-corpus` · `bibbleue` · `grimm` · `rijksmuseum` | — | Only smells from this source corpus (see eokg_list_datasets). |
 | `limit` | int (1–50) | `10` | Results per page. |
-| `offset` | int (0–10000) | `0` | Results to skip. |
+| `offset` | int (0–10000) | `0` | Results to skip. To continue, pass the previous page's next_offset: a page cut to fit the output budget holds fewer than limit results. |
 <!-- /generated -->
 
 ## `eokg_get_smell`
@@ -87,7 +87,7 @@ Returns a text or image source with its metadata and a page of the smells it con
 |---|---|---|---|
 | `id` | string (≤ 300) | **required** | Source id: the http://data.odeuropa.eu/source/<uuid> URI or the bare uuid, as returned by eokg_get_smell (source.id). |
 | `limit` | int (1–100) | `20` | Smells per page (1-100, default 20). |
-| `offset` | int (0–100000) | `0` | Smells to skip, for paging. |
+| `offset` | int (0–100000) | `0` | Smells to skip, for paging. To continue, pass the previous page's next_offset: a page cut to fit the output budget holds fewer than limit smells. |
 <!-- /generated -->
 
 ## `eokg_find_concepts`
@@ -174,7 +174,7 @@ Lists paintings and prints linked to an olfactory-objects concept, images with h
 | `year_from` | int (1000–2100) | — | Earliest artwork date (inclusive). Undated works are excluded. |
 | `year_to` | int (1000–2100) | — | Latest artwork date (inclusive). Undated works are excluded. |
 | `limit` | int (1–50) | `10` | Same as `eokg_search_smells`. |
-| `offset` | int (0–5000) | `0` | Results to skip. |
+| `offset` | int (0–5000) | `0` | Results to skip. To continue, pass the previous page's next_offset: a page cut to fit the output budget holds fewer than limit results. |
 | `min_score` | number (0–1) | `0.7` | Hide images whose boxes for this concept all score below this (0-1, default 0.7); boxes and best_score count only boxes at or above it. Hand-drawn boxes score 1. Pass 0 for every image. |
 <!-- /generated -->
 

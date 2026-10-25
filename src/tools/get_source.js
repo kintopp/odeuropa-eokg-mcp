@@ -5,7 +5,7 @@ import { withTool } from '../lib/tool.js';
 import { ToolError } from '../lib/errors.js';
 import { parseId, uuidOf, isLocal } from '../lib/ids.js';
 import { pickLabel, labelFromUri, uniqueStrings } from '../lib/rdf.js';
-import { capArrays, truncateText } from '../lib/budget.js';
+import { capPage, nextPageLine, truncateText } from '../lib/budget.js';
 import { withWarnings } from '../lib/warnings.js';
 import { prune } from '../lib/prune.js';
 import { sparqlSelect, v, num } from '../sparql/client.js';
@@ -25,7 +25,7 @@ const inputSchema = z.object({
   ),
   limit: z.number().int().min(1).max(SOURCE_MAX_LIMIT).default(SOURCE_DEFAULT_LIMIT)
     .describe(`Smells per page (1-${SOURCE_MAX_LIMIT}, default ${SOURCE_DEFAULT_LIMIT}).`),
-  offset: z.number().int().min(0).max(100000).default(0).describe('Smells to skip, for paging.'),
+  offset: z.number().int().min(0).max(100000).default(0).describe('Smells to skip, for paging. To continue, pass the previous page\'s next_offset: a page cut to fit the output budget holds fewer than limit smells.'),
 }).strict();
 
 const box = () => z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() });
@@ -37,7 +37,7 @@ export const outputSchema = z.object({
   place_created: z.string().optional(),
   image_url: z.string().optional(),
   original_image_url: z.string().optional(),
-  smell_count: z.number().int(), offset: z.number().int(), limit: z.number().int(), has_more: z.boolean(),
+  smell_count: z.number().int(), offset: z.number().int(), limit: z.number().int(), has_more: z.boolean(), next_offset: z.number().int().optional(),
   smells: z.array(z.object({ id: z.string(), concepts: z.array(z.string()), excerpt: z.string().optional() })),
   detected_objects: z.array(z.object({
     concept_id: z.string(), label: z.string(), score: z.number(), origin: z.enum(['detector', 'manual', 'unknown']),
@@ -183,6 +183,7 @@ function renderText(s) {
       return `${uuidOf(m.id) ?? m.id}${tag}${m.excerpt ? ` «${m.excerpt}»` : ''}`;
     }));
   }
+  lines.push(nextPageLine(s));
   return lines.filter(Boolean).join('\n');
 }
 
@@ -224,7 +225,7 @@ export function registerGetSourceTool(server) {
       if (offset > 0 && smellCount > 0 && offset >= smellCount) {
         warnings.push(`Offset ${offset} is past the last smell (${smellCount}).`);
       }
-      const capped = capArrays(dropUndefined(full), ['smells', 'detected_objects'], PER_CHANNEL_RESULT_BUDGET);
+      const capped = capPage(dropUndefined(full), 'smells', ['detected_objects'], PER_CHANNEL_RESULT_BUDGET);
       const { structured, text } = withWarnings({ structured: capped, text: renderText(capped) }, warnings);
       return { content: [{ type: 'text', text }], structuredContent: structured };
     }),
