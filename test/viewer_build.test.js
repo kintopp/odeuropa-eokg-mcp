@@ -38,3 +38,10 @@ test('the ext-apps protocol code is bundled', () => {
 test('the page stays under 650 KB', () => {
   assert.ok(statSync(VIEWER_HTML).size < 650 * 1024);
 });
+
+test('the page carries the notices of the code it bundles', () => {
+  // MIT and Apache-2.0 require the notice in every copy; the minifier strips the packages' own headers.
+  assert.ok(html.includes('Copyright (c) 2025 Colin McDonnell'), 'zod');
+  assert.ok(html.includes('Copyright (c) 2015 Douglas Christopher Wilson'), 'content-type');
+  assert.ok(html.includes('Apache License'), 'MCP SDK');
+});
