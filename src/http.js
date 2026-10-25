@@ -127,8 +127,11 @@ let draining = false;
 const server = createHttpServer((req, res) => {
   // A kept-alive socket would otherwise hold server.close() open until its idle timeout.
   res.once('close', () => { if (draining) server.closeIdleConnections(); });
-  const { pathname } = new URL(req.url ?? '/', 'http://localhost');
-  if (pathname === '/mcp') {
+  // Node's parser accepts targets such as `//%` that URL rejects; a throw here would kill the process.
+  const pathname = URL.parse(req.url ?? '/', 'http://localhost')?.pathname;
+  if (pathname === undefined) {
+    sendJson(res, 400, { error: 'Bad request target' });
+  } else if (pathname === '/mcp') {
     handleMcp(req, res).catch((err) => {
       log('unhandled:', err);
       if (res.headersSent) res.destroy();

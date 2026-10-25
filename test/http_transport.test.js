@@ -5,6 +5,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
+import { connect } from 'node:net';
 import { join } from 'node:path';
 import { ROOT } from './helpers.js';
 import { startStubServer, bindings } from './stub-backend.js';
@@ -208,6 +209,31 @@ test('/health has status, server, version, commit and node', async () => {
 test('unknown paths are 404', async () => {
   await withServer({}, async (server) => {
     assert.equal((await fetch(`${server.url}/nope`)).status, 404);
+  });
+});
+
+// Raw socket: fetch normalises or rejects these targets before sending them.
+async function rawRequest(server, target) {
+  const { port } = new URL(server.url);
+  const socket = connect(Number(port), '127.0.0.1');
+  await once(socket, 'connect');
+  socket.end(`GET ${target} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n`);
+  let data = '';
+  socket.setEncoding('utf8');
+  socket.on('data', (chunk) => { data += chunk; });
+  await once(socket, 'close');
+  return data;
+}
+
+test('a request target that URL cannot parse is 400 and the server keeps serving', async () => {
+  await withServer({}, async (server) => {
+    for (const target of ['//%', '//']) {
+      assert.match(await rawRequest(server, target), /^HTTP\/1\.1 400 /, `target ${target}`);
+    }
+    assert.equal((await fetch(`${server.url}/health`)).status, 200);
+    const list = await modernList(server);
+    assert.equal(list.body?.result?.tools?.length, TOOL_COUNT);
+    assert.equal(server.child.exitCode, null, server.stderr());
   });
 });
 
