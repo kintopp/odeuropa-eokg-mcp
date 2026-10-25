@@ -1,0 +1,53 @@
+cff-version: 1.2.0
+message: "If you use this software in your research, please cite it as below."
+type: software
+title: "odeuropa-eokg-mcp"
+abstract: >
+  An MCP server providing AI-mediated access to the European Olfactory
+  Knowledge Graph (EOKG) built by the Odeuropa project, supporting full-text
+  search of smell references, vocabulary concepts, smell profiles over time,
+  and viewing artworks with their detected smell-related objects.
+authors:
+  - family-names: Bosse
+    given-names: Arno
+    orcid: "https://orcid.org/0000-0003-3681-1289"
+    affiliation: "Research and Infrastructure Support (RISE), University of Basel"
+repository-code: "https://github.com/kintopp/odeuropa-eokg-mcp"
+url: "https://odeuropa-eokg-mcp-production.up.railway.app/mcp"
+license: MIT
+version: "0.1.0"
+date-released: "2026-10-25"
+keywords:
+  - digital humanities
+  - sensory history
+  - olfactory heritage
+  - knowledge graphs
+  - linked open data
+  - model context protocol
+  - Odeuropa
+references:
+  - type: software
+    title: "Claude Code"
+    authors:
+      - name: "Anthropic"
+    url: "https://www.anthropic.com"
+    notes: "AI coding assistant used in the development of this software"
+  - type: database
+    title: "European Olfactory Knowledge Graph"
+    authors:
+      - family-names: Lisena
+        given-names: Pasquale
+        orcid: "https://orcid.org/0000-0003-3094-5585"
+        affiliation: "EURECOM"
+      - family-names: Ehrhart
+        given-names: Thibault
+        orcid: "https://orcid.org/0000-0003-1377-8279"
+        affiliation: "EURECOM"
+      - family-names: Troncy
+        given-names: Raphaël
+        orcid: "https://orcid.org/0000-0003-0457-1436"
+        affiliation: "EURECOM"
+    doi: "10.5281/zenodo.10709702"
+    url: "https://data.odeuropa.eu/"
+    license: "CC-BY-4.0"
+    notes: "Built by the Odeuropa project (EU Horizon 2020, grant 101004469). Queried live through its public SPARQL endpoint."

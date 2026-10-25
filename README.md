@@ -134,6 +134,32 @@ npm run inspector        # open the MCP Inspector against the server
 
 `npm test` fails if `docs/tools.md`, the `.skill` bundle or the viewer page is stale. Rerun the matching build command and commit the result.
 
+## Citation
+
+If you use odeuropa-eokg-mcp in your research, please cite it as follows:
+
+**APA (7th ed.)**
+
+> Bosse, A. (2026). *odeuropa-eokg-mcp* (Version 0.1.0) [Software]. Research and Infrastructure Support (RISE), University of Basel. https://github.com/kintopp/odeuropa-eokg-mcp
+
+**BibTeX**
+```bibtex
+@software{bosse_2026_odeuropa_eokg_mcp,
+  author    = {Bosse, Arno},
+  title     = {{odeuropa-eokg-mcp}},
+  year      = {2026},
+  version   = {0.1.0},
+  publisher = {Research and Infrastructure Support (RISE), University of Basel},
+  url       = {https://github.com/kintopp/odeuropa-eokg-mcp},
+  orcid     = {0000-0003-3681-1289},
+  note      = {Developed with Claude Code (Anthropic, \url{https://www.anthropic.com})}
+}
+```
+
+Cite the data you report separately, as the European Olfactory Knowledge Graph (see below).
+
 ## License
 
-[MIT](./LICENSE) © 2026 University of Basel. The licence covers the code, not the EOKG data it queries; see the Odeuropa terms above.
+[MIT](./LICENSE) © 2026 University of Basel. The licence covers the code, not the EOKG data it queries.
+
+The European Olfactory Knowledge Graph has its own licence: its dump is published on Zenodo under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) by Pasquale Lisena, Thibault Ehrhart and Raphaël Troncy (EURECOM) for the Odeuropa project, https://doi.org/10.5281/zenodo.10709702. Individual sources carry their own licence in the graph.
