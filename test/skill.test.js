@@ -117,3 +117,14 @@ test('the bundled SKILL.md frontmatter uses only keys hosts accept', () => {
     assert.match(l, /^\s+[\w-]+: ".*"$/, `metadata value must be a quoted string: ${l.trim()}`);
   }
 });
+
+// The place recipe answers "which smells occur there"; only smell_sources counts smell
+// sources, while qualities describe how they smell.
+test('the place-type recipe requests the smell_sources facet its answer needs', () => {
+  const md = readFileSync(join(ROOT, 'skill', 'odeuropa-eokg', 'SKILL.md'), 'utf8');
+  const section = /### \d+\. Smells of a place type\n([\s\S]*?)\n###/.exec(md)?.[1];
+  assert.ok(section, 'no "Smells of a place type" recipe');
+  const call = /eokg_smell_profile\(\{[^}]*facets: \[([^\]]*)\][^}]*\}\)/.exec(section);
+  assert.ok(call, 'the recipe has no eokg_smell_profile call with facets');
+  assert.ok(call[1].includes('"smell_sources"'), `facets are [${call[1]}]`);
+});

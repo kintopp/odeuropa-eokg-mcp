@@ -202,9 +202,11 @@ facets, or profile the specific concept. A timed-out query is not retried.
 ### 3. Smells of a place type
 
 1. `eokg_find_concepts({ query: "garden", vocab: "fragrant-spaces" })`.
-2. `eokg_smell_profile({ concept: "fragrant-spaces/27", facets: ["timeline", "datasets", "qualities"] })`
-   → what smells co-occur there; fragrant-spaces concepts count smells perceived in
-   such a place. Check the `datasets` facet before reading a difference as national:
+2. `eokg_smell_profile({ concept: "fragrant-spaces/27", facets: ["smell_sources", "timeline", "datasets", "qualities"] })`
+   → fragrant-spaces concepts count smells perceived in such a place. `smell_sources`
+   says what smells there: the vocabulary concepts linked as sources of those smells
+   (many smells have no linked concept, so the counts are a lower bound). `qualities`
+   says how it smells, not what. Check the `datasets` facet before reading a difference as national:
    Hospital has 677 French smells against 215 English, almost all from Gallica.
 3. `eokg_search_smells` for exemplary passages ("garden" with a smell word), then
    `eokg_get_smell` to cite. Raw `places` are only a hint.
