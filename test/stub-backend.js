@@ -8,6 +8,8 @@
 // Routes are keyed by the `eokg:<name>` label on the first line of the posted
 // query. A route is `(queryText) => ({ status?, body })` or a Promise of it
 // (body: object → JSON, string → raw text), so a test can hold a response open.
+// `stall: true` sends the status, headers and body, then never ends the body: a body
+// read hangs until the request is aborted.
 //
 // IMPORTANT — the endpoint is read at MODULE LOAD (src/config.js). In-process
 // tests use installFetchStub, which matches by shape, not host. Subprocess tests
@@ -48,13 +50,25 @@ export function makeRouter(routes) {
     calls.push({ label, query });
     const route = label && routes[label];
     if (!route) throw new Error(`stub-backend: unrouted SPARQL query "${label ?? '(no label)'}"`);
-    const { status = 200, body } = await route(query);
-    return { status, body: typeof body === 'string' ? body : JSON.stringify(body) };
+    const { status = 200, body = '', stall = false } = await route(query);
+    return { status, stall, body: typeof body === 'string' ? body : JSON.stringify(body) };
   }
   return { calls, handle };
 }
 
 const failResponse = (err) => ({ status: 599, body: String(err.message) });
+
+// Like undici, a body read rejects with the signal's AbortError once the request is aborted.
+function stalledStream(prefix, signal) {
+  return new ReadableStream({
+    start(controller) {
+      if (prefix) controller.enqueue(new TextEncoder().encode(prefix));
+      signal?.addEventListener('abort', () => {
+        controller.error(new DOMException('This operation was aborted', 'AbortError'));
+      }, { once: true });
+    },
+  });
+}
 
 // Replace globalThis.fetch with a stub over `routes`. Returns { router, restore }.
 export function installFetchStub(routes) {
@@ -70,8 +84,8 @@ export function installFetchStub(routes) {
         reject(signal.reason instanceof Error ? signal.reason : Object.assign(new Error('aborted'), { name: 'AbortError' }));
       }, { once: true });
     });
-    const { status, body } = await Promise.race([pending, aborted]);
-    return new Response(body, { status, headers: { 'content-type': 'application/json' } });
+    const { status, body, stall } = await Promise.race([pending, aborted]);
+    return new Response(stall ? stalledStream(body, signal) : body, { status, headers: { 'content-type': 'application/json' } });
   };
   return { router, restore: () => { globalThis.fetch = original; } };
 }
@@ -86,7 +100,8 @@ export async function startStubServer(routes) {
     let out;
     try { out = await router.handle(query, `http://${req.headers.host}${req.url}`); } catch (err) { out = failResponse(err); }
     res.writeHead(out.status, { 'content-type': 'application/json' });
-    res.end(out.body);
+    if (out.stall) { res.flushHeaders(); if (out.body) res.write(out.body); }
+    else res.end(out.body);
   });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');

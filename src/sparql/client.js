@@ -94,7 +94,10 @@ function execute(query, { signal, timeoutMs }) {
       let json;
       try {
         json = await res.json();
-      } catch {
+      } catch (err) {
+        // Only a parse failure is relabelled: an AbortError from the body read must reach
+        // fetchWithRetry intact, or a timeout is retried and loses its typed label.
+        if (err?.name !== 'SyntaxError') throw err;
         const parseError = new Error('The EOKG SPARQL endpoint returned a non-JSON response (unparseable body on HTTP 200).');
         parseError.transient = true;
         throw parseError;

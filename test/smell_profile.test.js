@@ -170,6 +170,19 @@ test('a 504 on one facet degrades to failed_facets with a warning; the others ar
   assert.equal(labels().filter((l) => l === 'profile_qualities').length, 1, '504 is never retried');
 });
 
+test('a facet whose 200 body stalls past its timeout degrades to failed_facets, sent once', async () => {
+  // Shorten only the per-request timers (5–45 s); backoff sleeps and the client's own 60 s timeout keep their length.
+  const realSetTimeout = globalThis.setTimeout;
+  mock.method(globalThis, 'setTimeout', (fn, ms, ...rest) => realSetTimeout(fn, ms >= 5000 && ms <= 45_000 ? 30 : ms, ...rest));
+  await start(baseRoutes({ profile_qualities: () => ({ stall: true, body: '{"head":' }) }));
+  const res = await profile();
+  const s = valid(res);
+  assert.deepEqual(s.failed_facets, ['qualities']);
+  assert.ok(s.languages && s.timeline && s.emotions);
+  assert.ok(s.warnings.includes('The qualities facet timed out; try without include_narrower or with a narrower concept.'));
+  assert.equal(labels().filter((l) => l === 'profile_qualities').length, 1, 'a timed-out body read is never retried');
+});
+
 test('a non-timeout facet error fails the whole call', async () => {
   await start(baseRoutes({ profile_languages: () => ({ status: 400, body: 'bad query' }) }));
   const res = await profile();

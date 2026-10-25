@@ -81,6 +81,32 @@ test('our own timeout is one call and a timeout ToolError', async () => {
   assert.equal(stub.router.calls.length, 1);
 });
 
+test('our own timeout while reading a 200 body is one call and a timeout ToolError', async () => {
+  stub = installFetchStub({ q_stall: () => ({ stall: true, body: '{"head":' }) });
+  await assert.rejects(() => sparqlSelect('q_stall', 'SELECT * {}', { timeoutMs: 25 }), (e) => {
+    assert.ok(e instanceof ToolError);
+    assert.equal(e.timeout, true);
+    assert.doesNotMatch(e.message, /non-JSON/);
+    return true;
+  });
+  assert.equal(stub.router.calls.length, 1);
+});
+
+test('a caller cancel while reading a 200 body is one call and an AbortError', async () => {
+  stub = installFetchStub({ q_stall_cancel: () => ({ stall: true }) });
+  const ac = new AbortController();
+  setTimeout(() => ac.abort(), 25);
+  await assert.rejects(() => sparqlSelect('q_stall_cancel', 'SELECT * {}', { signal: ac.signal }), { name: 'AbortError' });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.equal(stub.router.calls.length, 1);
+});
+
+test('a malformed JSON body on HTTP 200 is retried as transient, then reported as non-JSON', async () => {
+  stub = installFetchStub({ q_garbled: () => ({ body: '<html>proxy error</html>' }) });
+  await assert.rejects(() => sparqlSelect('q_garbled', 'SELECT * {}'), /non-JSON response/);
+  assert.equal(stub.router.calls.length, 3);
+});
+
 test('a 502 on every attempt ends in a ToolError that says to retry later', async () => {
   stub = installFetchStub({ q_502: () => ({ status: 502, body: 'bad gateway' }) });
   await assert.rejects(() => sparqlSelect('q_502', 'SELECT * {}'), (e) => {
