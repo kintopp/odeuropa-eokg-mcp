@@ -8,6 +8,10 @@ The data is the work of the [Odeuropa](https://odeuropa.eu) project (EU Horizon 
 
 This MCP server was developed by the [Research and Infrastructure Support](https://rise.unibas.ch/en/) (RISE) group at the University of Basel. We are particularly interested in exploring the research opportunities, methodological risks, and technical challenges posed by retrieving and analysing data with LLMs. If you are interested in collaborating with us in this area, please [get in touch](mailto:rise@unibas.ch).
 
+<p align="center">
+  <img src="docs/image-viewer.jpg" width="50%" alt="The eokg_view_image viewer in Claude showing Gerret Willemsz. Heda's still life Stilleven (1642/1643), with coloured boxes labelling a jug, a cup, bread and meat, a legend, and buttons for boxes, zoom, reset, original and fullscreen">
+</p>
+
 ## Install
 
 ### Hosted
