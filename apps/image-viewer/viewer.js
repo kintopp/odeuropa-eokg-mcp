@@ -171,7 +171,6 @@ function wireInteraction(frame) {
   let pinch = 0;
   frame.addEventListener('pointerdown', (ev) => {
     pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
-    frame.setPointerCapture(ev.pointerId);
     dragMoved = false;
     pinch = 0;
   });
@@ -199,6 +198,9 @@ function wireInteraction(frame) {
         applyView();
       }
     }
+    // Capture only once a drag starts: capture retargets the click to the frame, so a box
+    // could never be selected.
+    if (dragMoved && !frame.hasPointerCapture(ev.pointerId)) frame.setPointerCapture(ev.pointerId);
   });
   const end = (ev) => {
     pointers.delete(ev.pointerId);
