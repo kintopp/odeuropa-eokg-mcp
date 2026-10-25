@@ -5,8 +5,8 @@
   "description": "MCP server for the European Olfactory Knowledge Graph (Odeuropa)",
   "license": "MIT",
   "author": {
-    "name": "Arno Bosse",
-    "url": "https://github.com/kintopp"
+    "name": "University of Basel",
+    "url": "https://rise.unibas.ch/en/"
   },
   "type": "module",
   "engines": {
