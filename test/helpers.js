@@ -70,3 +70,31 @@ export async function withClient(name, run, { env } = {}) {
     await client.close();
   }
 }
+
+// Follows next_offset from offset 0 until has_more is false. Every page must be wire-valid, within
+// the per-channel budget, and advance. Returns [{ s, text }] per page.
+export async function followPages(callPage, outputSchema) {
+  const pages = [];
+  let offset = 0;
+  for (let guard = 0; guard < 20; guard++) {
+    const res = await callPage(offset);
+    const s = assertWireValid(outputSchema, res.structuredContent);
+    assert.ok(JSON.stringify(s).length <= 60_000, `page at offset ${offset} is over the per-channel budget`);
+    pages.push({ s, text: res.content[0].text });
+    if (!s.has_more) {
+      assert.equal(s.next_offset, undefined, 'next_offset on the last page');
+      return pages;
+    }
+    assert.equal(typeof s.next_offset, 'number', 'has_more without next_offset');
+    assert.ok(s.next_offset > offset, `next_offset ${s.next_offset} does not advance past ${offset}`);
+    offset = s.next_offset;
+  }
+  throw new Error('pagination did not terminate');
+}
+
+// The first page was trimmed below `limit`, continues right after its last record, and says so in text.
+export function assertTrimmedFirstPage([{ s, text }], field, limit) {
+  assert.ok(s[field].length < limit, 'the fixture must overflow one page');
+  assert.equal(s.next_offset, s[field].length);
+  assert.ok(text.includes(`offset ${s.next_offset}`), 'the text channel names the continuation');
+}

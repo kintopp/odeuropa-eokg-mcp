@@ -13,7 +13,7 @@ import {
   anchorPattern, profileTotalQuery, profileFacetQuery, conceptLabelQuery,
 } from '../sparql/queries/profile.js';
 import {
-  READ_ONLY_ANNOTATIONS, REQUEST_TIMEOUT_MS, SPARQL_MAX_CONCURRENCY, TEXT_LANGUAGES, DATASET_GRAPH_BASE,
+  READ_ONLY_ANNOTATIONS, SPARQL_MAX_CONCURRENCY, TEXT_LANGUAGES, DATASET_GRAPH_BASE,
   FRAGRANT_SPACES_BASE, OLFACTORY_OBJECTS_BASE, PROFILE_FACETS, PROFILE_DEFAULT_FACETS, PROFILE_NARROWER_DEFAULT_FACETS,
   PROFILE_GESTURE_DEFAULT_FACETS,
   PROFILE_MAX_NARROWER_FACETS, PROFILE_CALL_DEADLINE_MS, PROFILE_MIN_FACET_BUDGET_MS, PROFILE_DEFAULT_TOP,
@@ -217,7 +217,6 @@ export function registerSmellProfileTool(server) {
       }
 
       const deadline = Date.now() + PROFILE_CALL_DEADLINE_MS;
-      const timeoutLeft = () => Math.floor(Math.min(REQUEST_TIMEOUT_MS, deadline - Date.now()));
       const anchor = anchorPattern(concept, vocab.anchor, { narrower, language, yearFrom, yearTo });
       const exclude = vocab.anchor === 'source' ? concept : undefined;
 
@@ -246,8 +245,7 @@ export function registerSmellProfileTool(server) {
         const report = progressReporter(ctx);
         let done = 0;
         await mapPool(facets, narrower ? 1 : SPARQL_MAX_CONCURRENCY, async (facet) => {
-          const left = timeoutLeft();
-          if (left < PROFILE_MIN_FACET_BUDGET_MS) {
+          if (deadline - Date.now() < PROFILE_MIN_FACET_BUDGET_MS) {
             failed.add(facet);
             warnings.push(skipWarning(facet));
           } else {

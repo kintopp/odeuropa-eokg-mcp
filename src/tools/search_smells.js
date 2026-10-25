@@ -5,7 +5,7 @@ import { withTool } from '../lib/tool.js';
 import { ToolError, assertYearRange } from '../lib/errors.js';
 import { explorerUrl, uuidOf } from '../lib/ids.js';
 import { pickLabel, uniqueStrings } from '../lib/rdf.js';
-import { capPage, nextPageLine } from '../lib/budget.js';
+import { capPage, continueHint, nextPageLine } from '../lib/budget.js';
 import { withWarnings } from '../lib/warnings.js';
 import { progressReporter } from '../lib/progress.js';
 import { makeSnippet } from '../lib/snippet.js';
@@ -32,7 +32,7 @@ const inputSchema = z.object({
   year_to: z.number().int().min(1000).max(2100).optional().describe('Latest document date, inclusive. A date range such as 1616/1678 counts by its first year. Undated sources are kept.'),
   dataset: z.enum([...DATASET_NAMES]).optional().describe('Only smells from this source corpus (see eokg_list_datasets).'),
   limit: z.number().int().min(1).max(SEARCH_MAX_LIMIT).default(SEARCH_DEFAULT_LIMIT).describe('Results per page.'),
-  offset: z.number().int().min(0).max(SEARCH_MAX_OFFSET).default(0).describe('Results to skip. To continue, pass the previous page\'s next_offset: a page cut to fit the output budget holds fewer than limit results.'),
+  offset: z.number().int().min(0).max(SEARCH_MAX_OFFSET).default(0).describe(`Results to skip. ${continueHint('results')}`),
 }).strict();
 
 export const outputSchema = z.object({

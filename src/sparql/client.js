@@ -48,13 +48,16 @@ function release() {
   else active--;
 }
 
+// `timeout` lets a profile report the facet as failed instead of failing the call.
+function timeoutError(message) {
+  const err = new ToolError(message, NARROW);
+  err.timeout = true;
+  return err;
+}
+
 function makeError(message, meta = {}) {
   const { status, body } = meta;
-  if (status === 504) {
-    const err = new ToolError('The EOKG SPARQL endpoint timed out (its gateway cuts queries at 60 s).', NARROW);
-    err.timeout = true;
-    return err;
-  }
+  if (status === 504) return timeoutError('The EOKG SPARQL endpoint timed out (its gateway cuts queries at 60 s).');
   if (status === 500 && typeof body === 'string' && body.includes(LUCENE_MARK)) {
     const detail = body.slice(body.indexOf(LUCENE_MARK) + LUCENE_MARK.length).split('\n')[0].trim().slice(0, 200);
     return new ToolError(
@@ -62,11 +65,7 @@ function makeError(message, meta = {}) {
       'Check quotes and parentheses are balanced; use AND/OR/NOT in capitals; quote phrases with "…".',
     );
   }
-  if (status === undefined && /timed out/.test(message)) {
-    const err = new ToolError(message, NARROW);
-    err.timeout = true;
-    return err;
-  }
+  if (status === undefined && /timed out/.test(message)) return timeoutError(message);
   if (status === 429) {
     return new ToolError(message, 'The endpoint is rate-limiting; wait a minute and retry.');
   }
@@ -147,11 +146,7 @@ export async function sparqlSelect(name, body, { signal, timeoutMs, deadline } =
 // absolute Date.now() value, so it covers queueing, retries and backoff alike.
 function deadlineScope(signal, deadline) {
   const expiry = new AbortController();
-  const expire = () => {
-    const err = new ToolError('The time budget for this call ran out before the EOKG SPARQL endpoint answered.', NARROW);
-    err.timeout = true;
-    expiry.abort(err);
-  };
+  const expire = () => expiry.abort(timeoutError('The time budget for this call ran out before the EOKG SPARQL endpoint answered.'));
   const ms = deadline - Date.now();
   const timer = ms > 0 ? setTimeout(expire, ms) : expire();
   return {

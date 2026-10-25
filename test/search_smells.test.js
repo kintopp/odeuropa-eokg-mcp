@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { outputSchema } from '../src/tools/search_smells.js';
 import { EXCERPT_INJECTION_BOUNDARY } from '../src/config.js';
 import { startStubServer, bindings } from './stub-backend.js';
-import { withClient, assertWireValid, LIVE } from './helpers.js';
+import { withClient, assertWireValid, followPages, assertTrimmedFirstPage, LIVE } from './helpers.js';
 
 const KG = 'http://data.odeuropa.eu/';
 const uri = (value) => ({ type: 'uri', value });
@@ -176,13 +176,15 @@ test('year_from after year_to is an error', async () => {
 });
 
 const SRC = '11111111-2222-4333-8444-555555555555';
+// `over`: extra binding fields, or a function of the smell id returning them.
 const customEnrich = (over) => (query) => {
   const found = [...query.matchAll(/<(http:\/\/data\.odeuropa\.eu\/smell\/[^>]+)>/g)].map((m) => m[1]);
   return {
     body: bindings(found.map((id) => ({
       id: uri(id), graph: uri(`${KG}gallica`), source: uri(`${KG}source/${SRC}`),
       type: uri('http://erlangen-crm.org/current/E33_Linguistic_Object'), title: en('Le Jardin'),
-      lang: 'fr', date: '1850', text: 'Le parfum de la lavande.', cl: en('Lavender'), ...over,
+      lang: 'fr', date: '1850', text: 'Le parfum de la lavande.', cl: en('Lavender'),
+      ...(typeof over === 'function' ? over(id) : over),
     }))),
   };
 };
@@ -198,58 +200,29 @@ const pagedSearch = (n) => (query) => {
     }))),
   };
 };
-const titledEnrich = (titleOf) => (query) => {
-  const found = [...query.matchAll(/<(http:\/\/data\.odeuropa\.eu\/smell\/[^>]+)>/g)].map((m) => m[1]);
-  return {
-    body: bindings(found.map((id) => ({
-      id: uri(id), graph: uri(`${KG}gallica`), source: uri(`${KG}source/${SRC}`),
-      type: uri('http://erlangen-crm.org/current/E33_Linguistic_Object'), title: en(titleOf(id)),
-      lang: 'fr', date: '1850', text: 'Le parfum de la lavande.', cl: en('Lavender'),
-    }))),
-  };
-};
-
-// Follows next_offset until has_more is false; returns every page.
-async function allPages(args) {
-  const pages = [];
-  let offset = args.offset ?? 0;
-  for (let guard = 0; guard < 20; guard++) {
-    const res = await call(stub, { ...args, offset });
-    const s = assertWireValid(outputSchema, res.structuredContent);
-    pages.push({ s, text: res.content[0].text });
-    if (!s.has_more) return pages;
-    assert.equal(typeof s.next_offset, 'number', 'has_more without next_offset');
-    assert.ok(s.next_offset > offset, `next_offset ${s.next_offset} does not advance past ${offset}`);
-    offset = s.next_offset;
-  }
-  throw new Error('pagination did not terminate');
-}
+const paged = (args) => withClient('search', (c) => followPages(
+  (offset) => c.callTool({ name: 'eokg_search_smells', arguments: { ...args, offset } }), outputSchema,
+), { env: { EOKG_SPARQL_ENDPOINT: stub.url } });
+const idsOf = (pages) => pages.flatMap((p) => p.s.results.map((r) => r.id));
 
 test('a page trimmed to the output budget continues at next_offset with nothing skipped or repeated', async () => {
-  stub = await startStubServer({ search_page: pagedSearch(50), search_enrich: titledEnrich(() => 'T'.repeat(2000)) });
-  const pages = await allPages({ text: 'lavande', limit: 50 });
-  const first = pages[0].s;
-  assert.ok(first.results.length < 50, 'the fixture must overflow one page');
-  assert.equal(first.has_more, true);
-  assert.equal(first.next_offset, first.results.length);
-  assert.ok(pages[0].text.includes(`offset ${first.next_offset}`), 'the text channel names the continuation');
-  assert.deepEqual(pages.flatMap((p) => p.s.results.map((r) => r.id)), ids(50));
-  for (const { s } of pages) assert.ok(JSON.stringify(s).length <= 60_000, 'over the per-channel budget');
-  assert.equal(pages.at(-1).s.next_offset, undefined);
+  stub = await startStubServer({ search_page: pagedSearch(50), search_enrich: customEnrich({ title: en('T'.repeat(2000)) }) });
+  const pages = await paged({ text: 'lavande', limit: 50 });
+  assertTrimmedFirstPage(pages, 'results', 50);
+  assert.deepEqual(idsOf(pages), ids(50));
 });
 
 test('a hit too large for the budget on its own is returned shortened, so paging advances', async () => {
   const huge = ids(1)[0];
   stub = await startStubServer({
     search_page: pagedSearch(2),
-    search_enrich: titledEnrich((id) => (id === huge ? 'H'.repeat(200_000) : 'Le Jardin')),
+    search_enrich: customEnrich((id) => ({ title: en(id === huge ? 'H'.repeat(200_000) : 'Le Jardin') })),
   });
-  const pages = await allPages({ text: 'lavande', limit: 2 });
-  assert.deepEqual(pages.flatMap((p) => p.s.results.map((r) => r.id)), ids(2));
+  const pages = await paged({ text: 'lavande', limit: 2 });
+  assert.deepEqual(idsOf(pages), ids(2));
   const shortened = pages[0].s.results[0];
   assert.equal(shortened.id, huge);
   assert.ok(shortened.title.length < 200_000);
-  assert.ok(JSON.stringify(pages[0].s).length <= 60_000, 'over the per-channel budget');
 });
 
 test('the text names the source id next to the smell id', async () => {

@@ -101,7 +101,10 @@ test('a caller cancel while reading a 200 body is one call and an AbortError', a
   assert.equal(stub.router.calls.length, 1);
 });
 
-test('a malformed JSON body on HTTP 200 is retried as transient, then reported as non-JSON', async () => {
+test('a malformed JSON body on HTTP 200 is retried as transient, then reported as non-JSON', async (t) => {
+  // Shorten only the 1 s and 2 s retry backoffs.
+  const realSetTimeout = globalThis.setTimeout;
+  t.mock.method(globalThis, 'setTimeout', (fn, ms, ...rest) => realSetTimeout(fn, ms === 1000 || ms === 2000 ? 1 : ms, ...rest));
   stub = installFetchStub({ q_garbled: () => ({ body: '<html>proxy error</html>' }) });
   await assert.rejects(() => sparqlSelect('q_garbled', 'SELECT * {}'), /non-JSON response/);
   assert.equal(stub.router.calls.length, 3);
@@ -234,8 +237,9 @@ test('a short-deadline caller detaches from a shared query without cancelling th
     stub = installFetchStub({ q_shared: () => new Promise((resolve) => { release = () => resolve(OK()); }) });
     const short = () => sparqlSelect('q_shared', 'SELECT * {}', { deadline: Date.now() + 20 });
     const long = () => sparqlSelect('q_shared', 'SELECT * {}', { deadline: Date.now() + 5000 });
-    const [a, b] = shortFirst ? [short(), long()] : [long(), short()];
-    const [shortCall, longCall] = shortFirst ? [a, b] : [b, a];
+    let shortCall;
+    let longCall;
+    if (shortFirst) { shortCall = short(); longCall = long(); } else { longCall = long(); shortCall = short(); }
     await assert.rejects(shortCall, (e) => e.timeout === true);
     await tick(10);
     release();

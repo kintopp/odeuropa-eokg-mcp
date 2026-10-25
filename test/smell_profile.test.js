@@ -254,7 +254,7 @@ test('deadline: a facet that would start with under 5 s left is skipped, not sen
   assert.ok(res.content[0].text.includes('time budget'));
 });
 
-test('deadline: each query is sent with a timeout no longer than the time left', async () => {
+test('deadline: no query waits longer than the time left', async () => {
   let clock = 1_000_000;
   mock.method(Date, 'now', () => clock);
   const timeouts = [];
@@ -267,7 +267,7 @@ test('deadline: each query is sent with a timeout no longer than the time left',
     profile_timeline: () => { clock += 20_000; return { body: bindings(FACET_ROWS.timeline) }; },
   }));
   valid(await profile({ include_narrower: true }));
-  // total + label at 45 s (REQUEST_TIMEOUT_MS), languages at 30 s left, datasets at 30 s.
+  // total + label: the 45 s per-attempt timer; languages and datasets: a deadline timer for the 30 s left.
   assert.ok(timeouts.includes(45_000));
   assert.ok(timeouts.includes(30_000), `got ${timeouts}`);
 });
@@ -296,7 +296,7 @@ const race = (p, settle) => Promise.race([p, settle().then(() => 'pending')]);
 test('deadline: with every SPARQL slot taken, the profile fails at 50 s and never sends its total', async () => {
   await saturated(async ({ holdRoute, hold, settle }) => {
     await start(baseRoutes({ hold: holdRoute }));
-    const holders = hold(4);
+    hold(4);
     await settle();
     const call = profile();
     await settle();
@@ -307,7 +307,6 @@ test('deadline: with every SPARQL slot taken, the profile fails at 50 s and neve
     assert.notEqual(res, 'pending', 'still running past its 50 s deadline');
     assert.equal(res.isError, true);
     assert.match(res.content[0].text, /time budget/);
-    void holders;
   });
   await new Promise((r) => setTimeout(r, 20));
   assert.ok(!labels().includes('profile_total'), 'the total was sent after the deadline');
@@ -315,11 +314,10 @@ test('deadline: with every SPARQL slot taken, the profile fails at 50 s and neve
 
 test('deadline: facets starved of a slot land in failed_facets at 50 s; total and label are kept', async () => {
   await saturated(async ({ holdRoute, hold, settle }) => {
-    let holders;
     // Once total and label hold two slots, take the other two and queue two more ahead of the facets.
     await start(baseRoutes({
       hold: holdRoute,
-      profile_total: () => { holders = hold(4); return { body: bindings([{ n: '29243' }]) }; },
+      profile_total: () => { hold(4); return { body: bindings([{ n: '29243' }]) }; },
     }));
     const call = profile();
     await settle();
@@ -331,7 +329,6 @@ test('deadline: facets starved of a slot land in failed_facets at 50 s; total an
     assert.equal(s.concept.label, 'Rose');
     assert.deepEqual([...s.failed_facets].sort(), ['datasets', 'emotions', 'fragrant_spaces', 'languages', 'qualities', 'timeline']);
     assert.deepEqual(facetLabels(), [], 'a facet was sent after the deadline');
-    void holders;
   });
 });
 

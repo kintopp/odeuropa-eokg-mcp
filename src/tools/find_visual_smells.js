@@ -5,7 +5,7 @@ import { withTool } from '../lib/tool.js';
 import { ToolError, assertYearRange } from '../lib/errors.js';
 import { parseId, vocabOf, uuidOf, KG_BASE } from '../lib/ids.js';
 import { pickLabel } from '../lib/rdf.js';
-import { capPage, nextPageLine, truncateText } from '../lib/budget.js';
+import { capPage, continueHint, nextPageLine, truncateText } from '../lib/budget.js';
 import { withWarnings } from '../lib/warnings.js';
 import { sparqlSelect, v, num } from '../sparql/client.js';
 import { conceptLabelQuery } from '../sparql/queries/profile.js';
@@ -26,7 +26,7 @@ const inputSchema = z.object({
   year_from: z.number().int().min(1000).max(2100).optional().describe('Earliest artwork date (inclusive). Undated works are excluded.'),
   year_to: z.number().int().min(1000).max(2100).optional().describe('Latest artwork date (inclusive). Undated works are excluded.'),
   limit: z.number().int().min(1).max(VISUAL_MAX_LIMIT).default(VISUAL_DEFAULT_LIMIT).describe('Results per page.'),
-  offset: z.number().int().min(0).max(5000).default(0).describe('Results to skip. To continue, pass the previous page\'s next_offset: a page cut to fit the output budget holds fewer than limit results.'),
+  offset: z.number().int().min(0).max(5000).default(0).describe(`Results to skip. ${continueHint('results')}`),
   min_score: z.number().min(0).max(1).default(FRAGMENT_MIN_SCORE_DEFAULT).describe(
     `Hide images whose boxes for this concept all score below this (0-1, default ${FRAGMENT_MIN_SCORE_DEFAULT}); boxes and best_score count only boxes at or above it. Hand-drawn boxes score 1. Pass 0 for every image.`,
   ),

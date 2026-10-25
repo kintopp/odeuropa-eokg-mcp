@@ -2,8 +2,8 @@ import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { outputSchema } from '../src/tools/get_source.js';
 import { EXCERPT_INJECTION_BOUNDARY } from '../src/config.js';
-import { startStubServer, bindings } from './stub-backend.js';
-import { withClient, assertWireValid, LIVE } from './helpers.js';
+import { startStubServer, bindings, limitOffset } from './stub-backend.js';
+import { withClient, assertWireValid, followPages, assertTrimmedFirstPage, LIVE } from './helpers.js';
 import { FRAGMENT_ROWS, MANUAL, IMAGE_SOURCE, uri, TYPE_TEXT, TYPE_IMAGE } from './source-fixtures.js';
 
 const KG = 'http://data.odeuropa.eu/';
@@ -162,25 +162,13 @@ test('a smell page trimmed to the output budget continues at next_offset with no
     source_meta: () => ({ body: textMeta }),
     source_smell_count: () => ({ body: count(all.length) }),
     source_smell_page: (q) => {
-      const [, limit, offset] = /LIMIT (\d+) OFFSET (\d+)/.exec(q).map(Number);
+      const [limit, offset] = limitOffset(q);
       return { body: bindings(all.slice(offset, offset + limit).map((s) => ({ smell: uri(s), concepts: longConcepts }))) };
     },
   });
-  const seen = [];
-  let offset = 0;
-  let first;
-  for (let guard = 0; guard < 20; guard++) {
-    const res = await call(stub, { id: TEXT_SOURCE, limit: 100, offset });
-    const s = assertWireValid(outputSchema, res.structuredContent);
-    first ??= { s, text: res.content[0].text };
-    seen.push(...s.smells.map((m) => m.id));
-    assert.ok(JSON.stringify(s).length <= 60_000, 'over the per-channel budget');
-    if (!s.has_more) { assert.equal(s.next_offset, undefined); break; }
-    assert.ok(s.next_offset > offset);
-    offset = s.next_offset;
-  }
-  assert.ok(first.s.smells.length < 100, 'the fixture must overflow one page');
-  assert.equal(first.s.next_offset, first.s.smells.length);
-  assert.ok(first.text.includes(`offset ${first.s.next_offset}`), 'the text channel names the continuation');
-  assert.deepEqual(seen, all);
+  const pages = await withClient('get-source', (c) => followPages(
+    (offset) => c.callTool({ name: 'eokg_get_source', arguments: { id: TEXT_SOURCE, limit: 100, offset } }), outputSchema,
+  ), { env: { EOKG_SPARQL_ENDPOINT: stub.url } });
+  assertTrimmedFirstPage(pages, 'smells', 100);
+  assert.deepEqual(pages.flatMap((p) => p.s.smells.map((m) => m.id)), all);
 });

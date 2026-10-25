@@ -8,8 +8,8 @@
 // Routes are keyed by the `eokg:<name>` label on the first line of the posted
 // query. A route is `(queryText) => ({ status?, body })` or a Promise of it
 // (body: object → JSON, string → raw text), so a test can hold a response open.
-// `stall: true` sends the status, headers and body, then never ends the body: a body
-// read hangs until the request is aborted.
+// `stall: true` (installFetchStub only) sends the status, headers and body, then never ends the
+// body: a body read hangs until the request is aborted.
 //
 // IMPORTANT — the endpoint is read at MODULE LOAD (src/config.js). In-process
 // tests use installFetchStub, which matches by shape, not host. Subprocess tests
@@ -23,6 +23,9 @@
 
 import { createServer } from 'node:http';
 import { once } from 'node:events';
+
+// [limit, offset] from a query's trailing `LIMIT n OFFSET m`.
+export const limitOffset = (query) => /LIMIT (\d+) OFFSET (\d+)/.exec(query).slice(1).map(Number);
 
 // A SPARQL JSON results body from [{ x: 'literal' | { type: 'uri', value } }].
 export function bindings(rows) {
@@ -100,8 +103,7 @@ export async function startStubServer(routes) {
     let out;
     try { out = await router.handle(query, `http://${req.headers.host}${req.url}`); } catch (err) { out = failResponse(err); }
     res.writeHead(out.status, { 'content-type': 'application/json' });
-    if (out.stall) { res.flushHeaders(); if (out.body) res.write(out.body); }
-    else res.end(out.body);
+    res.end(out.body);
   });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');

@@ -83,4 +83,6 @@ function shrinkToFit(out, field, record, budget) {
   return shortenStrings(record, lo);
 }
 
+export const continueHint = (noun) => `To continue, pass the previous page's next_offset: a page cut to fit the output budget holds fewer than limit ${noun}.`;
+
 export const nextPageLine = (s) => (s.next_offset === undefined ? undefined : `More results: call again with offset ${s.next_offset}.`);

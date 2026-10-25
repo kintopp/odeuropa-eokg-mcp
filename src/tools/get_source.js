@@ -5,7 +5,7 @@ import { withTool } from '../lib/tool.js';
 import { ToolError } from '../lib/errors.js';
 import { parseId, uuidOf, isLocal } from '../lib/ids.js';
 import { pickLabel, labelFromUri, uniqueStrings } from '../lib/rdf.js';
-import { capPage, nextPageLine, truncateText } from '../lib/budget.js';
+import { capPage, continueHint, nextPageLine, truncateText } from '../lib/budget.js';
 import { withWarnings } from '../lib/warnings.js';
 import { prune } from '../lib/prune.js';
 import { sparqlSelect, v, num } from '../sparql/client.js';
@@ -25,7 +25,7 @@ const inputSchema = z.object({
   ),
   limit: z.number().int().min(1).max(SOURCE_MAX_LIMIT).default(SOURCE_DEFAULT_LIMIT)
     .describe(`Smells per page (1-${SOURCE_MAX_LIMIT}, default ${SOURCE_DEFAULT_LIMIT}).`),
-  offset: z.number().int().min(0).max(100000).default(0).describe('Smells to skip, for paging. To continue, pass the previous page\'s next_offset: a page cut to fit the output budget holds fewer than limit smells.'),
+  offset: z.number().int().min(0).max(100000).default(0).describe(`Smells to skip, for paging. ${continueHint('smells')}`),
 }).strict();
 
 const box = () => z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() });
