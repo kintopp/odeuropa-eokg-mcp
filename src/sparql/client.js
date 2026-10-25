@@ -112,27 +112,52 @@ function execute(query, { signal, timeoutMs }) {
  * { varName: { type, value, lang?, datatype? } }, exactly as in SPARQL JSON results.
  * `name` labels the query: it is prepended as a comment line `# eokg:<name>`, so the
  * offline stub backend can route on it and the endpoint's logs can attribute it.
+ * `timeoutMs` bounds each attempt; `deadline` (a Date.now() value) bounds this caller's whole wait.
  */
-export async function sparqlSelect(name, body, { signal, timeoutMs } = {}) {
+export async function sparqlSelect(name, body, { signal, timeoutMs, deadline } = {}) {
   if (typeof name !== 'string' || !NAME_RE.test(name)) {
     throw new Error(`Invalid SPARQL query name: ${JSON.stringify(name)}`);
   }
   throwIfAborted(signal);
   const query = `# eokg:${name}\n${PREFIXES}${body}`;
-  const rows = await cache.fetchCached(
-    query,
-    // The loader runs on the cache's shared signal, never one caller's.
-    async (loaderSignal) => {
-      await acquire(loaderSignal);
-      try {
-        return await execute(query, { signal: loaderSignal, timeoutMs });
-      } finally {
-        release();
-      }
-    },
-    { signal },
-  );
-  return structuredClone(rows);
+  const scope = deadline === undefined ? { signal, done() {} } : deadlineScope(signal, deadline);
+  try {
+    const rows = await cache.fetchCached(
+      query,
+      // The loader runs on the cache's shared signal, never one caller's.
+      async (loaderSignal) => {
+        await acquire(loaderSignal);
+        try {
+          return await execute(query, { signal: loaderSignal, timeoutMs });
+        } finally {
+          release();
+        }
+      },
+      { signal: scope.signal },
+    );
+    return structuredClone(rows);
+  } finally {
+    scope.done();
+  }
+}
+
+// A deadline belongs to one caller, so it is enforced on the caller's side of the cache: at
+// expiry the caller detaches with a timeout ToolError. The shared loader is aborted (dequeued or
+// cancelled, freeing its slot) only when no other caller still waits on it. `deadline` is an
+// absolute Date.now() value, so it covers queueing, retries and backoff alike.
+function deadlineScope(signal, deadline) {
+  const expiry = new AbortController();
+  const expire = () => {
+    const err = new ToolError('The time budget for this call ran out before the EOKG SPARQL endpoint answered.', NARROW);
+    err.timeout = true;
+    expiry.abort(err);
+  };
+  const ms = deadline - Date.now();
+  const timer = ms > 0 ? setTimeout(expire, ms) : expire();
+  return {
+    signal: signal ? AbortSignal.any([signal, expiry.signal]) : expiry.signal,
+    done: () => clearTimeout(timer),
+  };
 }
 
 export const v = (row, key) => row[key]?.value;

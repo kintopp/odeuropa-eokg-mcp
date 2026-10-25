@@ -183,3 +183,71 @@ test('an aborted signal while queued rejects with AbortError', async () => {
   await Promise.all(holders);
   assert.equal(stub.router.calls.length, 4, 'the aborted call never reached the network');
 });
+
+// Failure modes (deadline): time spent queued for a slot is not counted; a query whose only caller
+// has given up is still sent once a slot frees; the expiry reads as a cancel rather than a timeout;
+// one caller's deadline cancels the shared query another caller still waits on; a slot leaks.
+const tick = (ms) => new Promise((r) => setTimeout(r, ms));
+
+test('a deadline that passes while queued is a timeout ToolError, and the query is never sent', { timeout: 5000 }, async () => {
+  const releases = [];
+  stub = installFetchStub({
+    q_hold: () => new Promise((resolve) => releases.push(() => resolve(OK()))),
+    q_late: OK,
+    q_after: OK,
+  });
+  const holders = Array.from({ length: 4 }, (_, i) => sparqlSelect('q_hold', `SELECT * { BIND(${i} AS ?i) }`));
+  await tick(20);
+  await assert.rejects(sparqlSelect('q_late', 'SELECT * {}', { deadline: Date.now() + 30 }), (e) => {
+    assert.ok(e instanceof ToolError);
+    assert.equal(e.timeout, true);
+    return true;
+  });
+  releases.forEach((r) => r());
+  await Promise.all(holders);
+  assert.equal((await sparqlSelect('q_after', 'SELECT * {}')).length, 1, 'capacity recovers');
+  await tick(20);
+  assert.ok(!stub.router.calls.some((c) => c.label === 'q_late'), 'work launched after its deadline');
+});
+
+test('a deadline already past fails before any request', async () => {
+  stub = installFetchStub({ q_past: OK });
+  await assert.rejects(sparqlSelect('q_past', 'SELECT * {}', { deadline: Date.now() - 1 }), (e) => e.timeout === true);
+  assert.equal(stub.router.calls.length, 0);
+});
+
+test('a caller cancel before its deadline stays an AbortError', async () => {
+  stub = installFetchStub({ q_cancel_first: () => new Promise(() => {}) });
+  const ac = new AbortController();
+  setTimeout(() => ac.abort(), 10);
+  await assert.rejects(
+    sparqlSelect('q_cancel_first', 'SELECT * {}', { signal: ac.signal, deadline: Date.now() + 5000 }),
+    { name: 'AbortError' },
+  );
+});
+
+test('a short-deadline caller detaches from a shared query without cancelling the other caller', { timeout: 5000 }, async () => {
+  for (const shortFirst of [true, false]) {
+    clearSparqlCache();
+    let release;
+    stub?.restore();
+    stub = installFetchStub({ q_shared: () => new Promise((resolve) => { release = () => resolve(OK()); }) });
+    const short = () => sparqlSelect('q_shared', 'SELECT * {}', { deadline: Date.now() + 20 });
+    const long = () => sparqlSelect('q_shared', 'SELECT * {}', { deadline: Date.now() + 5000 });
+    const [a, b] = shortFirst ? [short(), long()] : [long(), short()];
+    const [shortCall, longCall] = shortFirst ? [a, b] : [b, a];
+    await assert.rejects(shortCall, (e) => e.timeout === true);
+    await tick(10);
+    release();
+    assert.equal((await longCall).length, 1, `shortFirst=${shortFirst}`);
+    assert.equal(stub.router.calls.length, 1, 'one shared request');
+  }
+});
+
+test('retry backoff does not stretch a deadline', { timeout: 5000 }, async () => {
+  stub = installFetchStub({ q_busy: () => ({ status: 503, body: 'busy' }) });
+  const t0 = Date.now();
+  await assert.rejects(sparqlSelect('q_busy', 'SELECT * {}', { deadline: Date.now() + 50 }), (e) => e.timeout === true);
+  // Backoff alone is 1 s before the second attempt.
+  assert.ok(Date.now() - t0 < 900, `settled after ${Date.now() - t0} ms`);
+});

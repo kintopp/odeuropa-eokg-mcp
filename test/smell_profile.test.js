@@ -7,7 +7,7 @@ import { Client } from '@modelcontextprotocol/client';
 import { InMemoryTransport } from '@modelcontextprotocol/server';
 import { createServer } from '../src/server.js';
 import { outputSchema } from '../src/tools/smell_profile.js';
-import { clearSparqlCache } from '../src/sparql/client.js';
+import { clearSparqlCache, sparqlSelect } from '../src/sparql/client.js';
 import { installFetchStub, bindings } from './stub-backend.js';
 import { assertWireValid, LIVE } from './helpers.js';
 
@@ -270,6 +270,69 @@ test('deadline: each query is sent with a timeout no longer than the time left',
   // total + label at 45 s (REQUEST_TIMEOUT_MS), languages at 30 s left, datasets at 30 s.
   assert.ok(timeouts.includes(45_000));
   assert.ok(timeouts.includes(30_000), `got ${timeouts}`);
+});
+
+// Failure modes: time queued for a SPARQL slot is not charged to the 50 s budget, so a profile
+// outlives it; a query is sent after the deadline once a slot frees; a facet starved of a slot
+// fails the whole call instead of landing in failed_facets.
+async function saturated(fn) {
+  const realSetTimeout = globalThis.setTimeout;
+  const settle = () => new Promise((r) => realSetTimeout(r, 20));
+  const releases = [];
+  const holdRoute = () => new Promise((resolve) => releases.push(() => resolve({ body: bindings([]) })));
+  // Outlasts every tick, so the slots stay taken until the test releases them.
+  const hold = (n) => Array.from({ length: n }, (_, i) => sparqlSelect('hold', `SELECT * { BIND(${i} AS ?h) }`, { timeoutMs: 600_000 }).catch(() => {}));
+  mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1_000_000 });
+  try {
+    await fn({ holdRoute, hold, settle });
+  } finally {
+    releases.forEach((r) => r());
+    mock.timers.reset();
+  }
+}
+
+const race = (p, settle) => Promise.race([p, settle().then(() => 'pending')]);
+
+test('deadline: with every SPARQL slot taken, the profile fails at 50 s and never sends its total', async () => {
+  await saturated(async ({ holdRoute, hold, settle }) => {
+    await start(baseRoutes({ hold: holdRoute }));
+    const holders = hold(4);
+    await settle();
+    const call = profile();
+    await settle();
+    mock.timers.tick(49_000);
+    assert.equal(await race(call, settle), 'pending', 'settled before its deadline');
+    mock.timers.tick(1_000);
+    const res = await race(call, settle);
+    assert.notEqual(res, 'pending', 'still running past its 50 s deadline');
+    assert.equal(res.isError, true);
+    assert.match(res.content[0].text, /time budget/);
+    void holders;
+  });
+  await new Promise((r) => setTimeout(r, 20));
+  assert.ok(!labels().includes('profile_total'), 'the total was sent after the deadline');
+});
+
+test('deadline: facets starved of a slot land in failed_facets at 50 s; total and label are kept', async () => {
+  await saturated(async ({ holdRoute, hold, settle }) => {
+    let holders;
+    // Once total and label hold two slots, take the other two and queue two more ahead of the facets.
+    await start(baseRoutes({
+      hold: holdRoute,
+      profile_total: () => { holders = hold(4); return { body: bindings([{ n: '29243' }]) }; },
+    }));
+    const call = profile();
+    await settle();
+    mock.timers.tick(50_000);
+    const res = await race(call, settle);
+    assert.notEqual(res, 'pending', 'still running past its 50 s deadline');
+    const s = valid(res);
+    assert.equal(s.total_smells, 29243);
+    assert.equal(s.concept.label, 'Rose');
+    assert.deepEqual([...s.failed_facets].sort(), ['datasets', 'emotions', 'fragrant_spaces', 'languages', 'qualities', 'timeline']);
+    assert.deepEqual(facetLabels(), [], 'a facet was sent after the deadline');
+    void holders;
+  });
 });
 
 test('input rules fail before any query', async () => {

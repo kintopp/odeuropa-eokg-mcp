@@ -222,8 +222,8 @@ export function registerSmellProfileTool(server) {
       const exclude = vocab.anchor === 'source' ? concept : undefined;
 
       const [totalRows, labelRows] = await Promise.all([
-        sparqlSelect('profile_total', profileTotalQuery(anchor), { signal, timeoutMs: timeoutLeft() }),
-        sparqlSelect('concept_label', conceptLabelQuery(concept, vocab.name), { signal, timeoutMs: timeoutLeft() }),
+        sparqlSelect('profile_total', profileTotalQuery(anchor), { signal, deadline }),
+        sparqlSelect('concept_label', conceptLabelQuery(concept, vocab.name), { signal, deadline }),
       ]);
       const totalSmells = totalRows.length ? count(totalRows[0]) : 0;
       const label = pickLabel(labelRows.map((r) => r.l));
@@ -253,7 +253,7 @@ export function registerSmellProfileTool(server) {
           } else {
             try {
               const rows = await sparqlSelect(`profile_${facet}`, profileFacetQuery(facet, anchor, { bucketYears, top, exclude }), {
-                signal, timeoutMs: left,
+                signal, deadline,
               });
               out[facet] = shapeFacet(facet, rows, bucketYears);
             } catch (err) {
