@@ -29,7 +29,7 @@ carriers are mostly "the", "it", "they". Qualities mix languages ("fragrant",
 
 **Iconclass.** The KG's own `skos:closeMatch` values are single characters. The
 curated code for Rose is `25G41(...)`; the specific candidate `25G41(ROSE)` is
-valid in Iconclass but must be verified before use. Lavender's `31A5141(...)`
+valid in Iconclass but should, if possible, be verified with an Iconclass server before use. Lavender's `31A5141(...)`
 ("scents with NAME") has no named children.
 
 **Image boxes.** Detector boxes average about 0.76 confidence; boxes scoring 1.0 are

@@ -1,6 +1,6 @@
 ---
 name: odeuropa-eokg
-last_updated: 2026-10-24
+last_updated: 2026-10-25
 description: Research guidance for the Odeuropa European Olfactory Knowledge Graph (about 2.4 million machine-extracted smell references from European texts and artworks, mostly 1600–1920, in English, French, Italian, Slovenian, German and Dutch). Use whenever the user asks about smells, scents, odours, perfume, fragrance, stench or olfactory history, historical sensory history, the Odeuropa Smell Explorer, how a smell source (rose, lavender, tobacco, a garden, a church) was described over time or across languages, or smells in paintings and prints, including in French, German, Italian or Dutch (odeur, parfum, Geruch, Duft, odore, profumo, geur), and any time an eokg_ tool is about to be called.
 ---
 
@@ -150,7 +150,8 @@ full-text search has to carry the question; a concept profile undercounts.
 **Iconclass placeholders.** The KG's own Iconclass links are corrupt, so the server
 uses Odeuropa's curated tables. A notation ending in `(...)` (Rose: `25G41(...)`)
 is a placeholder meaning "with NAME". *Fix:* fill the name only as a candidate
-(`25G41(ROSE)`) and verify it with an Iconclass server before presenting it.
+(`25G41(ROSE)`) and, if possible, verify it with an Iconclass server before presenting
+it (see MCP Server Handoffs).
 
 **Image boxes can be wrong, hand-drawn ones included.** A detector box has a
 confidence below 1; boxes scoring exactly 1 were drawn by hand (`origin: manual`).
@@ -278,10 +279,16 @@ the data provider; cite it as such (EU Horizon 2020, grant 101004469).
 
 ## MCP Server Handoffs
 
-- **Iconclass.** A candidate notation from `(...)` placeholders must be checked
-  with an Iconclass server (`resolve`/`search`) before you present it as valid.
-- **Rijksmuseum.** `25G41(ROSE)`-style notations work as the `iconclass` filter on
-  the Rijksmuseum server's artwork search, to find collection works on the same subject.
+These servers may not be installed. When one is missing, say so and point the user to
+its repository.
+
+- **Iconclass** (https://github.com/kintopp/rijksmuseum-iconclass-mcp). A candidate
+  notation from a `(...)` placeholder should, if possible, be checked with this server
+  (`resolve`/`search`) before you present it as valid. Without it, present the
+  notation as unverified.
+- **Rijksmuseum** (https://github.com/kintopp/rijksmuseum-mcp-plus). `25G41(ROSE)`-style
+  notations work as the `iconclass` filter on its artwork search, to find collection
+  works on the same subject.
 - **Reverse.** Given a notation from either server, `eokg_find_concepts({ iconclass })`
   returns the Odeuropa concepts mapped to it or to broader or narrower notations.
 - **References.** `references/vocabularies.md` for the 20 vocabularies and which are
