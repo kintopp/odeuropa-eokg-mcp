@@ -124,13 +124,14 @@ test('the initialize instructions state the OR default, document dates and conce
     for (const phrase of [
       'Search words without an operator are OR-ed; write AND/OR/NOT in capitals and quote phrases.',
       'dates are document dates (the emission date almost always equals it) and include noise and undated sources',
-      'Profiles and image lists work for olfactory-objects, fragrant-spaces and olfactory-gestures concepts (gestures such as perfuming or holding one\'s nose; some come mostly from texts, others mostly from images); the other vocabularies describe smells but cannot be counted with these tools.',
+      'Profiles work for olfactory-objects, fragrant-spaces and olfactory-gestures concepts (gestures such as perfuming or holding one\'s nose; some come mostly from texts, others mostly from images), image lists for olfactory-objects and olfactory-gestures only; the other vocabularies describe smells but cannot be counted with these tools.',
       'olfactory-gestures = how people smelled',
     ]) {
       assert.ok(instructions.includes(phrase), `instructions must say: ${phrase}`);
     }
     assert.ok(!instructions.includes('Only olfactory-objects and fragrant-spaces concepts are linked to smells.'));
     assert.ok(!instructions.includes('dates mix document date and emission date'));
+    assert.ok(!instructions.includes('Profiles and image lists work for'));
   });
 });
 

@@ -7,7 +7,7 @@
 // changes nothing must produce byte-identical output on ANY machine, or every run
 // dirties the working tree. Hence: no system `zip` (its output embeds the current
 // clock and varies by implementation), a hand-rolled archive, an
-// entry timestamp taken from SKILL.md's own `last_updated:` frontmatter rather
+// entry timestamp taken from SKILL.md's own `metadata.last_updated` frontmatter rather
 // than from the filesystem (mtimes are set by `git clone`, so a checkout-derived
 // timestamp would differ per machine), and entries STORED rather than deflated:
 // DEFLATE output is not stable across zlib builds — a shared system zlib and
@@ -48,20 +48,20 @@ export function readSkillFiles(dir = join(root, SKILL_DIR)) {
   });
 }
 
-// The skill's `version:` tracks the server's, so it is written from package.json
+// The skill's `metadata.version` tracks the server's, so it is written from package.json
 // at build time rather than kept by hand in SKILL.md.
 function stampVersion(md) {
   const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-  const stamped = md.replace(/^(name:.*\n)/m, `$1version: ${version}\n`);
-  if (stamped === md) throw new Error(`${SKILL_SOURCE} has no \`name:\` frontmatter line to stamp the version after`);
+  const stamped = md.replace(/^(metadata:\n)/m, `$1  version: "${version}"\n`);
+  if (stamped === md) throw new Error(`${SKILL_SOURCE} has no \`metadata:\` frontmatter line to stamp the version under`);
   return stamped;
 }
 
-/** `last_updated: YYYY-MM-DD` from the frontmatter, as {year, month, day}. */
+/** `metadata.last_updated: YYYY-MM-DD` from the frontmatter, as {year, month, day}. */
 function frontmatterDate(md) {
-  const m = md.match(/^last_updated:\s*(\d{4})-(\d{2})-(\d{2})\s*$/m);
+  const m = md.match(/^[ \t]+last_updated:\s*"?(\d{4})-(\d{2})-(\d{2})"?\s*$/m);
   if (!m) {
-    throw new Error(`${SKILL_SOURCE} has no \`last_updated: YYYY-MM-DD\` frontmatter field to date the archive with`);
+    throw new Error(`${SKILL_SOURCE} has no \`metadata.last_updated: YYYY-MM-DD\` frontmatter field to date the archive with`);
   }
   return { year: Number(m[1]), month: Number(m[2]), day: Number(m[3]) };
 }

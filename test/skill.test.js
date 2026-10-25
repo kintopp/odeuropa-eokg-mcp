@@ -101,3 +101,19 @@ test('SKILL.md\'s folded description is at most 1,000 characters', () => {
   assert.ok(len > 0, 'description is empty');
   assert.ok(len <= 1000, `description is ${len} characters; the limit is 1,000`);
 });
+
+// Hosts reject a skill whose frontmatter has any other top-level key; extra
+// fields (version, last_updated) belong under `metadata:` as strings.
+test('the bundled SKILL.md frontmatter uses only keys hosts accept', () => {
+  const md = files.find((f) => f.name === ENTRY_NAME).content;
+  const lines = md.split('\n');
+  const front = lines.slice(1, lines.indexOf('---', 1));
+  const allowed = ['name', 'description', 'license', 'allowed-tools', 'metadata', 'compatibility'];
+  for (const l of front.filter((x) => /^[^\s#]/.test(x))) {
+    const key = l.slice(0, l.indexOf(':'));
+    assert.ok(allowed.includes(key), `frontmatter key "${key}" is not one of ${allowed.join(', ')}`);
+  }
+  for (const l of front.filter((x) => /^\s+\S/.test(x) && !/^\s+description/.test(x))) {
+    assert.match(l, /^\s+[\w-]+: ".*"$/, `metadata value must be a quoted string: ${l.trim()}`);
+  }
+});

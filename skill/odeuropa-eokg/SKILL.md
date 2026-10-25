@@ -1,7 +1,8 @@
 ---
 name: odeuropa-eokg
-last_updated: 2026-10-25
 description: Research guidance for the Odeuropa European Olfactory Knowledge Graph (about 2.4 million machine-extracted smell references from European texts and artworks, mostly 1600–1920, in English, French, Italian, Slovenian, German and Dutch). Use whenever the user asks about smells, scents, odours, perfume, fragrance, stench or olfactory history, historical sensory history, the Odeuropa Smell Explorer, how a smell source (rose, lavender, tobacco, a garden, a church) was described over time or across languages, or smells in paintings and prints, including in French, German, Italian or Dutch (odeur, parfum, Geruch, Duft, odore, profumo, geur), and any time an eokg_ tool is about to be called.
+metadata:
+  last_updated: "2026-10-25"
 ---
 
 # European Olfactory Knowledge Graph (EOKG)
@@ -193,7 +194,7 @@ facets, or profile the specific concept. A timed-out query is not retried.
   language, with `facets: ["timeline", "qualities"]`. (`language` cannot be combined
   with `include_narrower`.) Compare shares, not raw counts: English dominates.
 - Passage view: `eokg_search_smells` with each language's own term and
-  `language` set (`rose` / `rosa` / `Rose` / `roos` / `vrtnica`). Labels in all six
+  `language` set (`rose` / `rosa` / `Rose` / `roos` / `vrtnica`). Labels in up to six
   languages are on `eokg_get_concept`.
 - Look for: different qualities by language, and whether a dataset (see the
   `datasets` facet) explains a difference that looks like a language effect.

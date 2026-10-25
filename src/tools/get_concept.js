@@ -51,7 +51,7 @@ export const outputSchema = z.object({
 });
 
 const description =
-  'Get a vocabulary concept: labels in six languages, hierarchy, and usage counts. ' +
+  'Get a concept: labels in up to six languages, hierarchy, and usage counts. ' +
   'For olfactory-objects, fragrant-spaces and olfactory-gestures concepts, also returns how many smells (and, for objects and gestures, image sources) the knowledge graph links to it, ' +
   'and the curated Iconclass notation where Odeuropa assigned one. A notation ending in (...) is an Iconclass placeholder for a name; the candidate with the name filled in is unverified, so check it with an Iconclass server before using it.';
 
