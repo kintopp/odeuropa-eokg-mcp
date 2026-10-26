@@ -77,7 +77,7 @@ Odeuropa's curated tables link vocabulary concepts to Iconclass notations.
 
 Each smell is linked to the document or image it was taken from, and the document is linked to all the smells extracted from it.
 
-*For this passage, show me the whole book and every other smell found in it.*
+*For [this passage], show me the whole book and every other smell found in it.*
 
 - `eokg_get_smell` returns the passage and its parts.
 - `eokg_get_source` returns the document with a page of its smells. This gives the olfactory content of a whole book or painting, not only the passages that matched a search term.
