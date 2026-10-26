@@ -4,7 +4,7 @@
 
 A [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server for the *European Olfactory Knowledge Graph* (EOKG): about 2.4 million smell references machine-extracted from European texts (English, French, Italian, Slovenian, German, Dutch) and from roughly 44,000 images of artworks, mostly 1600–1920. The [EOKG](https://doi.org/10.5281/zenodo.10709702) and the [Smell Explorer](https://explorer.odeuropa.eu) are the work of the [Odeuropa](https://odeuropa.eu) project (EU Horizon 2020, grant 101004469).
 
-The MCP server allows a researcher to search passages, resolve vocabulary concepts, profile a smell source over time, and show artworks with their detected smell-related objects. Because the graph models a smell as an event, it can [answer questions](docs/knowledge-graph-queries.md) that a full-text search can address only partially or not at all.
+The MCP server allows a researcher to search passages in natural language, resolve vocabulary concepts, profile a smell source over time, and show artworks with their detected smell-related objects. Because the graph models a smell as an event, it can [answer questions](docs/knowledge-graph-queries.md) that a full-text search can address only partially or not at all.
 
 This MCP server was developed by the [Research and Infrastructure Support](https://rise.unibas.ch/en/) (RISE) group at the University of Basel. We are particularly interested in exploring the research opportunities, methodological risks, and technical challenges posed by retrieving and analysing data with LLMs. If you are interested in collaborating with us in this area, please [get in touch](mailto:rise@unibas.ch).
 
