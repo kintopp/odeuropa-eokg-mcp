@@ -57,7 +57,7 @@ To check the install without a client, run `npm test`.
 
 ### Skill
 
-The skill file [skill/odeuropa-eokg.skill](skill/odeuropa-eokg.skill) gives the AI assistant guidance in natural language on how to use this server well: which tool to choose for a given question, how to combine them, and the traps in this data. [Skills](https://support.claude.com/en/articles/12512176-what-are-skills) were developed by Anthropic and are now an [open standard](https://agentskills.io/home). To install it in Claude, follow [these instructions](https://claude.com/resources/tutorials/teach-claude-your-way-of-working-using-skills).
+The skill file [skill/odeuropa-eokg.skill](skill/odeuropa-eokg.skill) gives the AI assistant guidance in natural language on how to use this server well: which tool to choose for a given question, how to combine them, and the traps in this data. [Skills](https://support.claude.com/en/articles/12512176-what-are-skills) were developed by Anthropic and are now an [open standard](https://agentskills.io/home) and widely supported. To install it in Claude, follow [these instructions](https://claude.com/resources/tutorials/teach-claude-your-way-of-working-using-skills). Please consult the documentation of your LLM client (e.g. ChatGPT, Mistral Le Chat..) for instructions on how to install .skill files.
 
 ## Tools
 
