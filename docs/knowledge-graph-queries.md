@@ -1,6 +1,6 @@
 # What the Knowledge Graph Adds
 
-The European Olfactory Knowledge Graph holds about 2.4 million smell references taken from European texts and images. This page describes questions that a full-text index of this data answers only partially or not at all, and which tools this MCP server uses to answer them with the knowledge graph. The example prompts below can be pasted into a chat session with the server connected. Please also enable the server's [skill file](../README.md#skill) – this will help an AI assistant select the best approach for each query.
+The European Olfactory Knowledge Graph holds about 2.4 million smell references taken from European texts and images. This page describes questions that a full-text index of this data can address only partially or not at all, and which tools the MCP server uses to answer them with the help of a knowledge graph. All of the sample prompts below can be pasted into a chat session with the server connected. Please also enable the server's [skill file](../README.md#skill) – this will help an AI assistant select the best approach for each query.
 
 - [Smells as Events in a Graph](#smells-as-events-in-a-graph)
 - [Concepts Instead of Words](#concepts-instead-of-words)
