@@ -15,8 +15,8 @@ authors:
 repository-code: "https://github.com/kintopp/odeuropa-eokg-mcp"
 url: "https://odeuropa-eokg-mcp-production.up.railway.app/mcp"
 license: MIT
-version: "0.5.0"
-date-released: "2026-10-25"
+version: "0.6.0"
+date-released: "2026-10-30"
 keywords:
   - digital humanities
   - sensory history
