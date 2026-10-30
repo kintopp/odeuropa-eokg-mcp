@@ -140,7 +140,7 @@ If you use odeuropa-eokg-mcp in your research, please cite it as follows:
 
 **APA (7th ed.)**
 
-> Bosse, A. (2026). *odeuropa-eokg-mcp* (Version 0.6.0) [Software]. Research and Infrastructure Support (RISE), University of Basel. https://github.com/kintopp/odeuropa-eokg-mcp
+> Bosse, A. (2026). *odeuropa-eokg-mcp* (Version 0.7.0) [Software]. Research and Infrastructure Support (RISE), University of Basel. https://github.com/kintopp/odeuropa-eokg-mcp
 
 **BibTeX**
 ```bibtex
@@ -148,7 +148,7 @@ If you use odeuropa-eokg-mcp in your research, please cite it as follows:
   author    = {Bosse, Arno},
   title     = {{odeuropa-eokg-mcp}},
   year      = {2026},
-  version   = {0.6.0},
+  version   = {0.7.0},
   publisher = {Research and Infrastructure Support (RISE), University of Basel},
   url       = {https://github.com/kintopp/odeuropa-eokg-mcp},
   orcid     = {0000-0003-3681-1289},
