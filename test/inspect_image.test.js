@@ -281,6 +281,26 @@ test('unreadable dimensions: pixel boxes only, with a warning', async () => {
   assert.ok(s.warnings.some((w) => w.includes('boxes are given in pixels only')));
 });
 
+test('box labels are looked up in both vocabularies that boxes use, each inside its named graph', async () => {
+  await inspect();
+  const q = stub.router.calls.find((c) => c.label === 'image_fragments').query;
+  // A label outside these graphs leaves the bare concept number; an ungraphed lookup picks up sameAs twin labels.
+  assert.ok(q.includes('GRAPH <http://data.odeuropa.eu/vocabulary/olfactory-objects> { ?body skos:prefLabel'));
+  assert.ok(q.includes('GRAPH <http://data.odeuropa.eu/vocabulary/olfactory-gestures> { ?body skos:prefLabel'));
+});
+
+test('live: a gesture box carries the gesture label, not the concept number', { skip: !LIVE }, async () => {
+  stub.restore();
+  await withClient('inspect-image-gesture-live', async (c) => {
+    const res = await c.callTool({ name: 'eokg_inspect_image', arguments: { id: '00aef985-f9ef-5a00-a48c-1e02de16e90d' } });
+    assert.notEqual(res.isError, true, res.content?.[1]?.text ?? res.content?.[0]?.text);
+    const s = assertWireValid(outputSchema, res.structuredContent);
+    const box = s.objects.find((o) => o.concept_id.endsWith('/olfactory-gestures/2'));
+    assert.equal(box?.label, "Holding one's nose");
+    assert.equal(box?.origin, 'manual');
+  });
+});
+
 test('live: the RKD still life', { skip: !LIVE }, async () => {
   stub.restore();
   await withClient('inspect-image-live', async (c) => {

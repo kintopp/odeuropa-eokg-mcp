@@ -85,14 +85,17 @@ const description =
   'All values are machine-extracted: dates include OCR noise (reported as out_of_range), and emotions are inferred by a classifier that was not run on medical-heritage, royal-society-corpus, old-bailey-corpus or text-annotation and has no German or Slovenian model. ' +
   'Gesture smells come from texts (Perfuming, mostly French) or from images (Holding one\'s nose); check the datasets facet. ' +
   'year_from and year_to restrict the profile to a period by document date; undated sources drop out, and images can be a large share of a period\'s smells. ' +
-  'include_narrower adds sub-concepts (e.g. all flowers) but takes 15–30 s per facet; facets that do not fit the time budget are listed in failed_facets.';
+  'include_narrower adds sub-concepts (e.g. all flowers) but takes 15–30 s per facet. ' +
+  'Facets that do not fit the time budget are listed in failed_facets, which can also happen without include_narrower when the endpoint is busy; request them again on their own.';
 
 const fmt = (n) => n.toLocaleString('en-US');
 const shortId = (uri) => uri.slice(VOCAB_PREFIX.length);
 const count = (r) => Math.round(num(r, 'n') ?? 0);
 
 const skipWarning = (f) => `The ${f} facet was skipped (time budget); request it on its own.`;
-const timeoutWarning = (f) => `The ${f} facet timed out; try without include_narrower or with a narrower concept.`;
+const timeoutWarning = (f, narrower) => (narrower
+  ? `The ${f} facet timed out; try without include_narrower or with a narrower concept.`
+  : `The ${f} facet timed out; the endpoint may be busy, so request it on its own.`);
 
 function shapeTimeline(rows, basis, bucketYears) {
   const buckets = [];
@@ -257,7 +260,7 @@ export function registerSmellProfileTool(server) {
             } catch (err) {
               if (err?.timeout !== true) throw err;
               failed.add(facet);
-              warnings.push(timeoutWarning(facet));
+              warnings.push(timeoutWarning(facet, narrower));
             }
           }
           done++;

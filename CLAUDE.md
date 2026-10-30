@@ -87,4 +87,5 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 - **Malformed related URIs in fragrant-spaces:** `http://data.odeuropa.eu/olfactory_objects/<n>` means `vocabulary/olfactory-objects/<n>`; `get_concept` maps it.
 - **Skill `name:` must equal its folder name:** renaming the skill means renaming `skill/<name>/`, `SKILL_NAME` in `scripts/build-skill.mjs` and the bundle, then re-uploading it to claude.ai.
 - **Skill frontmatter keys are fixed:** only `name`, `description`, `license`, `allowed-tools`, `metadata`, `compatibility`; anything else (`version`, `last_updated`) goes under `metadata:` as a quoted string, which `build-skill.mjs` and `test/skill.test.js` expect.
+- **Image boxes use two vocabularies:** `oa:hasBody` is an olfactory-objects or olfactory-gestures concept; a label lookup in only one graph leaves the other's boxes labelled with the bare concept number.
 - **Gestures link through experiences:** `od:F5_involved_gesture` (experience) and `oa:hasBody` / `crm:P138_represents` (images), not `crm:P137_exemplifies`.

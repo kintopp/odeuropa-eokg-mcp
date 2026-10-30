@@ -2,7 +2,7 @@
 name: odeuropa-eokg
 description: Research guidance for the Odeuropa European Olfactory Knowledge Graph (about 2.4 million machine-extracted smell references from European texts and artworks, mostly 1600–1920, in English, French, Italian, Slovenian, German and Dutch). Use whenever the user asks about smells, scents, odours, perfume, fragrance, stench or olfactory history, historical sensory history, the Odeuropa Smell Explorer, how a smell source (rose, lavender, tobacco, a garden, a church) was described over time or across languages, or smells in paintings and prints, including in French, German, Italian or Dutch (odeur, parfum, Geruch, Duft, odore, profumo, geur), and any time an eokg_ tool is about to be called.
 metadata:
-  last_updated: "2026-10-25"
+  last_updated: "2026-10-30"
 ---
 
 # European Olfactory Knowledge Graph (EOKG)
@@ -164,7 +164,9 @@ picture, and report what you see against each label, whatever its origin.
 
 **Slow calls.** `include_narrower` on a broad concept (Flower, Flora) takes 15–30
 seconds per facet and some facets may fall into `failed_facets`; ask for few
-facets, or profile the specific concept. A timed-out query is not retried.
+facets, or profile the specific concept. A timed-out query is not retried. When the
+endpoint is busy, a facet can fall into `failed_facets` without `include_narrower` too;
+request it again on its own.
 
 ## Research patterns
 

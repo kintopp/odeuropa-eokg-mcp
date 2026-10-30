@@ -1,6 +1,6 @@
 // Queries for eokg_get_source and eokg_inspect_image. Each takes a canonical source URI already validated by parseId.
 
-import { OLFACTORY_OBJECTS_GRAPH } from '../../config.js';
+import { OLFACTORY_GESTURES_GRAPH, OLFACTORY_OBJECTS_GRAPH } from '../../config.js';
 
 export const sourceMetaQuery = (src) => `
 SELECT ?type ?title ?url ?lang ?date ?begin ?author ?artist ?license ?genre ?image ?place FROM onto:explicit WHERE {
@@ -27,6 +27,7 @@ SELECT ?f ?body ?label ?score ?x ?y ?w ?h ?prov FROM onto:explicit WHERE {
   <${src}> ma:hasFragment ?f . ?f oa:hasBody ?body ; rdf:value ?score ; nsa:spatialX ?x ; nsa:spatialY ?y ; nsa:spatialW ?w ; nsa:spatialH ?h .
   OPTIONAL { ?f <http://www.w3.org/ns/prov#wasGeneratedBy> ?prov }
   OPTIONAL { GRAPH <${OLFACTORY_OBJECTS_GRAPH}> { ?body skos:prefLabel ?label FILTER(LANG(?label) = "en") } }
+  OPTIONAL { GRAPH <${OLFACTORY_GESTURES_GRAPH}> { ?body skos:prefLabel ?label FILTER(LANG(?label) = "en") } }
 } ORDER BY DESC(?score) ?f`;
 
 export const smellSourceQuery = (smell) => `

@@ -165,9 +165,16 @@ test('a 504 on one facet degrades to failed_facets with a warning; the others ar
   assert.deepEqual(s.failed_facets, ['qualities']);
   assert.equal(s.qualities, undefined);
   assert.ok(s.languages && s.timeline && s.emotions);
-  assert.ok(s.warnings.includes('The qualities facet timed out; try without include_narrower or with a narrower concept.'));
+  assert.ok(s.warnings.includes('The qualities facet timed out; the endpoint may be busy, so request it on its own.'));
   assert.ok(res.content[0].text.includes('The qualities facet timed out'));
   assert.equal(labels().filter((l) => l === 'profile_qualities').length, 1, '504 is never retried');
+});
+
+test('a facet timeout under include_narrower advises dropping it, and only then', async () => {
+  await start(baseRoutes({ profile_languages: () => ({ status: 504, body: '<html>Gateway Time-out</html>' }) }));
+  const s = valid(await profile({ include_narrower: true, facets: ['languages'] }));
+  assert.deepEqual(s.failed_facets, ['languages']);
+  assert.ok(s.warnings.includes('The languages facet timed out; try without include_narrower or with a narrower concept.'));
 });
 
 test('a facet whose 200 body stalls past its timeout degrades to failed_facets, sent once', async () => {
@@ -179,7 +186,7 @@ test('a facet whose 200 body stalls past its timeout degrades to failed_facets, 
   const s = valid(res);
   assert.deepEqual(s.failed_facets, ['qualities']);
   assert.ok(s.languages && s.timeline && s.emotions);
-  assert.ok(s.warnings.includes('The qualities facet timed out; try without include_narrower or with a narrower concept.'));
+  assert.ok(s.warnings.includes('The qualities facet timed out; the endpoint may be busy, so request it on its own.'));
   assert.equal(labels().filter((l) => l === 'profile_qualities').length, 1, 'a timed-out body read is never retried');
 });
 

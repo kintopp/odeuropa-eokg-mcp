@@ -97,6 +97,7 @@ export const EXCERPT_MAX_CHARS = 4000; // per excerpt
 export const SMELL_MAX_EXCERPTS = 5;
 export const OLFACTORY_OBJECTS_GRAPH = 'http://data.odeuropa.eu/vocabulary/olfactory-objects';
 export const FRAGRANT_SPACES_GRAPH = 'http://data.odeuropa.eu/vocabulary/fragrant-spaces';
+export const OLFACTORY_GESTURES_GRAPH = 'http://data.odeuropa.eu/vocabulary/olfactory-gestures';
 export const OLFACTORY_OBJECTS_BASE = `${OLFACTORY_OBJECTS_GRAPH}/`;
 export const FRAGRANT_SPACES_BASE = `${FRAGRANT_SPACES_GRAPH}/`;
 
