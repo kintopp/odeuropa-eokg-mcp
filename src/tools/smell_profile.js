@@ -100,16 +100,16 @@ const smallerQuery = ({ narrower, filters }) => new Intl.ListFormat('en', { type
 
 const budgetAdvice = (scope) => (scope.alone
   ? `the endpoint may be busy, so try again later or ${smallerQuery(scope)}.`
-  : 'request it on its own.');
+  : 'request it on its own, one call at a time.');
 
 const skipWarning = (f, scope) => `The ${f} facet was skipped (time budget); ${budgetAdvice(scope)}`;
 
 // A query that hit its own limit (a 504 or the per-attempt timeout) is likely to hit it again, so only one
-// that ran beside other facets is worth repeating, and only once: the load may have been ours.
-function timeoutWarning(f, err, scope) {
+// that was still sharing the endpoint with other facets is worth repeating, and only once: the load may have been ours.
+function timeoutWarning(f, err, scope, othersRunning) {
   if (err.budget) return `The ${f} facet ran out of the time budget${scope.alone ? '' : ' it shares with the other facets'}; ${budgetAdvice(scope)}`;
-  return scope.parallel
-    ? `The ${f} facet timed out while other facets were running; request it on its own once, and if it times out again, try ${smallerQuery(scope)}.`
+  return othersRunning
+    ? `The ${f} facet timed out while other facets were running; request it on its own once, one call at a time, and if it times out again, try ${smallerQuery(scope)}.`
     : `The ${f} facet timed out; repeating the same request is likely to time out again, so try ${smallerQuery(scope)}.`;
 }
 
@@ -239,10 +239,16 @@ export function registerSmellProfileTool(server) {
       const anchor = anchorPattern(concept, vocab.anchor, { narrower, language, yearFrom, yearTo });
       const exclude = vocab.anchor === 'source' ? concept : undefined;
 
+      const filters = [...(language ? ['language'] : []), ...(yearFrom != null || yearTo != null ? ['year'] : [])];
+      const scope = { narrower, filters, alone: facets.length === 1 };
+
       const [totalRows, labelRows] = await Promise.all([
         sparqlSelect('profile_total', profileTotalQuery(anchor), { signal, deadline }),
         sparqlSelect('concept_label', conceptLabelQuery(concept, vocab.name), { signal, deadline }),
-      ]);
+      ]).catch((err) => {
+        if (err?.timeout !== true) throw err;
+        throw new ToolError(err.message, `Repeating the same request is likely to time out again, so try ${smallerQuery(scope)}.`);
+      });
       const totalSmells = totalRows.length ? count(totalRows[0]) : 0;
       const label = pickLabel(labelRows.map((r) => r.l));
 
@@ -262,15 +268,14 @@ export function registerSmellProfileTool(server) {
         warnings.push(`No ${lang}smells${yearPhrase(out)} are linked to this concept.`);
       } else {
         const report = progressReporter(ctx);
-        const concurrency = narrower ? 1 : SPARQL_MAX_CONCURRENCY;
-        const filters = [...(language ? ['language'] : []), ...(yearFrom != null || yearTo != null ? ['year'] : [])];
-        const scope = { narrower, filters, alone: facets.length === 1, parallel: concurrency > 1 && facets.length > 1 };
         let done = 0;
-        await mapPool(facets, concurrency, async (facet) => {
+        let running = 0;
+        await mapPool(facets, narrower ? 1 : SPARQL_MAX_CONCURRENCY, async (facet) => {
           if (deadline - Date.now() < PROFILE_MIN_FACET_BUDGET_MS) {
             failed.add(facet);
             warnings.push(skipWarning(facet, scope));
           } else {
+            running++;
             try {
               const rows = await sparqlSelect(`profile_${facet}`, profileFacetQuery(facet, anchor, { bucketYears, top, exclude }), {
                 signal, deadline,
@@ -279,7 +284,9 @@ export function registerSmellProfileTool(server) {
             } catch (err) {
               if (err?.timeout !== true) throw err;
               failed.add(facet);
-              warnings.push(timeoutWarning(facet, err, scope));
+              warnings.push(timeoutWarning(facet, err, scope, running > 1));
+            } finally {
+              running--;
             }
           }
           done++;

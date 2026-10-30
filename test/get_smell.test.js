@@ -213,14 +213,21 @@ test('carrier concepts keep their id, a twin is dropped, and words alone render 
   assert.ok(description.includes('counts that concept as a smell source or space, not as a carrier'));
 });
 
-test('an oversized list of carrier words is capped and reported', async () => {
-  const roles = bindings(Array.from({ length: 2000 }, (_, i) => (
-    { role: 'carrier', val: uri(`${KG}object/${i}`), valLabel: en(`${'word '.repeat(40)}${i}`) })));
+// Failure mode: the noisy words stay while the excerpt and the concept id are cut.
+test('an oversized list of carrier words is cut first and reported', async () => {
+  const roles = bindings([
+    { role: 'carrier', val: uri(`${KG}vocabulary/olfactory-objects/28`), valLabel: en('Cassolette') },
+    ...Array.from({ length: 2000 }, (_, i) => (
+      { role: 'carrier', val: uri(`${KG}object/${i}`), valLabel: en(`${'word '.repeat(40)}${i}`) })),
+  ]);
   stub = await startStubServer(routes(textCore, excerpts(EXCERPT), roles));
   const res = await call(stub, SMELL);
   const s = assertWireValid(outputSchema, res.structuredContent);
   assert.equal(s.truncated.carrier_mentions, 2000);
   assert.ok(s.carrier_mentions.length < 2000);
+  assert.deepEqual(s.excerpts, [EXCERPT]);
+  assert.deepEqual(s.carriers.map((c) => c.label), ['Cassolette']);
+  assert.deepEqual(Object.keys(s.truncated), ['carrier_mentions']);
 });
 
 test('role labels for gestures and carriers come from the vocabulary graphs, and words only from object URIs', async () => {

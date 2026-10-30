@@ -169,7 +169,7 @@ export function registerGetSmellTool(server) {
         excerpts,
         ...shapeRoles(roleRows),
       };
-      const structured = capArrays(full, ['excerpts', 'qualities', 'emotions', 'places', 'carriers', 'carrier_mentions'], PER_CHANNEL_RESULT_BUDGET);
+      const structured = capArrays(full, ['carrier_mentions', 'excerpts', 'qualities', 'emotions', 'places', 'carriers'], PER_CHANNEL_RESULT_BUDGET);
       const text = renderText(structured, uuidOf(id));
       const res = withWarnings({ structured, text }, warnings);
       return { content: [{ type: 'text', text: res.text }], structuredContent: res.structured };

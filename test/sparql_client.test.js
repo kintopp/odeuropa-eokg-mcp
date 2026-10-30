@@ -60,6 +60,16 @@ test('an identical second call is served from the cache', async () => {
   assert.equal(stub.router.calls.length, 1);
 });
 
+// Failure mode: every tool is told to add a year range, which adds a join and makes a query slower.
+test('the timeout hint suggests fewer filters, not a year range', async () => {
+  stub = installFetchStub({ q_hint: () => ({ status: 504, body: '<title>504 Gateway Time-out</title>' }) });
+  await assert.rejects(() => sparqlSelect('q_hint', 'SELECT * {}'), (e) => {
+    assert.match(e.suggestion, /fewer filters/);
+    assert.doesNotMatch(e.suggestion, /year range/);
+    return true;
+  });
+});
+
 test('a 504 is NOT retried and maps to a timeout ToolError', async () => {
   stub = installFetchStub({ q_504: () => ({ status: 504, body: '<title>504 Gateway Time-out</title>' }) });
   await assert.rejects(() => sparqlSelect('q_504', 'SELECT * {}'), (e) => {

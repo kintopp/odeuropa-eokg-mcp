@@ -64,7 +64,7 @@ SELECT ?q ?n (SAMPLE(?pl) AS ?label) (SAMPLE(?rl) AS ?rlabel) WHERE {
   FILTER(STRSTARTS(STR(?o), "${OLFACTORY_OBJECTS_BASE}")${exclude ? ` && ?o != <${exclude}>` : ''})
   OPTIONAL { GRAPH <${OLFACTORY_OBJECTS_GRAPH}> { ?o skos:prefLabel ?ol FILTER(LANG(?ol) = "en") } }`,
     'o', top, '(SAMPLE(?ol) AS ?label)'),
-  // MAX, where lowercase sorts last, shows "the room" over "The room" and leaves a name that only occurs capitalised alone.
+  // MAX, where lowercase sorts last, shows "the room" over "The room"; a name keeps its capital unless a lowercase variant occurs.
   places: (a, { top }) => topN(a, '?ex od:F2_perceived ?smell ; crm:P7_took_place_at ?p . ?p rdfs:label ?pl . BIND(LCASE(STR(?pl)) AS ?folded)', 'folded', top, '(MAX(STR(?pl)) AS ?label)'),
   // Raw words are lowercased so that MIN, where capitals sort first, shows a concept's label over a word with the same text.
   carriers: (a, { top }) => topN(a,
