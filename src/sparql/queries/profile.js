@@ -64,13 +64,16 @@ SELECT ?q ?n (SAMPLE(?pl) AS ?label) (SAMPLE(?rl) AS ?rlabel) WHERE {
   FILTER(STRSTARTS(STR(?o), "${OLFACTORY_OBJECTS_BASE}")${exclude ? ` && ?o != <${exclude}>` : ''})
   OPTIONAL { GRAPH <${OLFACTORY_OBJECTS_GRAPH}> { ?o skos:prefLabel ?ol FILTER(LANG(?ol) = "en") } }`,
     'o', top, '(SAMPLE(?ol) AS ?label)'),
-  places: (a, { top }) => topN(a, '?ex od:F2_perceived ?smell ; crm:P7_took_place_at ?p . ?p rdfs:label ?pl .', 'pl', top),
+  // MAX, where lowercase sorts last, shows "the room" over "The room" and leaves a name that only occurs capitalised alone.
+  places: (a, { top }) => topN(a, '?ex od:F2_perceived ?smell ; crm:P7_took_place_at ?p . ?p rdfs:label ?pl . BIND(LCASE(STR(?pl)) AS ?folded)', 'folded', top, '(MAX(STR(?pl)) AS ?label)'),
+  // Raw words are lowercased so that MIN, where capitals sort first, shows a concept's label over a word with the same text.
   carriers: (a, { top }) => topN(a,
     `?emission od:F4_had_carrier ?car .
-  { ?car rdfs:label ?cl FILTER(STRSTARTS(STR(?car), "${KG_BASE}object/")) }
+  { ?car rdfs:label ?word FILTER(STRSTARTS(STR(?car), "${KG_BASE}object/")) BIND(LCASE(STR(?word)) AS ?cl) }
   UNION { GRAPH <${OLFACTORY_OBJECTS_GRAPH}> { ?car skos:prefLabel ?cl FILTER(LANG(?cl) = "en") } }
-  UNION { GRAPH <${FRAGRANT_SPACES_GRAPH}> { ?car skos:prefLabel ?cl FILTER(LANG(?cl) = "en") } }`,
-    'cl', top),
+  UNION { GRAPH <${FRAGRANT_SPACES_GRAPH}> { ?car skos:prefLabel ?cl FILTER(LANG(?cl) = "en") } }
+  BIND(LCASE(STR(?cl)) AS ?folded)`,
+    'folded', top, '(MIN(STR(?cl)) AS ?label)'),
 };
 
 /** `exclude` is the concept URI to leave out of smell_sources (the anchor's own object concept). */

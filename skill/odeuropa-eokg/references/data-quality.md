@@ -23,7 +23,7 @@ far more hits than filtering English-ranked ones.
 *Ljubljanski zvon* and in `text-annotation`, each copy with different roles. Three
 results are one passage.
 
-**Raw strings.** Top Rose places: "jardin" (84), "chambre" (62), "in" (22). Top
+**Raw strings.** Top Rose places: "jardin" (86), "chambre" (62), "in" (24). Top
 carriers are mostly "the", "it", "they". Qualities mix languages ("fragrant",
 "aromatique").
 

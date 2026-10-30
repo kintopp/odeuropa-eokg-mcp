@@ -35,8 +35,8 @@ const FACET_ROWS = {
     { o: uri(`${KG}vocabulary/olfactory-objects/20`), label: en('Gas'), n: '16' },
     { o: uri(`${KG}vocabulary/olfactory-objects/72`), label: en('Flower  \n pot'), n: '10' },
   ],
-  places: [{ pl: 'jardin', n: '4' }],
-  carriers: [{ cl: 'the', n: '3' }],
+  places: [{ label: 'jardin', n: '4' }],
+  carriers: [{ label: 'the', n: '3' }],
 };
 
 const facetRoutes = (over = {}) => Object.fromEntries(
@@ -456,7 +456,7 @@ test('zero smells with language names the language', async () => {
 test('multi-line facet labels are collapsed to single spaces', async () => {
   await start(baseRoutes({
     profile_fragrant_spaces: ok([{ space: uri(`${KG}vocabulary/fragrant-spaces/14`), label: en('seat of a first-order\n            administrative   division'), n: '24' }]),
-    profile_places: ok([{ pl: 'the\n  garden', n: '4' }]),
+    profile_places: ok([{ label: 'the\n  garden', n: '4' }]),
   }));
   const s = valid(await profile({ facets: ['fragrant_spaces', 'places'] }));
   assert.equal(s.fragrant_spaces[0].label, 'seat of a first-order administrative division');

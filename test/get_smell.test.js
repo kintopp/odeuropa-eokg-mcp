@@ -170,16 +170,57 @@ test('gestures and vocabulary carriers reach the record and its text; no gesture
   const res = await call(stub, SMELL);
   const s = assertWireValid(outputSchema, res.structuredContent);
   assert.deepEqual(s.gestures, [{ id: `${KG}vocabulary/olfactory-gestures/2`, label: "Holding one's nose" }]);
-  assert.deepEqual(s.carriers, ['Cassolette', 'the sheets']);
+  assert.deepEqual(s.carriers, [{ id: `${KG}vocabulary/olfactory-objects/28`, label: 'Cassolette' }]);
+  assert.deepEqual(s.carrier_mentions, ['the sheets']);
   const text = res.content[0].text;
   assert.ok(text.includes("Gesture: Holding one's nose"));
-  assert.ok(text.includes('Carrier: Cassolette, the sheets'));
+  assert.ok(text.includes('Carrier: Cassolette [olfactory-objects/28]; words used: "the sheets"'));
   await stub.close();
 
   stub = await startStubServer(routes(textCore, excerpts(EXCERPT), textRoles));
   const plain = await call(stub, SMELL);
-  assert.deepEqual(assertWireValid(outputSchema, plain.structuredContent).gestures, []);
+  const none = assertWireValid(outputSchema, plain.structuredContent);
+  assert.deepEqual(none.gestures, []);
+  assert.deepEqual(none.carriers, []);
+  assert.deepEqual(none.carrier_mentions, []);
+  assert.ok(!plain.content[0].text.includes('Carrier:'));
   assert.ok(!plain.content[0].text.includes('Gesture:'));
+});
+
+// Failure modes: a concept without an English label vanishes; a sameAs twin is offered as a carrier id; words alone leave a
+// dangling separator; a model reads a carrier id as a count of carriers.
+test('carrier concepts keep their id, a twin is dropped, and words alone render without a concept', async () => {
+  const roles = bindings([
+    { role: 'carrier', val: uri(`${KG}vocabulary/olfactory-objects/999`) },
+    { role: 'carrier', val: uri('http://www.wikidata.org/entity/Q171892'), valLabel: en('twin') },
+    { role: 'carrier', val: uri(`${KG}object/6aac8590-0000-0000-0000-000000000002`), valLabel: en('it') },
+  ]);
+  stub = await startStubServer(routes(textCore, excerpts(EXCERPT), roles));
+  const res = await call(stub, SMELL);
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.deepEqual(s.carriers, [{ id: `${KG}vocabulary/olfactory-objects/999`, label: '999' }]);
+  assert.deepEqual(s.carrier_mentions, ['it']);
+  assert.ok(!res.content[0].text.includes('twin'));
+  await stub.close();
+
+  const wordsOnly = bindings([{ role: 'carrier', val: uri(`${KG}object/6aac8590-0000-0000-0000-000000000002`), valLabel: en('it') }]);
+  stub = await startStubServer(routes(textCore, excerpts(EXCERPT), wordsOnly));
+  const only = await call(stub, SMELL);
+  assert.ok(only.content[0].text.includes('Carrier: words used: "it"'));
+
+  const { tools } = await withClient('get-smell', (c) => c.listTools());
+  const { description } = tools.find((t) => t.name === 'eokg_get_smell');
+  assert.ok(description.includes('counts that concept as a smell source or space, not as a carrier'));
+});
+
+test('an oversized list of carrier words is capped and reported', async () => {
+  const roles = bindings(Array.from({ length: 2000 }, (_, i) => (
+    { role: 'carrier', val: uri(`${KG}object/${i}`), valLabel: en(`${'word '.repeat(40)}${i}`) })));
+  stub = await startStubServer(routes(textCore, excerpts(EXCERPT), roles));
+  const res = await call(stub, SMELL);
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.equal(s.truncated.carrier_mentions, 2000);
+  assert.ok(s.carrier_mentions.length < 2000);
 });
 
 test('role labels for gestures and carriers come from the vocabulary graphs, and words only from object URIs', async () => {
@@ -206,7 +247,8 @@ test('live: a gesture smell on an image shows its gesture', { skip: !LIVE }, asy
 test('live: a vocabulary carrier and a text gesture appear on the Blégny smell', { skip: !LIVE }, async () => {
   const res = await withClient('get-smell-live', (c) => c.callTool({ name: 'eokg_get_smell', arguments: { id: '885cde94-f3cd-591b-b627-be16c6c9480a' } }));
   const s = assertWireValid(outputSchema, res.structuredContent);
-  assert.deepEqual(s.carriers, ['Cassolette']);
+  assert.deepEqual(s.carriers.map((c) => c.label), ['Cassolette']);
+  assert.ok(s.carriers[0].id.startsWith(`${KG}vocabulary/olfactory-objects/`));
   assert.deepEqual(s.gestures.map((g) => g.label), ['Perfuming']);
 });
 

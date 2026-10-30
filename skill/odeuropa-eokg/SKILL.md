@@ -46,7 +46,9 @@ A **smell** is one extracted reference, not a documented odour event. It has:
   (the whole book, article or image). The excerpt is a fragment, the source is the
   document around it: use `eokg_get_source` for the latter.
 - a **smell source** in two parts: the vocabulary `concept` (what the model
-  classified it as) and the `mention` (the words actually used in the text).
+  classified it as) and the `mention` (the words actually used in the text). Carriers
+  split the same way, into `carriers` and `carrier_mentions`. `eokg_smell_profile` counts
+  a carrier's concept as a smell source or space, not as a carrier.
 - optional roles: carrier, gesture, place, perceiver, time, qualities (adjectives),
   emotions. Roles are extracted; many smells have only some of them. An image smell found
   through a gesture may have nothing else but its date.

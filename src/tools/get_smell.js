@@ -37,7 +37,9 @@ export const outputSchema = z.object({
   excerpts: z.array(z.string()),
   smell_sources: z.array(idLabel()),
   mentions: z.array(z.string()),
-  carriers: z.array(z.string()), times: z.array(z.string()),
+  carriers: z.array(idLabel()),
+  carrier_mentions: z.array(z.string()),
+  times: z.array(z.string()),
   gestures: z.array(idLabel()),
   places: z.array(idLabel()),
   perceivers: z.array(z.string()), emotions: z.array(z.string()),
@@ -48,7 +50,8 @@ export const outputSchema = z.object({
 
 const description =
   'Get one smell reference: its source text or image, excerpt and extracted roles. ' +
-  'Roles are machine-extracted: smell source (vocabulary concept plus the words used), carrier (a vocabulary concept or the words used), gesture, time, place, perceiver, emotions, qualities. ' +
+  'Roles are machine-extracted: smell source (vocabulary concept plus the words used), carrier (vocabulary concept in carriers, the words used in carrier_mentions), gesture, time, place, perceiver, emotions, qualities. ' +
+  'A carrier id works in eokg_smell_profile, which counts that concept as a smell source or space, not as a carrier. ' +
   'Emotions are inferred by a classifier, not stated in the text. Ids come from eokg_search_smells, eokg_get_source or eokg_find_visual_smells.';
 
 const IMAGE_WARNING = 'This smell was detected in an image, so there is no text excerpt; source.images links the picture.';
@@ -76,14 +79,14 @@ const keep = (r) => r.val?.type === 'bnode' || isLocal(r.val?.value);
 function shapeRoles(rows) {
   const by = (role) => rows.filter((r) => v(r, 'role') === role);
   const labels = (role) => uniqueStrings(by(role).filter(keep).map((r) => v(r, 'valLabel')));
-  const sourceRows = by('source');
-  const vocab = sourceRows.filter((r) => v(r, 'val')?.startsWith(`${KG_BASE}vocabulary/`));
-  const objects = sourceRows.filter((r) => v(r, 'val')?.startsWith(`${KG_BASE}object/`));
+  const concepts = (role) => collectByUri(by(role).filter((r) => v(r, 'val')?.startsWith(`${KG_BASE}vocabulary/`)), 'val', 'valLabel');
+  const words = (role) => uniqueStrings(by(role).filter((r) => v(r, 'val')?.startsWith(`${KG_BASE}object/`)).map((r) => v(r, 'valLabel')));
   const withFallback = (role) => collectByUri(by(role), 'val', 'valLabel');
   return {
-    smell_sources: collectByUri(vocab, 'val', 'valLabel'),
-    mentions: uniqueStrings(objects.map((r) => v(r, 'valLabel'))),
-    carriers: labels('carrier'),
+    smell_sources: concepts('source'),
+    mentions: words('source'),
+    carriers: concepts('carrier'),
+    carrier_mentions: words('carrier'),
     times: labels('time'),
     gestures: withFallback('gesture'),
     perceivers: labels('perceiver'),
@@ -91,6 +94,12 @@ function shapeRoles(rows) {
     emotions: uniqueStrings(by('emotion').filter(keep).map((r) => v(r, 'valLabel') ?? labelFromUri(v(r, 'val')))),
     qualities: withFallback('quality'),
   };
+}
+
+function conceptsAndWords(concepts, words) {
+  const named = concepts.map((c) => `${c.label} [${c.id.slice(`${KG_BASE}vocabulary/`.length)}]`).join(', ');
+  const used = words.map((w) => `"${w}"`).join(', ');
+  return [named, used && `words used: ${used}`].filter(Boolean).join('; ');
 }
 
 function renderText(s, uuid) {
@@ -102,16 +111,13 @@ function renderText(s, uuid) {
     `Source (${src.type}): ${src.title ?? '(untitled)'}${meta ? ` (${meta})` : ''}${who ? ` by ${who}` : ''}`,
     src.url ? `  ${src.url}` : undefined,
   ];
-  if (s.smell_sources.length || s.mentions.length) {
-    const concepts = s.smell_sources
-      .map((c) => `${c.label} [${c.id.slice(`${KG_BASE}vocabulary/`.length)}]`).join(', ');
-    const words = s.mentions.map((m) => `"${m}"`).join(', ');
-    lines.push(`Smell source: ${[concepts, words && `words used: ${words}`].filter(Boolean).join('; ')}`);
-  }
+  const smellSource = conceptsAndWords(s.smell_sources, s.mentions);
+  if (smellSource) lines.push(`Smell source: ${smellSource}`);
+  const carrier = conceptsAndWords(s.carriers, s.carrier_mentions);
   const joined = (label, xs) => (xs.length ? `${label}: ${xs.join(', ')}` : undefined);
   const ctx = [
     joined('Time', s.times), joined('Place', s.places.map((p) => p.label)),
-    joined('Carrier', s.carriers), joined('Gesture', s.gestures.map((g) => g.label)), joined('Perceiver', s.perceivers),
+    carrier && `Carrier: ${carrier}`, joined('Gesture', s.gestures.map((g) => g.label)), joined('Perceiver', s.perceivers),
   ].filter(Boolean).join(' · ') || undefined;
   lines.push(
     ctx,
@@ -163,7 +169,7 @@ export function registerGetSmellTool(server) {
         excerpts,
         ...shapeRoles(roleRows),
       };
-      const structured = capArrays(full, ['excerpts', 'qualities', 'emotions', 'places', 'carriers'], PER_CHANNEL_RESULT_BUDGET);
+      const structured = capArrays(full, ['excerpts', 'qualities', 'emotions', 'places', 'carriers', 'carrier_mentions'], PER_CHANNEL_RESULT_BUDGET);
       const text = renderText(structured, uuidOf(id));
       const res = withWarnings({ structured, text }, warnings);
       return { content: [{ type: 'text', text: res.text }], structuredContent: res.structured };

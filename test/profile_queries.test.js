@@ -54,8 +54,27 @@ test('carriers count vocabulary concepts under their own label and raw words onl
   assert.ok(q.includes('GRAPH <http://data.odeuropa.eu/vocabulary/olfactory-objects> { ?car skos:prefLabel ?cl FILTER(LANG(?cl) = "en") }'));
   assert.ok(q.includes('GRAPH <http://data.odeuropa.eu/vocabulary/fragrant-spaces> { ?car skos:prefLabel ?cl FILTER(LANG(?cl) = "en") }'));
   // Inference copies twin labels onto vocabulary concepts, so rdfs:label is read for the raw words only.
-  assert.ok(q.includes('?car rdfs:label ?cl FILTER(STRSTARTS(STR(?car), "http://data.odeuropa.eu/object/"))'));
+  assert.ok(q.includes('?car rdfs:label ?word FILTER(STRSTARTS(STR(?car), "http://data.odeuropa.eu/object/"))'));
   assert.ok(q.indexOf('STRSTARTS(STR(?car)') >= 0 && q.indexOf('STRSTARTS(STR(?car)') < q.indexOf('LIMIT'));
+});
+
+test('carriers merge labels that differ only by case or language tag', () => {
+  const q = profileFacetQuery('carriers', anchor, { top: 10 });
+  // Grouping on the raw literal lists "the"@en and "The"@en as two entries and splits their counts.
+  assert.ok(q.includes('BIND(LCASE(STR(?cl)) AS ?folded)'));
+  assert.match(q, /GROUP BY \?folded ORDER BY DESC\(\?n\) LIMIT 10$/);
+  // SAMPLE would change the shown label between runs; MIN alone would show "THE" for a raw word.
+  assert.ok(q.includes('(MIN(STR(?cl)) AS ?label)'));
+  assert.ok(q.includes('BIND(LCASE(STR(?word)) AS ?cl)'));
+});
+
+test('places merge labels that differ only by case or language tag and keep a readable label', () => {
+  const q = profileFacetQuery('places', anchor, { top: 10 });
+  // Grouping on the raw literal lists "the room" and "The room" as two entries and splits their counts.
+  assert.ok(q.includes('BIND(LCASE(STR(?pl)) AS ?folded)'));
+  assert.match(q, /GROUP BY \?folded ORDER BY DESC\(\?n\) LIMIT 10$/);
+  // SAMPLE would change the shown label between runs; MIN would show "THE ROOM"; lowercasing every label would lose "Paris".
+  assert.ok(q.includes('(MAX(STR(?pl)) AS ?label)'));
 });
 
 test('anchors: exact, narrower, fragrant-spaces', () => {

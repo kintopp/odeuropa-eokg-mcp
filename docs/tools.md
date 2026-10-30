@@ -59,7 +59,7 @@ Returns one smell reference in full: source document or image, excerpt, and the 
 ### Tool description
 
 <!-- generated:eokg_get_smell:description -->
-> Get one smell reference: its source text or image, excerpt and extracted roles. Roles are machine-extracted: smell source (vocabulary concept plus the words used), carrier (a vocabulary concept or the words used), gesture, time, place, perceiver, emotions, qualities. Emotions are inferred by a classifier, not stated in the text. Ids come from eokg_search_smells, eokg_get_source or eokg_find_visual_smells.
+> Get one smell reference: its source text or image, excerpt and extracted roles. Roles are machine-extracted: smell source (vocabulary concept plus the words used), carrier (vocabulary concept in carriers, the words used in carrier_mentions), gesture, time, place, perceiver, emotions, qualities. A carrier id works in eokg_smell_profile, which counts that concept as a smell source or space, not as a carrier. Emotions are inferred by a classifier, not stated in the text. Ids come from eokg_search_smells, eokg_get_source or eokg_find_visual_smells.
 <!-- /generated -->
 
 ### Parameters
@@ -232,5 +232,5 @@ The knowledge graph is the output of automatic pipelines over historical materia
 - **Filtered search is windowed.** Language, year and dataset filters run after Lucene ranking, on the top 1,000, 5,000 or 20,000 hits. For Italian Rose smells from 1600 to 1800, a window of 1,000 keeps 4 and a window of 20,000 keeps 37; matches beyond the window are not examined.
 - **Only three vocabularies can be counted.** They are olfactory-objects, fragrant-spaces and olfactory-gestures (gestures come from texts and images). The expert-taxonomy "rose" has zero smells; use the olfactory-objects Rose (`olfactory-objects/138`).
 - **Iconclass links in the KG are broken.** Its `skos:closeMatch` values are single characters (`/2`, `/G`, `/(`). The server uses Odeuropa's curated tables instead: Rose maps to `25G41(...)`, and a `(...)` suffix is a placeholder to be completed (for example `25G41(ROSE)`) and verified with an Iconclass server.
-- **Places, carriers and quality labels are largely raw strings.** Top places for Rose include "jardin" (84), "chambre" (62) and "in" (22); carriers mix vocabulary concepts with raw words (for Rose, "Air" (963) and "Glass with stem" (114) alongside "the" (59) and "in the air" (47)), and one smell can count under both; quality labels mix languages ("fragrant"@en, "aromatique"@fr).
+- **Places, carriers and quality labels are largely raw strings.** Top places for Rose include "jardin" (86), "chambre" (62) and "in" (24); carriers mix vocabulary concepts with raw words (for Rose, "Air" (963) and "Glass with stem" (114) alongside "the" (83) and "in the air" (49)), and one smell can count under both; quality labels mix languages ("fragrant"@en, "aromatique"@fr).
 - **Image detections can be wrong.** Detector boxes have a mean confidence of about 0.76; only boxes scoring exactly 1.0 were drawn by hand. Look at the picture with `eokg_inspect_image`.

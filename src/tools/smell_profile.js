@@ -146,8 +146,8 @@ const localOnly = (key, base) => (rows) => rows.map((r) => localEntry(r, key, ba
 const SHAPERS = {
   languages: plain('lang'),
   emotions: plain('word'),
-  places: plain('pl'),
-  carriers: plain('cl'),
+  places: plain('label'),
+  carriers: plain('label'),
   datasets: (rows) => rows.filter((r) => v(r, 'g')?.startsWith(DATASET_GRAPH_BASE))
     .map((r) => ({ label: tidy(v(r, 'g').slice(DATASET_GRAPH_BASE.length)), count: count(r) })),
   qualities: (rows) => rows.map((r) => localEntry(r, 'q', VOCAB_PREFIX)).filter(Boolean)
