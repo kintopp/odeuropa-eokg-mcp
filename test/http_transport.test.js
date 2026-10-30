@@ -22,7 +22,11 @@ const children = new Set();
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 before(async () => {
-  const slow = async () => { await sleep(stubDelayMs); return { body: bindings([]) }; };
+  // Unref'd: a long delay must not hold the test process open after the test has ended.
+  const slow = async () => {
+    await new Promise((resolve) => { setTimeout(resolve, stubDelayMs).unref(); });
+    return { body: bindings([]) };
+  };
   stub = await startStubServer({ smell_core: slow, smell_excerpts: slow, smell_roles: slow });
 });
 
@@ -404,6 +408,30 @@ test('a body finishing after the 504 does not leave its tool running', { timeout
     assert.equal((await modernCall(server, 'eokg_get_smell', getSmell)).status, 200, server.stderr());
     assert.equal(server.child.exitCode, null, server.stderr());
     assert.doesNotMatch(server.stderr(), /unhandled/);
+  });
+});
+
+test('a client dropping mid-body is not logged as a failure, a real request failure is', async () => {
+  await withServer({}, async (server) => {
+    const { port } = new URL(server.url);
+    const dropped = connect(Number(port), '127.0.0.1');
+    await once(dropped, 'connect');
+    dropped.write('POST /mcp HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n{"json');
+    await sleep(100);
+    dropped.destroy();
+    await sleep(200);
+    assert.doesNotMatch(server.stderr(), /request failed/);
+
+    // A Host that URL rejects fails while the Request is built.
+    const bad = connect(Number(port), '127.0.0.1');
+    await once(bad, 'connect');
+    bad.end('POST /mcp HTTP/1.1\r\nHost: a b\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+    let answer = '';
+    bad.setEncoding('utf8');
+    bad.on('data', (chunk) => { answer += chunk; });
+    await once(bad, 'close');
+    assert.match(answer, /^HTTP\/1\.1 500 /);
+    assert.match(server.stderr(), /request failed/);
   });
 });
 

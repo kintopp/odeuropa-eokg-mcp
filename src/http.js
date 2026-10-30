@@ -40,7 +40,8 @@ const handleRequest = toNodeHandler({
   },
 }, {
   maxRequestBodySize: HTTP_MAX_BODY_BYTES,
-  onerror: (err) => log('request failed:', err),
+  // ECONNRESET is the client dropping the socket while sending its body, not a server failure.
+  onerror: (err) => { if (err.code !== 'ECONNRESET') log('request failed:', err); },
 });
 
 let inflight = 0;
@@ -106,7 +107,7 @@ async function handleTransport(req, res) {
     await handleRequest(req, res);
   } catch (err) {
     // After a 504, toNodeHandler's unconditional writeHead throws ERR_HTTP_HEADERS_SENT.
-    if (!timedOut) throw err;
+    if (!timedOut || err.code !== 'ERR_HTTP_HEADERS_SENT') throw err;
   }
 }
 
