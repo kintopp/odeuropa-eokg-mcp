@@ -104,13 +104,13 @@ const budgetAdvice = (scope) => (scope.alone
 
 const skipWarning = (f, scope) => `The ${f} facet was skipped (time budget); ${budgetAdvice(scope)}`;
 
-// A query that hit its own limit (a 504 or the per-attempt timeout) is likely to hit it again, so only one
+// A query that hit its own limit (a 504 or the per-attempt timeout) may hit it again, so only one
 // that was still sharing the endpoint with other facets is worth repeating, and only once: the load may have been ours.
 function timeoutWarning(f, err, scope, othersRunning) {
   if (err.budget) return `The ${f} facet ran out of the time budget${scope.alone ? '' : ' it shares with the other facets'}; ${budgetAdvice(scope)}`;
   return othersRunning
     ? `The ${f} facet timed out while other facets were running; request it on its own once, one call at a time, and if it times out again, try ${smallerQuery(scope)}.`
-    : `The ${f} facet timed out; repeating the same request is likely to time out again, so try ${smallerQuery(scope)}.`;
+    : `The ${f} facet timed out; the same request may time out again, so try ${smallerQuery(scope)}.`;
 }
 
 function shapeTimeline(rows, basis, bucketYears) {
@@ -247,7 +247,7 @@ export function registerSmellProfileTool(server) {
         sparqlSelect('concept_label', conceptLabelQuery(concept, vocab.name), { signal, deadline }),
       ]).catch((err) => {
         if (err?.timeout !== true) throw err;
-        throw new ToolError(err.message, `Repeating the same request is likely to time out again, so try ${smallerQuery(scope)}.`);
+        throw new ToolError(err.message, `The same request may time out again, so try ${smallerQuery(scope)}.`);
       });
       const totalSmells = totalRows.length ? count(totalRows[0]) : 0;
       const label = pickLabel(labelRows.map((r) => r.l));

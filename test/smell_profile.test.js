@@ -182,7 +182,7 @@ test('a facet timeout names only the options this call can drop', async () => {
     assert.deepEqual(s.failed_facets, ['languages']);
     return s.warnings;
   };
-  const prefix = 'The languages facet timed out; repeating the same request is likely to time out again, so try';
+  const prefix = 'The languages facet timed out; the same request may time out again, so try';
   assert.ok((await timedOut({ include_narrower: true })).includes(`${prefix} without include_narrower or with a narrower concept.`));
   assert.ok((await timedOut({ language: 'fr' })).includes(`${prefix} without the language filter or with a narrower concept.`));
   assert.ok((await timedOut({ year_from: 1800 })).includes(`${prefix} without the year filter or with a narrower concept.`));
@@ -195,7 +195,7 @@ test('a facet timeout names only the options this call can drop', async () => {
 test('a timeout is worth one repeat only if another facet was still running when it failed', async () => {
   const gateway504 = () => ({ status: 504, body: '<html>Gateway Time-out</html>' });
   const REPEAT = 'The languages facet timed out while other facets were running; request it on its own once, one call at a time, and if it times out again, try with a narrower concept.';
-  const NO_REPEAT = 'The languages facet timed out; repeating the same request is likely to time out again, so try with a narrower concept.';
+  const NO_REPEAT = 'The languages facet timed out; the same request may time out again, so try with a narrower concept.';
   const gated = () => {
     let open;
     const gate = new Promise((r) => { open = r; });
@@ -227,7 +227,7 @@ test('a timeout is worth one repeat only if another facet was still running when
 
   await start(baseRoutes({ profile_languages: () => ({ status: 504, body: '<html>Gateway Time-out</html>' }) }));
   const serial = valid(await profile({ facets: ['languages', 'datasets'], include_narrower: true }));
-  assert.deepEqual(serial.warnings, ['The languages facet timed out; repeating the same request is likely to time out again, so try without include_narrower or with a narrower concept.']);
+  assert.deepEqual(serial.warnings, ['The languages facet timed out; the same request may time out again, so try without include_narrower or with a narrower concept.']);
 });
 
 // Failure mode: a timed-out total gets the generic hint, which never names the option that made it slow.
