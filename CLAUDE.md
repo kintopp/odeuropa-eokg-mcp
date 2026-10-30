@@ -76,7 +76,7 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 ## Common Errors
 
 - **Go easy on the public endpoint:** it has no SLA and is shared, so don't loop heavy calls or run bulk or whole-graph probes without need. `EOKG_LIVE=1 npm test` runs test files in parallel and can overload it, which shows up as timeouts in unrelated tests. Run only the live tests a change needs: `EOKG_LIVE=1 node --test --test-concurrency=1 --test-name-pattern="…" <files>`.
-- **Never retry a SPARQL 504:** the gateway's 60 s cut is deterministic for a given query; retrying costs another minute and fails the same way.
+- **Never retry a SPARQL 504:** the gateway's 60 s cut is deterministic for a given query; retrying costs another minute and fails the same way. The one exception is advice, not code: `eokg_smell_profile` suggests one repeat of a facet that timed out beside others.
 - **luc:snippets over a window:** snippets are computed for every hit in luc:limit; only request them when the window is the page (24 s at 5k hits).
 - **Skosmos 200 + HTML:** an unknown vocab id returns a PHP fatal-error page with status 200; the VOCABS enum prevents it.
 - **railway.json is not read:** Railway's Config as Code is deprecated (new services cannot use it; existing ones stop on 2026-12-01). Service config lives in .railway/railway.ts and is applied with railway config apply; code is deployed separately.

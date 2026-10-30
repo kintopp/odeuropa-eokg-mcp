@@ -92,23 +92,25 @@ const fmt = (n) => n.toLocaleString('en-US');
 const shortId = (uri) => uri.slice(VOCAB_PREFIX.length);
 const count = (r) => Math.round(num(r, 'n') ?? 0);
 
-const smallerQuery = ({ narrower, filtered }) => new Intl.ListFormat('en', { type: 'disjunction' }).format([
+const smallerQuery = ({ narrower, filters }) => new Intl.ListFormat('en', { type: 'disjunction' }).format([
   ...(narrower ? ['without include_narrower'] : []),
-  ...(filtered ? ['without the language or year filter'] : []),
+  ...(filters.length ? [`without the ${filters.join(' or ')} filter`] : []),
   'with a narrower concept',
 ]);
 
-const skipWarning = (f, scope) => (scope.alone
-  ? `The ${f} facet was skipped (time budget); the endpoint may be busy, so try again later or ${smallerQuery(scope)}.`
-  : `The ${f} facet was skipped (time budget); request it on its own.`);
+const budgetAdvice = (scope) => (scope.alone
+  ? `the endpoint may be busy, so try again later or ${smallerQuery(scope)}.`
+  : 'request it on its own.');
 
-// Only a budget shared with other facets is worth re-requesting: a query that hit its own limit
-// (a 504 or the per-attempt timeout) is likely to hit it again.
+const skipWarning = (f, scope) => `The ${f} facet was skipped (time budget); ${budgetAdvice(scope)}`;
+
+// A query that hit its own limit (a 504 or the per-attempt timeout) is likely to hit it again, so only one
+// that ran beside other facets is worth repeating, and only once: the load may have been ours.
 function timeoutWarning(f, err, scope) {
-  if (!err.budget) return `The ${f} facet timed out; repeating the same request is likely to time out again, so try ${smallerQuery(scope)}.`;
-  return scope.alone
-    ? `The ${f} facet ran out of the time budget; the endpoint may be busy, so try again later or ${smallerQuery(scope)}.`
-    : `The ${f} facet ran out of the time budget it shares with the other facets; request it on its own.`;
+  if (err.budget) return `The ${f} facet ran out of the time budget${scope.alone ? '' : ' it shares with the other facets'}; ${budgetAdvice(scope)}`;
+  return scope.parallel
+    ? `The ${f} facet timed out while other facets were running; request it on its own once, and if it times out again, try ${smallerQuery(scope)}.`
+    : `The ${f} facet timed out; repeating the same request is likely to time out again, so try ${smallerQuery(scope)}.`;
 }
 
 function shapeTimeline(rows, basis, bucketYears) {
@@ -260,9 +262,11 @@ export function registerSmellProfileTool(server) {
         warnings.push(`No ${lang}smells${yearPhrase(out)} are linked to this concept.`);
       } else {
         const report = progressReporter(ctx);
-        const scope = { narrower, filtered: Boolean(language) || yearFrom != null || yearTo != null, alone: facets.length === 1 };
+        const concurrency = narrower ? 1 : SPARQL_MAX_CONCURRENCY;
+        const filters = [...(language ? ['language'] : []), ...(yearFrom != null || yearTo != null ? ['year'] : [])];
+        const scope = { narrower, filters, alone: facets.length === 1, parallel: concurrency > 1 && facets.length > 1 };
         let done = 0;
-        await mapPool(facets, narrower ? 1 : SPARQL_MAX_CONCURRENCY, async (facet) => {
+        await mapPool(facets, concurrency, async (facet) => {
           if (deadline - Date.now() < PROFILE_MIN_FACET_BUDGET_MS) {
             failed.add(facet);
             warnings.push(skipWarning(facet, scope));

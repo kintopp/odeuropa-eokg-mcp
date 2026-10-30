@@ -15,7 +15,7 @@ import { createAsyncCache } from '../lib/cache.js';
 import { ToolError } from '../lib/errors.js';
 
 const NAME_RE = /^[a-z][a-z0-9_]{0,63}$/;
-const NARROW = 'Narrow the request: a more specific query or concept, a year range, a smaller page.';
+const NARROW = 'Narrow the request: a more specific query or concept, fewer filters, a smaller page.';
 const LUCENE_MARK = 'Cannot parse Lucene query';
 
 const cache = createAsyncCache({ max: SPARQL_CACHE_MAX, ttlMs: SPARQL_CACHE_TTL_MS });
