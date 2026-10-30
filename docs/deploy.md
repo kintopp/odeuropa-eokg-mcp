@@ -22,8 +22,8 @@ All variables are optional.
 | `PORT` | `3000` | Listen port (Railway sets it). `0` picks a free port. |
 | `MCP_ALLOWED_ORIGINS` | claude.ai, claude.com, chatgpt.com, `*.openai.com`, mistral.ai and their subdomains | Comma-separated exact origins or `*.host` globs. **Replaces** the defaults. `*` disables the check. A mismatch is 403. |
 | `MCP_ALLOWED_HOSTS` | unset | Comma-separated hostnames the `Host` header must match (a port is ignored). `RAILWAY_PUBLIC_DOMAIN` and localhost are added. With neither set, the Host check is skipped. |
-| `EOKG_HTTP_RESPONSE_TIMEOUT_MS` | `120000` | Wall-clock limit per `POST /mcp`. Sends 504, or ends a stream already started. |
-| `EOKG_HTTP_MAX_INFLIGHT` | `16` | Concurrent `POST /mcp` requests. More get 503 with `Retry-After: 5`. |
+| `EOKG_HTTP_RESPONSE_TIMEOUT_MS` | `120000` | Wall-clock limit per request to `/mcp`. Sends 504, or ends a stream already started. |
+| `EOKG_HTTP_MAX_INFLIGHT` | `16` | Concurrent requests to `/mcp`. More get 503 with `Retry-After: 5`. |
 | `EOKG_LOG` | off | `1` writes one JSON line per tool call to stderr. |
 | `EOKG_LOG_INPUT` | off | `1` adds the tool arguments to that line. Off by default on HTTP because search text is user content. |
 

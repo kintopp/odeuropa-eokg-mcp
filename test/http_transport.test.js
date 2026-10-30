@@ -287,6 +287,126 @@ test('response guard: a slow 2025 SSE answer is cut and the stream ends', async 
   });
 });
 
+test('a 2025 SSE answer commits its headers while the tool is still running', async () => {
+  stubDelayMs = 1500;
+  await withServer({}, async (server) => {
+    const started = Date.now();
+    const res = await fetch(server.mcp, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream', ...legacyHeaders },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'eokg_get_smell', arguments: getSmell } }),
+    });
+    assert.ok(Date.now() - started < 1000, `headers took ${Date.now() - started} ms`);
+    assert.match(res.headers.get('content-type'), /^text\/event-stream/);
+    assert.equal(parseBody(await res.text())?.id, 2);
+  });
+});
+
+test('response guard: a tool finishing after the 504 leaves the server healthy', async () => {
+  stubDelayMs = 500;
+  await withServer({ EOKG_HTTP_RESPONSE_TIMEOUT_MS: '200' }, async (server) => {
+    assert.equal((await modernCall(server, 'eokg_get_smell', getSmell)).status, 504);
+    await sleep(700);
+    assert.equal(server.child.exitCode, null, server.stderr());
+    assert.equal((await fetch(`${server.url}/health`)).status, 200);
+    assert.doesNotMatch(server.stderr(), /ERR_HTTP_HEADERS_SENT|unhandled/);
+  });
+});
+
+test('a chunked body over 1 MiB is refused without being buffered', async () => {
+  await withServer({}, async (server) => {
+    const { request } = await import('node:http');
+    const outcome = await new Promise((resolve) => {
+      const req = request(server.mcp, {
+        method: 'POST',
+        headers: { ...modernHeaders('tools/list'), 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
+      }, (res) => { res.resume(); resolve(res.statusCode); });
+      req.on('error', (err) => resolve(err.code));
+      const chunk = Buffer.alloc(64 * 1024, 'x');
+      let sent = 0;
+      const pump = () => {
+        while (sent < 1_100_000) {
+          sent += chunk.length;
+          if (!req.write(chunk)) { req.once('drain', pump); return; }
+        }
+        req.end();
+      };
+      pump();
+    });
+    assert.equal(outcome, 413);
+    assert.equal((await fetch(`${server.url}/health`)).status, 200);
+  });
+});
+
+// The server advertises listChanged: false, so a listen stream has nothing to wait for. If that
+// changes, streams stay open until dropped: add a test that the SDK's cap of 1024 is not hit.
+test('subscriptions/listen is acknowledged and the stream ends at once', async () => {
+  await withServer({}, async (server) => {
+    const res = await fetch(server.mcp, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream', ...modernHeaders('subscriptions/listen') },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'subscriptions/listen',
+        params: { notifications: { toolsListChanged: true }, _meta: envelope() } }),
+      signal: AbortSignal.timeout(2000),
+    });
+    assert.equal(res.status, 200);
+    assert.match(await res.text(), /notifications\/subscriptions\/acknowledged/);
+  });
+});
+
+test('dropped 2025 SSE calls reach the SDK and free their SPARQL slots', { timeout: 30_000 }, async () => {
+  stubDelayMs = 20_000;
+  await withServer({}, async (server) => {
+    const dropped = ['aaaaaaaa', 'bbbbbbbb', 'cccccccc', 'dddddddd', 'eeeeeeee'].map(async (prefix) => {
+      const ctl = new AbortController();
+      const res = await fetch(server.mcp, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream', ...legacyHeaders },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: {
+          name: 'eokg_get_smell', arguments: { id: `http://data.odeuropa.eu/smell/${prefix}-fcd7-5192-a678-ae760d6306ad` } } }),
+        signal: ctl.signal,
+      });
+      await sleep(250);
+      ctl.abort();
+      await res.body.cancel().catch(() => {});
+    });
+    await Promise.all(dropped);
+    await sleep(100);
+    stubDelayMs = 0;
+    const started = Date.now();
+    const probe = await modernCall(server, 'eokg_get_smell', getSmell);
+    assert.equal(probe.status, 200);
+    assert.ok(Date.now() - started < 5000, `probe queued behind dropped calls for ${Date.now() - started} ms`);
+  });
+});
+
+test('a body finishing after the 504 does not leave its tool running', { timeout: 30_000 }, async () => {
+  stubDelayMs = 20_000;
+  await withServer({ EOKG_HTTP_RESPONSE_TIMEOUT_MS: '300', EOKG_HTTP_MAX_INFLIGHT: '50' }, async (server) => {
+    const { request } = await import('node:http');
+    const late = ['aaaaaaaa', 'bbbbbbbb', 'cccccccc', 'dddddddd', 'eeeeeeee'].map((prefix) => new Promise((resolve, reject) => {
+      const body = JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: {
+        name: 'eokg_get_smell', arguments: { id: `http://data.odeuropa.eu/smell/${prefix}-fcd7-5192-a678-ae760d6306ad` } } });
+      const req = request(server.mcp, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream', ...legacyHeaders, 'content-length': Buffer.byteLength(body) },
+      }, (res) => {
+        res.resume();
+        req.end(body.slice(1));
+        res.on('end', () => resolve(res.statusCode));
+      });
+      req.on('error', reject);
+      req.write(body[0]);
+    }));
+    assert.deepEqual(await Promise.all(late), [504, 504, 504, 504, 504]);
+    await sleep(300);
+    stubDelayMs = 0;
+    assert.equal((await modernCall(server, 'eokg_get_smell', getSmell)).status, 200, server.stderr());
+    assert.equal(server.child.exitCode, null, server.stderr());
+    assert.doesNotMatch(server.stderr(), /unhandled/);
+  });
+});
+
 test('in-flight cap: the second slow call is 503 with Retry-After, and the slot is released afterwards', async () => {
   stubDelayMs = 1000;
   await withServer({ EOKG_HTTP_MAX_INFLIGHT: '1' }, async (server) => {

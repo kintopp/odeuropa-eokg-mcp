@@ -7,13 +7,13 @@ process.env.EOKG_ENTRY_POINT ??= 'http';
 import { createServer as createHttpServer } from 'node:http';
 import { once } from 'node:events';
 import { createMcpHandler } from '@modelcontextprotocol/server';
+import { toNodeHandler } from '@modelcontextprotocol/node';
 import { createServer } from './server.js';
 import {
   SERVER_NAME, SERVER_VERSION, HTTP_PORT, HTTP_MAX_BODY_BYTES, HTTP_RESPONSE_TIMEOUT_MS,
   HTTP_MAX_INFLIGHT, MCP_ALLOWED_ORIGINS, MCP_ALLOWED_HOSTS,
 } from './config.js';
 import { parseMcpAllowedOrigins, isAllowedOrigin, isAllowedHost } from './lib/origin.js';
-import { readBody, toWebRequest, writeWebResponse } from './lib/webbridge.js';
 
 const log = (...args) => console.error('[odeuropa-eokg-mcp]', ...args);
 
@@ -28,6 +28,19 @@ const allowedHosts = configuredHosts.length ? [...configuredHosts, 'localhost', 
 const handler = createMcpHandler(() => createServer(), {
   maxRequestBodySize: HTTP_MAX_BODY_BYTES,
   onerror: (err) => log('transport error:', err),
+});
+
+const handleRequest = toNodeHandler({
+  fetch: async (request, options) => {
+    const response = await handler.fetch(request, options);
+    // Nobody reads a response that arrives after the guard answered, and an unread SSE body
+    // queues keep-alive chunks forever. An already-aborted signal does not tear it down either.
+    if (request.signal.aborted) response.body?.cancel().catch(() => {});
+    return response;
+  },
+}, {
+  maxRequestBodySize: HTTP_MAX_BODY_BYTES,
+  onerror: (err) => log('request failed:', err),
 });
 
 let inflight = 0;
@@ -53,7 +66,18 @@ function handlePreflight(req, res) {
   res.end();
 }
 
-async function handlePost(req, res) {
+// toNodeHandler never flushes, and a 2025 SSE answer writes nothing until the tool result or
+// the keep-alive; the headers must commit before that for the client and the proxy.
+function flushOnWriteHead(res) {
+  const { writeHead } = res;
+  res.writeHead = (...args) => {
+    writeHead.apply(res, args);
+    res.flushHeaders();
+    return res;
+  };
+}
+
+async function handleTransport(req, res) {
   // Nothing here decodes bodies; refusing them keeps any later decoder off the request path.
   const encoding = req.headers['content-encoding']?.trim().toLowerCase();
   if (encoding && encoding !== 'identity') {
@@ -65,31 +89,24 @@ async function handlePost(req, res) {
     return;
   }
   inflight++;
-  const abort = new AbortController();
+  let timedOut = false;
   // Wall-clock, not res.setTimeout: SSE keep-alive frames would reset an idle timer.
   const guard = setTimeout(() => {
-    abort.abort();
+    timedOut = true;
     if (!res.headersSent) sendJson(res, 504, { error: 'Request timeout' });
     else res.destroy();
   }, HTTP_RESPONSE_TIMEOUT_MS);
   res.once('close', () => {
     clearTimeout(guard);
     inflight--;
-    if (!res.writableFinished) abort.abort();
   });
 
+  flushOnWriteHead(res);
   try {
-    const body = await readBody(req, HTTP_MAX_BODY_BYTES);
-    const response = await handler.fetch(toWebRequest(req, body, abort.signal));
-    await writeWebResponse(res, response);
+    await handleRequest(req, res);
   } catch (err) {
-    if (err?.status === 413) {
-      sendJson(res, 413, { error: 'Request body too large' }, { Connection: 'close' });
-    } else if (!abort.signal.aborted) {
-      log('request failed:', err);
-      if (res.headersSent) res.destroy();
-      else sendJson(res, 500, { error: 'Internal server error' });
-    }
+    // After a 504, toNodeHandler's unconditional writeHead throws ERR_HTTP_HEADERS_SENT.
+    if (!timedOut) throw err;
   }
 }
 
@@ -109,16 +126,7 @@ async function handleMcp(req, res) {
     res.setHeader('Vary', 'Origin');
   }
   if (req.method === 'OPTIONS') return handlePreflight(req, res);
-  if (req.method === 'POST') return handlePost(req, res);
-  if (req.method === 'GET' || req.method === 'DELETE') {
-    try {
-      await writeWebResponse(res, await handler.fetch(toWebRequest(req, undefined)));
-    } catch (err) {
-      log('request failed:', err);
-      sendJson(res, 500, { error: 'Internal server error' });
-    }
-    return;
-  }
+  if (['POST', 'GET', 'DELETE'].includes(req.method)) return handleTransport(req, res);
   sendJson(res, 405, { error: 'Method not allowed' }, { Allow: 'POST' });
 }
 
