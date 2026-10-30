@@ -146,7 +146,11 @@ export async function sparqlSelect(name, body, { signal, timeoutMs, deadline } =
 // absolute Date.now() value, so it covers queueing, retries and backoff alike.
 function deadlineScope(signal, deadline) {
   const expiry = new AbortController();
-  const expire = () => expiry.abort(timeoutError('The time budget for this call ran out before the EOKG SPARQL endpoint answered.'));
+  const expire = () => {
+    const err = timeoutError('The time budget for this call ran out before the EOKG SPARQL endpoint answered.');
+    err.budget = true; // the caller's shared budget ended, not necessarily this query's own limit
+    expiry.abort(err);
+  };
   const ms = deadline - Date.now();
   const timer = ms > 0 ? setTimeout(expire, ms) : expire();
   return {

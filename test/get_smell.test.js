@@ -158,6 +158,58 @@ test('Explorer permalink resolves to the canonical id', async () => {
   assert.ok(stub.router.calls.every((c) => c.query.includes(`<${SMELL}>`)));
 });
 
+// Failure modes: a gesture stays invisible on the record it was found by; vocabulary carriers have no rdfs:label, so they
+// vanish; a sameAs twin's rdfs:label takes the place of the vocabulary label.
+test('gestures and vocabulary carriers reach the record and its text; no gesture gives an empty list', async () => {
+  const roles = bindings([
+    { role: 'gesture', val: uri(`${KG}vocabulary/olfactory-gestures/2`), valLabel: en("Holding one's nose") },
+    { role: 'carrier', val: uri(`${KG}vocabulary/olfactory-objects/28`), valLabel: en('Cassolette') },
+    { role: 'carrier', val: uri(`${KG}object/6aac8590-0000-0000-0000-000000000001`), valLabel: en('the sheets') },
+  ]);
+  stub = await startStubServer(routes(textCore, excerpts(EXCERPT), roles));
+  const res = await call(stub, SMELL);
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.deepEqual(s.gestures, [{ id: `${KG}vocabulary/olfactory-gestures/2`, label: "Holding one's nose" }]);
+  assert.deepEqual(s.carriers, ['Cassolette', 'the sheets']);
+  const text = res.content[0].text;
+  assert.ok(text.includes("Gesture: Holding one's nose"));
+  assert.ok(text.includes('Carrier: Cassolette, the sheets'));
+  await stub.close();
+
+  stub = await startStubServer(routes(textCore, excerpts(EXCERPT), textRoles));
+  const plain = await call(stub, SMELL);
+  assert.deepEqual(assertWireValid(outputSchema, plain.structuredContent).gestures, []);
+  assert.ok(!plain.content[0].text.includes('Gesture:'));
+});
+
+test('role labels for gestures and carriers come from the vocabulary graphs, and words only from object URIs', async () => {
+  stub = await startStubServer(routes(textCore, excerpts(EXCERPT), textRoles));
+  await call(stub, SMELL);
+  const q = stub.router.calls.find((c) => c.label === 'smell_roles').query;
+  // Gestures hang off the experience, not the emission.
+  assert.ok(q.includes('?ex od:F2_perceived ?id ; od:F5_involved_gesture ?val'));
+  const graphLabel = (name) => `GRAPH <${KG}vocabulary/${name}> { ?val skos:prefLabel ?valLabel FILTER(LANG(?valLabel) = "en") }`;
+  assert.ok(q.includes(graphLabel('olfactory-gestures')));
+  const carrier = q.slice(q.indexOf('od:F4_had_carrier'), q.indexOf('BIND("time"'));
+  assert.ok(carrier.includes(graphLabel('olfactory-objects')));
+  assert.ok(carrier.includes(graphLabel('fragrant-spaces')));
+  // Inference copies twin labels onto vocabulary concepts, so rdfs:label is read for the raw words only.
+  assert.match(carrier, /\?val rdfs:label \?valLabel FILTER\(STRSTARTS\(STR\(\?val\), "http:\/\/data\.odeuropa\.eu\/object\/"\)\)/);
+});
+
+test('live: a gesture smell on an image shows its gesture', { skip: !LIVE }, async () => {
+  const res = await withClient('get-smell-live', (c) => c.callTool({ name: 'eokg_get_smell', arguments: { id: '49f4042a-40f7-5666-b92a-321d64afafc0' } }));
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.deepEqual(s.gestures, [{ id: `${KG}vocabulary/olfactory-gestures/2`, label: "Holding one's nose" }]);
+});
+
+test('live: a vocabulary carrier and a text gesture appear on the Blégny smell', { skip: !LIVE }, async () => {
+  const res = await withClient('get-smell-live', (c) => c.callTool({ name: 'eokg_get_smell', arguments: { id: '885cde94-f3cd-591b-b627-be16c6c9480a' } }));
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.deepEqual(s.carriers, ['Cassolette']);
+  assert.deepEqual(s.gestures.map((g) => g.label), ['Perfuming']);
+});
+
 test('live: KNOWN_SMELL resolves with concept and mention', { skip: !LIVE }, async () => {
   const res = await withClient('get-smell-live', (c) => c.callTool({ name: 'eokg_get_smell', arguments: { id: KNOWN_SMELL } }));
   assert.notEqual(res.isError, true, res.content?.[0]?.text);

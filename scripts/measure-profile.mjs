@@ -32,7 +32,9 @@ const FACETS = {
   fragrant_spaces: (a) => top(a, `?emission crm:P7_took_place_at ?fplace . ?fplace crm:P137_exemplifies ?space .
     FILTER(STRSTARTS(STR(?space), "${SPACES}")) OPTIONAL { ?space skos:prefLabel ?sl FILTER(LANG(?sl) = "en") }`, 'space', '(SAMPLE(?sl) AS ?label)'),
   places: (a) => top(a, '?ex od:F2_perceived ?smell ; crm:P7_took_place_at ?p . ?p rdfs:label ?pl .', 'pl'),
-  carriers: (a) => top(a, '?emission od:F4_had_carrier ?car . ?car rdfs:label ?cl .', 'cl'),
+  carriers: (a) => top(a, `?emission od:F4_had_carrier ?car .
+    { ?car rdfs:label ?cl FILTER(STRSTARTS(STR(?car), "http://data.odeuropa.eu/object/")) }
+    UNION { ?car skos:prefLabel ?cl FILTER(LANG(?cl) = "en") }`, 'cl'),
 };
 const total = (a) => `SELECT (COUNT(DISTINCT ?smell) AS ?n) WHERE { ${a} }`;
 

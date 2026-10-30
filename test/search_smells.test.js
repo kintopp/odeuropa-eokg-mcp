@@ -1,6 +1,8 @@
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { outputSchema } from '../src/tools/search_smells.js';
+import { sparqlSelect } from '../src/sparql/client.js';
+import { searchEnrichQuery } from '../src/sparql/queries/search.js';
 import { EXCERPT_INJECTION_BOUNDARY } from '../src/config.js';
 import { startStubServer, bindings } from './stub-backend.js';
 import { withClient, assertWireValid, followPages, assertTrimmedFirstPage, LIVE } from './helpers.js';
@@ -53,6 +55,36 @@ test('unfiltered: Lucene paging and snippets, exact total, no window or count qu
   assert.ok(res.content[0].text.includes('12,120 full-text hits for source_value:(lavender)'));
   assert.ok(res.content[0].text.includes(EXCERPT_INJECTION_BOUNDARY));
   assert.deepEqual(labels(stub), ['search_page', 'search_enrich']);
+});
+
+test('a result lists its gestures; one without any has no gestures field', async () => {
+  const [withGesture, without] = ids(2);
+  const enrich = () => ({
+    body: bindings([withGesture, without].map((id) => ({
+      id: uri(id), graph: uri(`${KG}gallica`), source: uri(`${KG}source/s-${id.slice(-4)}`),
+      type: uri('http://erlangen-crm.org/current/E33_Linguistic_Object'), cl: en('Lavender'),
+      ...(id === withGesture && { gl: en('Perfuming') }),
+    }))),
+  });
+  stub = await startStubServer({
+    search_page: () => ({ body: bindings([withGesture, without].map((id) => ({ id: uri(id), score: '1', total: '2' }))) }),
+    search_enrich: enrich,
+  });
+  const res = await call(stub, { text: 'lavender' });
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.deepEqual(s.results[0].gestures, ['Perfuming']);
+  assert.equal(s.results[1].gestures, undefined);
+  assert.ok(res.content[0].text.includes('concepts: Lavender — gestures: Perfuming'));
+  const q = stub.router.calls.find((c) => c.label === 'search_enrich').query;
+  // Reusing ?cl would lose the gesture of any smell that also has a smell source.
+  assert.ok(q.includes('?ex od:F2_perceived ?id ; od:F5_involved_gesture ?g'));
+  assert.ok(q.includes(`GRAPH <${KG}vocabulary/olfactory-gestures> { ?g skos:prefLabel ?gl FILTER(LANG(?gl) = "en") }`));
+});
+
+test('live: the enrich query returns both the sources and the gesture of one smell', { skip: !LIVE }, async () => {
+  const rows = await sparqlSelect('live_enrich_gesture', searchEnrichQuery([`${KG}smell/c6d918c6-35b0-5eed-a6c0-25532922e04b`]));
+  assert.ok(rows.some((r) => r.gl?.value === 'Perfuming'));
+  assert.ok(rows.some((r) => r.cl?.value === 'Blood'));
 });
 
 test('unfiltered: 0 hits gives total 0 and the no-hits warning', async () => {

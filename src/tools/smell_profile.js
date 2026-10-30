@@ -79,23 +79,37 @@ export const outputSchema = z.object({
 
 const description =
   'Profile a smell source, fragrant space or gesture across the whole graph. ' +
-  'Counts smells linked to an olfactory-objects, fragrant-spaces or olfactory-gestures concept (from eokg_find_concepts) by 20-year period of document date (bucket_years changes it), language, dataset, qualities, emotions and fragrant spaces; emission dates, raw place labels and carriers on request. ' +
+  'Counts smells linked to an olfactory-objects, fragrant-spaces or olfactory-gestures concept (from eokg_find_concepts) by 20-year period of document date (bucket_years changes it), language, dataset, qualities, emotions and fragrant spaces; emission dates, raw place labels and carriers (vocabulary concepts mixed with raw words) on request. ' +
   'The languages facet counts text smells only; image smells are in the total and the timeline but have no language. ' +
   'The emission date is extracted from the text but in almost every record equals the document date, so emission_timeline rarely differs from timeline. ' +
   'All values are machine-extracted: dates include OCR noise (reported as out_of_range), and emotions are inferred by a classifier that was not run on medical-heritage, royal-society-corpus, old-bailey-corpus or text-annotation and has no German or Slovenian model. ' +
   'Gesture smells come from texts (Perfuming, mostly French) or from images (Holding one\'s nose); check the datasets facet. ' +
   'year_from and year_to restrict the profile to a period by document date; undated sources drop out, and images can be a large share of a period\'s smells. ' +
   'include_narrower adds sub-concepts (e.g. all flowers) but takes 15–30 s per facet. ' +
-  'Facets that do not fit the time budget are listed in failed_facets, which can also happen without include_narrower when the endpoint is busy; request them again on their own.';
+  'Facets that time out or do not fit the time budget are listed in failed_facets, also without include_narrower; a warning for each says what to try next.';
 
 const fmt = (n) => n.toLocaleString('en-US');
 const shortId = (uri) => uri.slice(VOCAB_PREFIX.length);
 const count = (r) => Math.round(num(r, 'n') ?? 0);
 
-const skipWarning = (f) => `The ${f} facet was skipped (time budget); request it on its own.`;
-const timeoutWarning = (f, narrower) => (narrower
-  ? `The ${f} facet timed out; try without include_narrower or with a narrower concept.`
-  : `The ${f} facet timed out; the endpoint may be busy, so request it on its own.`);
+const smallerQuery = ({ narrower, filtered }) => new Intl.ListFormat('en', { type: 'disjunction' }).format([
+  ...(narrower ? ['without include_narrower'] : []),
+  ...(filtered ? ['without the language or year filter'] : []),
+  'with a narrower concept',
+]);
+
+const skipWarning = (f, scope) => (scope.alone
+  ? `The ${f} facet was skipped (time budget); the endpoint may be busy, so try again later or ${smallerQuery(scope)}.`
+  : `The ${f} facet was skipped (time budget); request it on its own.`);
+
+// Only a budget shared with other facets is worth re-requesting: a query that hit its own limit
+// (a 504 or the per-attempt timeout) is likely to hit it again.
+function timeoutWarning(f, err, scope) {
+  if (!err.budget) return `The ${f} facet timed out; repeating the same request is likely to time out again, so try ${smallerQuery(scope)}.`;
+  return scope.alone
+    ? `The ${f} facet ran out of the time budget; the endpoint may be busy, so try again later or ${smallerQuery(scope)}.`
+    : `The ${f} facet ran out of the time budget it shares with the other facets; request it on its own.`;
+}
 
 function shapeTimeline(rows, basis, bucketYears) {
   const buckets = [];
@@ -150,7 +164,7 @@ function shapeFacet(facet, rows, bucketYears) {
 
 const LIST_LABELS = {
   languages: 'Languages', datasets: 'Datasets', qualities: 'Qualities', emotions: 'Emotions (machine-inferred)',
-  fragrant_spaces: 'Fragrant spaces', smell_sources: 'Smell sources in the same smells', places: 'Place words (raw text)', carriers: 'Carrier words (raw text)',
+  fragrant_spaces: 'Fragrant spaces', smell_sources: 'Smell sources in the same smells', places: 'Place words (raw text)', carriers: 'Carriers (vocabulary concepts and raw words)',
 };
 
 function renderTimeline(t, title) {
@@ -246,11 +260,12 @@ export function registerSmellProfileTool(server) {
         warnings.push(`No ${lang}smells${yearPhrase(out)} are linked to this concept.`);
       } else {
         const report = progressReporter(ctx);
+        const scope = { narrower, filtered: Boolean(language) || yearFrom != null || yearTo != null, alone: facets.length === 1 };
         let done = 0;
         await mapPool(facets, narrower ? 1 : SPARQL_MAX_CONCURRENCY, async (facet) => {
           if (deadline - Date.now() < PROFILE_MIN_FACET_BUDGET_MS) {
             failed.add(facet);
-            warnings.push(skipWarning(facet));
+            warnings.push(skipWarning(facet, scope));
           } else {
             try {
               const rows = await sparqlSelect(`profile_${facet}`, profileFacetQuery(facet, anchor, { bucketYears, top, exclude }), {
@@ -260,7 +275,7 @@ export function registerSmellProfileTool(server) {
             } catch (err) {
               if (err?.timeout !== true) throw err;
               failed.add(facet);
-              warnings.push(timeoutWarning(facet, narrower));
+              warnings.push(timeoutWarning(facet, err, scope));
             }
           }
           done++;

@@ -65,7 +65,12 @@ SELECT ?q ?n (SAMPLE(?pl) AS ?label) (SAMPLE(?rl) AS ?rlabel) WHERE {
   OPTIONAL { GRAPH <${OLFACTORY_OBJECTS_GRAPH}> { ?o skos:prefLabel ?ol FILTER(LANG(?ol) = "en") } }`,
     'o', top, '(SAMPLE(?ol) AS ?label)'),
   places: (a, { top }) => topN(a, '?ex od:F2_perceived ?smell ; crm:P7_took_place_at ?p . ?p rdfs:label ?pl .', 'pl', top),
-  carriers: (a, { top }) => topN(a, '?emission od:F4_had_carrier ?car . ?car rdfs:label ?cl .', 'cl', top),
+  carriers: (a, { top }) => topN(a,
+    `?emission od:F4_had_carrier ?car .
+  { ?car rdfs:label ?cl FILTER(STRSTARTS(STR(?car), "${KG_BASE}object/")) }
+  UNION { GRAPH <${OLFACTORY_OBJECTS_GRAPH}> { ?car skos:prefLabel ?cl FILTER(LANG(?cl) = "en") } }
+  UNION { GRAPH <${FRAGRANT_SPACES_GRAPH}> { ?car skos:prefLabel ?cl FILTER(LANG(?cl) = "en") } }`,
+    'cl', top),
 };
 
 /** `exclude` is the concept URI to leave out of smell_sources (the anchor's own object concept). */

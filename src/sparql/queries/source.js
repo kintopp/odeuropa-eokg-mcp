@@ -16,9 +16,10 @@ export const sourceSmellCountQuery = (src) => `
 SELECT (COUNT(DISTINCT ?smell) AS ?n) WHERE { <${src}> crm:P67_refers_to ?smell . ?smell a od:L11_Smell }`;
 
 export const sourceSmellPageQuery = (src, limit, offset) => `
-SELECT ?smell (SAMPLE(?txt) AS ?excerpt) (GROUP_CONCAT(DISTINCT ?cl; separator="|") AS ?concepts) WHERE {
+SELECT ?smell (SAMPLE(?txt) AS ?excerpt) (GROUP_CONCAT(DISTINCT ?cl; separator="|") AS ?concepts) (GROUP_CONCAT(DISTINCT ?gl; separator="|") AS ?gestures) WHERE {
   { SELECT ?smell WHERE { <${src}> crm:P67_refers_to ?smell . ?smell a od:L11_Smell } ORDER BY ?smell LIMIT ${limit} OFFSET ${offset} }
   OPTIONAL { ?em od:F1_generated ?smell ; od:F3_had_source ?c . GRAPH <${OLFACTORY_OBJECTS_GRAPH}> { ?c skos:prefLabel ?cl FILTER(LANG(?cl) = "en") } }
+  OPTIONAL { ?ex od:F2_perceived ?smell ; od:F5_involved_gesture ?g . GRAPH <${OLFACTORY_GESTURES_GRAPH}> { ?g skos:prefLabel ?gl FILTER(LANG(?gl) = "en") } }
   OPTIONAL { ?frag crm:P67_refers_to ?smell ; rdf:value ?txt }
 } GROUP BY ?smell ORDER BY ?smell`;
 

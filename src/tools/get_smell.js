@@ -38,6 +38,7 @@ export const outputSchema = z.object({
   smell_sources: z.array(idLabel()),
   mentions: z.array(z.string()),
   carriers: z.array(z.string()), times: z.array(z.string()),
+  gestures: z.array(idLabel()),
   places: z.array(idLabel()),
   perceivers: z.array(z.string()), emotions: z.array(z.string()),
   qualities: z.array(idLabel()),
@@ -47,7 +48,7 @@ export const outputSchema = z.object({
 
 const description =
   'Get one smell reference: its source text or image, excerpt and extracted roles. ' +
-  'Roles are machine-extracted: smell source (vocabulary concept plus the words used), carrier, time, place, perceiver, emotions, qualities. ' +
+  'Roles are machine-extracted: smell source (vocabulary concept plus the words used), carrier (a vocabulary concept or the words used), gesture, time, place, perceiver, emotions, qualities. ' +
   'Emotions are inferred by a classifier, not stated in the text. Ids come from eokg_search_smells, eokg_get_source or eokg_find_visual_smells.';
 
 const IMAGE_WARNING = 'This smell was detected in an image, so there is no text excerpt; source.images links the picture.';
@@ -84,6 +85,7 @@ function shapeRoles(rows) {
     mentions: uniqueStrings(objects.map((r) => v(r, 'valLabel'))),
     carriers: labels('carrier'),
     times: labels('time'),
+    gestures: withFallback('gesture'),
     perceivers: labels('perceiver'),
     places: withFallback('place'),
     emotions: uniqueStrings(by('emotion').filter(keep).map((r) => v(r, 'valLabel') ?? labelFromUri(v(r, 'val')))),
@@ -109,7 +111,7 @@ function renderText(s, uuid) {
   const joined = (label, xs) => (xs.length ? `${label}: ${xs.join(', ')}` : undefined);
   const ctx = [
     joined('Time', s.times), joined('Place', s.places.map((p) => p.label)),
-    joined('Carrier', s.carriers), joined('Perceiver', s.perceivers),
+    joined('Carrier', s.carriers), joined('Gesture', s.gestures.map((g) => g.label)), joined('Perceiver', s.perceivers),
   ].filter(Boolean).join(' · ') || undefined;
   lines.push(
     ctx,

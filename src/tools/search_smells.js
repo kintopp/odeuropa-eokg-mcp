@@ -49,7 +49,7 @@ export const outputSchema = z.object({
     id: z.string(), explorer_url: z.string(), score: z.number(), dataset: z.string(),
     source_id: z.string(), source_type: z.enum(['text', 'image']), title: z.string().optional(),
     language: z.string().optional(), date: z.string().optional(),
-    concepts: z.array(z.string()), snippets: z.array(z.string()),
+    concepts: z.array(z.string()), gestures: z.array(z.string()).optional(), snippets: z.array(z.string()),
   })),
   truncated: z.record(z.string(), z.number().int()).optional(),
   warnings: z.array(z.string()).optional(),
@@ -129,6 +129,7 @@ function shapeEnriched(rows, ids, page, filtered, text) {
     const excerpt = rs.map((r) => v(r, 'text')).find(Boolean);
     let snippets = filtered ? [] : page.snippets.get(id) ?? [];
     if (!snippets.length && excerpt) snippets = [makeSnippet(excerpt, text)];
+    const gestures = uniqueStrings(rs.map((r) => v(r, 'gl')));
     return dropUndefined({
       id,
       explorer_url: explorerUrl('smell', id),
@@ -140,6 +141,7 @@ function shapeEnriched(rows, ids, page, filtered, text) {
       language: first && v(first, 'lang'),
       date: first && v(first, 'date'),
       concepts: uniqueStrings(rs.map((r) => v(r, 'cl'))),
+      gestures: gestures.length ? gestures : undefined,
       snippets,
     });
   });
@@ -153,7 +155,8 @@ function renderText(s) {
   const blocks = s.results.map((r, i) => {
     const meta = [isUndated(r) ? 'undated' : r.date, r.language, r.dataset].filter(Boolean).join(', ');
     const concepts = r.concepts.length ? ` — concepts: ${r.concepts.join(', ')}` : '';
-    const lines = [`${s.offset + i + 1}. ${r.title ?? '(untitled)'} (${meta})${concepts}`];
+    const gestures = r.gestures ? ` — gestures: ${r.gestures.join(', ')}` : '';
+    const lines = [`${s.offset + i + 1}. ${r.title ?? '(untitled)'} (${meta})${concepts}${gestures}`];
     for (const sn of r.snippets) lines.push(`   «${sn.replace(/\s+/g, ' ')}»`);
     const src = uuidOf(r.source_id) ?? r.source_id;
     lines.push(

@@ -285,8 +285,9 @@ test('box labels are looked up in both vocabularies that boxes use, each inside 
   await inspect();
   const q = stub.router.calls.find((c) => c.label === 'image_fragments').query;
   // A label outside these graphs leaves the bare concept number; an ungraphed lookup picks up sameAs twin labels.
-  assert.ok(q.includes('GRAPH <http://data.odeuropa.eu/vocabulary/olfactory-objects> { ?body skos:prefLabel'));
-  assert.ok(q.includes('GRAPH <http://data.odeuropa.eu/vocabulary/olfactory-gestures> { ?body skos:prefLabel'));
+  // Separate OPTIONALs: a concept is in one vocabulary only, so one block over both graphs would match nothing.
+  assert.match(q, /OPTIONAL \{ GRAPH <http:\/\/data\.odeuropa\.eu\/vocabulary\/olfactory-objects> \{ \?body skos:prefLabel [^}]*\} \}/);
+  assert.match(q, /OPTIONAL \{ GRAPH <http:\/\/data\.odeuropa\.eu\/vocabulary\/olfactory-gestures> \{ \?body skos:prefLabel [^}]*\} \}/);
 });
 
 test('live: a gesture box carries the gesture label, not the concept number', { skip: !LIVE }, async () => {

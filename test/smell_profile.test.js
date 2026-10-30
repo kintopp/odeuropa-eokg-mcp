@@ -165,16 +165,28 @@ test('a 504 on one facet degrades to failed_facets with a warning; the others ar
   assert.deepEqual(s.failed_facets, ['qualities']);
   assert.equal(s.qualities, undefined);
   assert.ok(s.languages && s.timeline && s.emotions);
-  assert.ok(s.warnings.includes('The qualities facet timed out; the endpoint may be busy, so request it on its own.'));
+  assert.ok(s.warnings.includes('The qualities facet timed out; repeating the same request is likely to time out again, so try with a narrower concept.'));
   assert.ok(res.content[0].text.includes('The qualities facet timed out'));
   assert.equal(labels().filter((l) => l === 'profile_qualities').length, 1, '504 is never retried');
 });
 
-test('a facet timeout under include_narrower advises dropping it, and only then', async () => {
-  await start(baseRoutes({ profile_languages: () => ({ status: 504, body: '<html>Gateway Time-out</html>' }) }));
-  const s = valid(await profile({ include_narrower: true, facets: ['languages'] }));
-  assert.deepEqual(s.failed_facets, ['languages']);
-  assert.ok(s.warnings.includes('The languages facet timed out; try without include_narrower or with a narrower concept.'));
+// Failure modes: a 504 is advised to be re-sent as is; the advice names an option the call did not use,
+// or leaves out the one that made the query heavier.
+test('a facet timeout names only the options this call can drop', async () => {
+  const timedOut = async (args) => {
+    await start(baseRoutes({ profile_languages: () => ({ status: 504, body: '<html>Gateway Time-out</html>' }) }));
+    const s = valid(await profile({ facets: ['languages'], ...args }));
+    await client.close();
+    stub.restore();
+    clearSparqlCache();
+    assert.deepEqual(s.failed_facets, ['languages']);
+    return s.warnings;
+  };
+  const prefix = 'The languages facet timed out; repeating the same request is likely to time out again, so try';
+  assert.ok((await timedOut({ include_narrower: true })).includes(`${prefix} without include_narrower or with a narrower concept.`));
+  assert.ok((await timedOut({ language: 'fr' })).includes(`${prefix} without the language or year filter or with a narrower concept.`));
+  assert.ok((await timedOut({ year_from: 1800 })).includes(`${prefix} without the language or year filter or with a narrower concept.`));
+  assert.ok((await timedOut({ include_narrower: true, year_to: 1900 })).includes(`${prefix} without include_narrower, without the language or year filter, or with a narrower concept.`));
 });
 
 test('a facet whose 200 body stalls past its timeout degrades to failed_facets, sent once', async () => {
@@ -186,8 +198,16 @@ test('a facet whose 200 body stalls past its timeout degrades to failed_facets, 
   const s = valid(res);
   assert.deepEqual(s.failed_facets, ['qualities']);
   assert.ok(s.languages && s.timeline && s.emotions);
-  assert.ok(s.warnings.includes('The qualities facet timed out; the endpoint may be busy, so request it on its own.'));
+  assert.ok(s.warnings.includes('The qualities facet timed out; repeating the same request is likely to time out again, so try with a narrower concept.'));
   assert.equal(labels().filter((l) => l === 'profile_qualities').length, 1, 'a timed-out body read is never retried');
+});
+
+test('carriers are described as a mix of concepts and raw words', async () => {
+  await start(baseRoutes());
+  const res = await profile({ facets: ['carriers'] });
+  assert.ok(res.content[0].text.includes('Carriers (vocabulary concepts and raw words): the 3'));
+  const t = (await client.listTools()).tools.find((x) => x.name === 'eokg_smell_profile');
+  assert.match(t.description, /carriers \(vocabulary concepts mixed with raw words\)/);
 });
 
 test('a non-timeout facet error fails the whole call', async () => {
@@ -336,7 +356,36 @@ test('deadline: facets starved of a slot land in failed_facets at 50 s; total an
     assert.equal(s.concept.label, 'Rose');
     assert.deepEqual([...s.failed_facets].sort(), ['datasets', 'emotions', 'fragrant_spaces', 'languages', 'qualities', 'timeline']);
     assert.deepEqual(facetLabels(), [], 'a facet was sent after the deadline');
+    assert.ok(s.warnings.includes('The qualities facet ran out of the time budget it shares with the other facets; request it on its own.'));
   });
+});
+
+test('deadline: a facet requested alone is never told to request it on its own', async () => {
+  await saturated(async ({ holdRoute, hold, settle }) => {
+    await start(baseRoutes({
+      hold: holdRoute,
+      profile_total: () => { hold(4); return { body: bindings([{ n: '29243' }]) }; },
+    }));
+    const call = profile({ facets: ['qualities'] });
+    await settle();
+    mock.timers.tick(50_000);
+    const res = await race(call, settle);
+    assert.notEqual(res, 'pending', 'still running past its 50 s deadline');
+    const s = valid(res);
+    assert.deepEqual(s.failed_facets, ['qualities']);
+    assert.deepEqual(s.warnings, ['The qualities facet ran out of the time budget; the endpoint may be busy, so try again later or with a narrower concept.']);
+  });
+});
+
+test('deadline: a lone facet skipped for lack of budget is told to try later', async () => {
+  let clock = 1_000_000;
+  mock.method(Date, 'now', () => clock);
+  await start(baseRoutes({
+    profile_total: () => { clock += 46_000; return { body: bindings([{ n: '29243' }]) }; },
+  }));
+  const s = valid(await profile({ facets: ['languages'] }));
+  assert.deepEqual(s.failed_facets, ['languages']);
+  assert.deepEqual(s.warnings, ['The languages facet was skipped (time budget); the endpoint may be busy, so try again later or with a narrower concept.']);
 });
 
 test('input rules fail before any query', async () => {
@@ -419,6 +468,7 @@ test('the description carries the language-facet and emission-date caveats', asy
   const t = (await client.listTools()).tools.find((x) => x.name === 'eokg_smell_profile');
   assert.match(t.description, /languages facet counts text smells only; image smells are in the total and the timeline but have no language/);
   assert.match(t.description, /in almost every record equals the document date, so emission_timeline rarely differs from timeline/);
+  assert.match(t.description, /listed in failed_facets, also without include_narrower; a warning for each says what to try next/);
   assert.match(t.inputSchema.properties.bucket_years.description, /Timeline bucket width: 10, 20 or 50 years\./);
 });
 

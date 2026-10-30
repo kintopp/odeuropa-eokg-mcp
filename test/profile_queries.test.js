@@ -48,6 +48,16 @@ test('fragrant_spaces and datasets filter to local URIs inside the WHERE clause,
   assert.ok(ds.indexOf('STRSTARTS') < ds.indexOf('LIMIT'));
 });
 
+test('carriers count vocabulary concepts under their own label and raw words only from object URIs', () => {
+  const q = profileFacetQuery('carriers', anchor, { top: 10 });
+  // About half of all carriers are vocabulary concepts, which have no rdfs:label of their own.
+  assert.ok(q.includes('GRAPH <http://data.odeuropa.eu/vocabulary/olfactory-objects> { ?car skos:prefLabel ?cl FILTER(LANG(?cl) = "en") }'));
+  assert.ok(q.includes('GRAPH <http://data.odeuropa.eu/vocabulary/fragrant-spaces> { ?car skos:prefLabel ?cl FILTER(LANG(?cl) = "en") }'));
+  // Inference copies twin labels onto vocabulary concepts, so rdfs:label is read for the raw words only.
+  assert.ok(q.includes('?car rdfs:label ?cl FILTER(STRSTARTS(STR(?car), "http://data.odeuropa.eu/object/"))'));
+  assert.ok(q.indexOf('STRSTARTS(STR(?car)') >= 0 && q.indexOf('STRSTARTS(STR(?car)') < q.indexOf('LIMIT'));
+});
+
 test('anchors: exact, narrower, fragrant-spaces', () => {
   assert.ok(anchor.includes(`VALUES ?c { <${ROSE}> }`));
   assert.ok(!anchor.includes('skos:broader*'));

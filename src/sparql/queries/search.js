@@ -2,7 +2,7 @@
 // Language and dataset only ever come from zod enums, so interpolating them is safe.
 
 import { sparqlString } from '../lucene.js';
-import { DATASET_GRAPH_BASE, OLFACTORY_OBJECTS_GRAPH } from '../../config.js';
+import { DATASET_GRAPH_BASE, OLFACTORY_GESTURES_GRAPH, OLFACTORY_OBJECTS_GRAPH } from '../../config.js';
 import { yearBounds } from './years.js';
 
 export const searchCountQuery = (lq) => `
@@ -34,7 +34,7 @@ SELECT DISTINCT ?id ?score WHERE {
 
 // Enrichment for the (at most `limit`) ids of one page.
 export const searchEnrichQuery = (ids) => `
-SELECT ?id ?graph ?source ?type ?title ?lang ?date ?frag ?text ?cl WHERE {
+SELECT ?id ?graph ?source ?type ?title ?lang ?date ?frag ?text ?cl ?gl WHERE {
   VALUES ?id { ${ids.map((i) => `<${i}>`).join(' ')} }
   GRAPH ?graph { ?id a od:L11_Smell }
   ?source crm:P67_refers_to ?id ; a ?type . FILTER NOT EXISTS { ?source rdf:value [] }
@@ -43,4 +43,5 @@ SELECT ?id ?graph ?source ?type ?title ?lang ?date ?frag ?text ?cl WHERE {
   OPTIONAL { ?source schema:dateCreated/rdfs:label ?date }
   OPTIONAL { ?frag crm:P67_refers_to ?id ; rdf:value ?text . }
   OPTIONAL { ?em od:F1_generated ?id ; od:F3_had_source ?c . GRAPH <${OLFACTORY_OBJECTS_GRAPH}> { ?c skos:prefLabel ?cl FILTER(LANG(?cl) = "en") } }
+  OPTIONAL { ?ex od:F2_perceived ?id ; od:F5_involved_gesture ?g . GRAPH <${OLFACTORY_GESTURES_GRAPH}> { ?g skos:prefLabel ?gl FILTER(LANG(?gl) = "en") } }
 }`;

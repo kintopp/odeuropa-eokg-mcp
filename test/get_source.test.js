@@ -143,6 +143,37 @@ test('a fragment id is rejected before any query', async () => {
   assert.equal(stub.router.calls.length, 0);
 });
 
+test('smells with a gesture list it, and smells without one have no gestures field', async () => {
+  const gesturePage = bindings([
+    { smell: uri(`${KG}smell/a1`), concepts: 'Rose', gestures: "Holding one's nose|Smoking" },
+    { smell: uri(`${KG}smell/a2`), concepts: '', gestures: '' },
+  ]);
+  stub = await startStubServer({ ...routes(textMeta), source_smell_page: () => ({ body: gesturePage }) });
+  const res = await call(stub, { id: TEXT_SOURCE });
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.deepEqual(s.smells[0].gestures, ["Holding one's nose", 'Smoking']);
+  assert.deepEqual(s.smells[1], { id: `${KG}smell/a2`, concepts: [] });
+  assert.ok(res.content[0].text.includes("a1 [Rose] — gestures: Holding one's nose, Smoking"));
+});
+
+test('the page query reads gesture labels into their own variable', async () => {
+  stub = await startStubServer(routes(textMeta));
+  await call(stub, { id: TEXT_SOURCE });
+  const q = stub.router.calls.find((c) => c.label === 'source_smell_page').query;
+  // Reusing ?cl would lose the gesture of any smell that also has a smell source.
+  assert.ok(q.includes('?ex od:F2_perceived ?smell ; od:F5_involved_gesture ?g'));
+  assert.ok(q.includes(`GRAPH <${KG}vocabulary/olfactory-gestures> { ?g skos:prefLabel ?gl FILTER(LANG(?gl) = "en") }`));
+  assert.ok(q.includes('GROUP_CONCAT(DISTINCT ?gl; separator="|") AS ?gestures'));
+});
+
+test('live: a gesture image lists the gesture on its smell', { skip: !LIVE }, async () => {
+  const res = await withClient('get-source-live', (c) => c.callTool({
+    name: 'eokg_get_source', arguments: { id: '00aef985-f9ef-5a00-a48c-1e02de16e90d' },
+  }));
+  const s = assertWireValid(outputSchema, res.structuredContent);
+  assert.deepEqual(s.smells[0].gestures, ["Holding one's nose"]);
+});
+
 test('live: The Art of Perfumery', { skip: !LIVE }, async () => {
   const res = await withClient('get-source-live', (c) => c.callTool({
     name: 'eokg_get_source', arguments: { id: TEXT_SOURCE, limit: 5 },

@@ -80,7 +80,7 @@ export const LANGUAGE_NAMES = Object.freeze({
 });
 export const SERVER_INSTRUCTIONS = [
   'Search the European Olfactory Knowledge Graph (Odeuropa): ~2.4M smell references machine-extracted from European texts (en, fr, it, sl, de, nl) and from ~44,000 images of artworks, mostly 1600–1920.',
-  'A "smell" is one extracted reference: a passage or image plus its roles — smell source (a vocabulary concept and the words used), carrier, time, place, perceiver, emotions, qualities.',
+  'A "smell" is one extracted reference: a passage or image plus its roles — smell source (a vocabulary concept and the words used), carrier, gesture, time, place, perceiver, emotions, qualities.',
   'Workflow: `eokg_search_smells` for passages (Lucene syntax, no field prefixes) → `eokg_get_smell` for one reference → `eokg_get_source` for the document or image around it.',
   'Search words without an operator are OR-ed; write AND/OR/NOT in capitals and quote phrases.',
   'For concept-level questions, resolve the concept first with `eokg_find_concepts` (olfactory-objects = what smells, fragrant-spaces = where, olfactory-gestures = how people smelled), then `eokg_smell_profile` for counts over time, languages, datasets, qualities, emotions and spaces, and `eokg_find_visual_smells` + `eokg_inspect_image` for artworks.',

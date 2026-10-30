@@ -38,7 +38,9 @@ export const outputSchema = z.object({
   image_url: z.string().optional(),
   original_image_url: z.string().optional(),
   smell_count: z.number().int(), offset: z.number().int(), limit: z.number().int(), has_more: z.boolean(), next_offset: z.number().int().optional(),
-  smells: z.array(z.object({ id: z.string(), concepts: z.array(z.string()), excerpt: z.string().optional() })),
+  smells: z.array(z.object({
+    id: z.string(), concepts: z.array(z.string()), gestures: z.array(z.string()).optional(), excerpt: z.string().optional(),
+  })),
   detected_objects: z.array(z.object({
     concept_id: z.string(), label: z.string(), score: z.number(), origin: z.enum(['detector', 'manual', 'unknown']),
     box_px: box(),
@@ -49,7 +51,7 @@ export const outputSchema = z.object({
 
 const description =
   'Get a source text or image: its metadata and a page of the smells it contains. ' +
-  'Smells are listed in no meaningful order (the graph keeps no position within the document), each with its vocabulary concepts and a short excerpt. ' +
+  'Smells are listed in no meaningful order (the graph keeps no position within the document), each with its vocabulary concepts, any gestures and a short excerpt. ' +
   'For an image source, also lists the objects the detector found, with bounding boxes; call eokg_inspect_image to see the picture.';
 
 const round1 = (n) => Math.round(n * 10) / 10;
@@ -180,7 +182,8 @@ function renderText(s) {
   if (s.smells.length) {
     lines.push('', EXCERPT_INJECTION_BOUNDARY, ...s.smells.map((m) => {
       const tag = m.concepts.length ? ` [${m.concepts.join(', ')}]` : '';
-      return `${uuidOf(m.id) ?? m.id}${tag}${m.excerpt ? ` «${m.excerpt}»` : ''}`;
+      const gestures = m.gestures ? ` — gestures: ${m.gestures.join(', ')}` : '';
+      return `${uuidOf(m.id) ?? m.id}${tag}${gestures}${m.excerpt ? ` «${m.excerpt}»` : ''}`;
     }));
   }
   lines.push(nextPageLine(s));
@@ -204,11 +207,15 @@ export function registerGetSourceTool(server) {
       );
       const { isImage, imageUrl, originalImageUrl, meta } = shapeSourceMeta(id, metaRows);
       const smellCount = num(countRows[0] ?? {}, 'n') ?? 0;
-      const smells = pageRows.map((r) => ({
-        id: v(r, 'smell'),
-        concepts: uniqueStrings((v(r, 'concepts') ?? '').split('|')),
-        ...(v(r, 'excerpt') && { excerpt: truncateText(v(r, 'excerpt'), SOURCE_EXCERPT_CHARS) }),
-      }));
+      const smells = pageRows.map((r) => {
+        const gestures = uniqueStrings((v(r, 'gestures') ?? '').split('|'));
+        return {
+          id: v(r, 'smell'),
+          concepts: uniqueStrings((v(r, 'concepts') ?? '').split('|')),
+          ...(gestures.length && { gestures }),
+          ...(v(r, 'excerpt') && { excerpt: truncateText(v(r, 'excerpt'), SOURCE_EXCERPT_CHARS) }),
+        };
+      });
 
       const full = {
         ...meta,

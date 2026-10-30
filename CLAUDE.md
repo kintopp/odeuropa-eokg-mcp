@@ -75,6 +75,7 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 
 ## Common Errors
 
+- **Go easy on the public endpoint:** it has no SLA and is shared, so don't loop heavy calls or run bulk or whole-graph probes without need. `EOKG_LIVE=1 npm test` runs test files in parallel and can overload it, which shows up as timeouts in unrelated tests. Run only the live tests a change needs: `EOKG_LIVE=1 node --test --test-concurrency=1 --test-name-pattern="…" <files>`.
 - **Never retry a SPARQL 504:** the gateway's 60 s cut is deterministic for a given query; retrying costs another minute and fails the same way.
 - **luc:snippets over a window:** snippets are computed for every hit in luc:limit; only request them when the window is the page (24 s at 5k hits).
 - **Skosmos 200 + HTML:** an unknown vocab id returns a PHP fatal-error page with status 200; the VOCABS enum prevents it.
@@ -88,4 +89,6 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 - **Skill `name:` must equal its folder name:** renaming the skill means renaming `skill/<name>/`, `SKILL_NAME` in `scripts/build-skill.mjs` and the bundle, then re-uploading it to claude.ai.
 - **Skill frontmatter keys are fixed:** only `name`, `description`, `license`, `allowed-tools`, `metadata`, `compatibility`; anything else (`version`, `last_updated`) goes under `metadata:` as a quoted string, which `build-skill.mjs` and `test/skill.test.js` expect.
 - **Image boxes use two vocabularies:** `oa:hasBody` is an olfactory-objects or olfactory-gestures concept; a label lookup in only one graph leaves the other's boxes labelled with the bare concept number.
+- **Carriers have three kinds of value:** olfactory-objects and fragrant-spaces concepts (label in the vocabulary graph, no `rdfs:label`) and `…/object/<uuid>` words (`rdfs:label`); reading only `rdfs:label` loses about half.
+- **Don't reuse a label variable across `OPTIONAL`s when both can match:** the second can only match the value already bound, so a smell with sources loses its gestures. Bind gesture labels to `?gl`.
 - **Gestures link through experiences:** `od:F5_involved_gesture` (experience) and `oa:hasBody` / `crm:P138_represents` (images), not `crm:P137_exemplifies`.

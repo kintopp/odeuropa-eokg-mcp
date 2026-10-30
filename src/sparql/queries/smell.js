@@ -1,6 +1,11 @@
 // Queries for eokg_get_smell. Each takes a canonical smell URI already validated by parseId.
 
-import { SMELL_MAX_EXCERPTS } from '../../config.js';
+import { KG_BASE } from '../../lib/ids.js';
+import {
+  FRAGRANT_SPACES_GRAPH, OLFACTORY_GESTURES_GRAPH, OLFACTORY_OBJECTS_GRAPH, SMELL_MAX_EXCERPTS,
+} from '../../config.js';
+
+const graphLabel = (graph) => `OPTIONAL { GRAPH <${graph}> { ?val skos:prefLabel ?valLabel FILTER(LANG(?valLabel) = "en") } }`;
 
 export const smellCoreQuery = (id) => `
 SELECT ?graph ?source ?type ?title ?url ?lang ?date ?license ?genre ?author ?artist ?image WHERE {
@@ -23,10 +28,11 @@ export const smellRolesQuery = (id) => `
 SELECT ?role ?val ?valLabel WHERE {
   VALUES ?id { <${id}> }
   { ?em od:F1_generated ?id ; od:F3_had_source ?val . BIND("source" AS ?role) OPTIONAL { ?val skos:prefLabel ?valLabel } OPTIONAL { ?val rdfs:label ?valLabel } }
-  UNION { ?em od:F1_generated ?id ; od:F4_had_carrier ?val . BIND("carrier" AS ?role) OPTIONAL { ?val rdfs:label ?valLabel } }
+  UNION { ?em od:F1_generated ?id ; od:F4_had_carrier ?val . BIND("carrier" AS ?role) ${graphLabel(OLFACTORY_OBJECTS_GRAPH)} ${graphLabel(FRAGRANT_SPACES_GRAPH)} OPTIONAL { ?val rdfs:label ?valLabel FILTER(STRSTARTS(STR(?val), "${KG_BASE}object/")) } }
   UNION { ?em od:F1_generated ?id ; time:hasTime ?val . BIND("time" AS ?role) OPTIONAL { ?val rdfs:label ?valLabel } }
   UNION { ?ex od:F2_perceived ?id ; crm:P7_took_place_at ?val . BIND("place" AS ?role) OPTIONAL { ?val rdfs:label ?valLabel } }
   UNION { ?ex od:F2_perceived ?id ; od:F5_involved_perceiver ?val . BIND("perceiver" AS ?role) OPTIONAL { ?val rdfs:label ?valLabel } }
+  UNION { ?ex od:F2_perceived ?id ; od:F5_involved_gesture ?val . BIND("gesture" AS ?role) ${graphLabel(OLFACTORY_GESTURES_GRAPH)} }
   UNION { ?ex od:F2_perceived ?id . ?val reo:readP27 ?ex . BIND("emotion" AS ?role) OPTIONAL { ?val rdfs:label ?valLabel } }
   UNION { ?a crm:P140_assigned_attribute_to ?id ; crm:P141_assigned ?val . BIND("quality" AS ?role) OPTIONAL { ?val skos:prefLabel ?valLabel } OPTIONAL { ?val rdfs:label ?valLabel } }
 }`;

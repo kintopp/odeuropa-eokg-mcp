@@ -47,8 +47,9 @@ A **smell** is one extracted reference, not a documented odour event. It has:
   document around it: use `eokg_get_source` for the latter.
 - a **smell source** in two parts: the vocabulary `concept` (what the model
   classified it as) and the `mention` (the words actually used in the text).
-- optional roles: carrier, place, perceiver, time, qualities (adjectives), emotions.
-  Roles are extracted strings; many smells have only some of them.
+- optional roles: carrier, gesture, place, perceiver, time, qualities (adjectives),
+  emotions. Roles are extracted; many smells have only some of them. An image smell found
+  through a gesture may have nothing else but its date.
 - **two dates.** The *document date* is when the source was created and drives
   `year_from`/`year_to` and the profile timeline. The *emission date* is meant to be
   the smell's own time, but in almost every record it equals the document date (10 of
@@ -115,10 +116,11 @@ passages that also sit in other datasets (Kostanjevec's *Noč*, 1902, appears in
 `dlib`, in *Ljubljanski zvon* and in `text-annotation`, each with different roles).
 *Fix:* count passages, not records.
 
-**Raw place and carrier strings.** `places` and `carriers` facets are unnormalised
-text ("jardin", "in", "the", "it"). *Symptom:* function words and a mix of
-languages among the top values. *Fix:* use `fragrant_spaces` (vocabulary-linked) for
-"where"; treat raw places and carriers as hints, never as counts of places.
+**Raw place and carrier strings.** The `places` facet is unnormalised text ("jardin",
+"in"). The `carriers` facet mixes vocabulary concepts (Air, Jug) with raw words ("the",
+"in the air"), and one smell can count under both. *Symptom:* function words and a mix
+of languages among the top values. *Fix:* use `fragrant_spaces` (vocabulary-linked) for
+"where"; treat raw places and carriers as hints, and do not add up carrier counts.
 
 **Counts are relative.** The corpus grows steeply after 1800 and its datasets differ
 in size, so almost every concept rises over time. *Symptom:* a timeline that looks
@@ -164,9 +166,10 @@ picture, and report what you see against each label, whatever its origin.
 
 **Slow calls.** `include_narrower` on a broad concept (Flower, Flora) takes 15–30
 seconds per facet and some facets may fall into `failed_facets`; ask for few
-facets, or profile the specific concept. A timed-out query is not retried. When the
-endpoint is busy, a facet can fall into `failed_facets` without `include_narrower` too;
-request it again on its own.
+facets, or profile the specific concept. A facet can land there without
+`include_narrower` too, and its warning says what to do: a facet that only ran out of
+the budget it shares with others can be requested on its own, but a query that timed
+out by itself is likely to do so again, so make it smaller instead of repeating it.
 
 ## Research patterns
 
