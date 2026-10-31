@@ -1,8 +1,11 @@
 ---
 name: odeuropa-eokg
 description: Research guidance for the Odeuropa European Olfactory Knowledge Graph (about 2.4 million machine-extracted smell references from European texts and artworks, mostly 1600–1920, in English, French, Italian, Slovenian, German and Dutch). Use whenever the user asks about smells, scents, odours, perfume, fragrance, stench or olfactory history, historical sensory history, the Odeuropa Smell Explorer, how a smell source (rose, lavender, tobacco, a garden, a church) was described over time or across languages, or smells in paintings and prints, including in French, German, Italian or Dutch (odeur, parfum, Geruch, Duft, odore, profumo, geur), and any time an eokg_ tool is about to be called.
+license: MIT
+compatibility: Requires the odeuropa-eokg-mcp MCP server and network access.
 metadata:
-  last_updated: "2026-10-30"
+  version: "0.7.0"
+  last_updated: "2026-10-31"
 ---
 
 # European Olfactory Knowledge Graph (EOKG)

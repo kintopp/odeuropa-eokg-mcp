@@ -27,6 +27,8 @@ export const SKILL_NAME = 'odeuropa-eokg';
 export const SKILL_DIR = join('skill', SKILL_NAME);
 export const SKILL_SOURCE = join(SKILL_DIR, 'SKILL.md');
 export const SKILL_BUNDLE = join('skill', `${SKILL_NAME}.skill`);
+// Some clients and browsers only accept a .zip extension.
+export const SKILL_BUNDLE_ZIP = `${SKILL_BUNDLE}.zip`;
 // Paths INSIDE the archive. Claude installs a skill from a folder, so every
 // entry must carry that folder level — a bare SKILL.md at the root will not load.
 export const ENTRY_NAME = `${SKILL_NAME}/SKILL.md`;
@@ -48,13 +50,12 @@ export function readSkillFiles(dir = join(root, SKILL_DIR)) {
   });
 }
 
-// The skill's `metadata.version` tracks the server's, so it is written from package.json
-// at build time rather than kept by hand in SKILL.md.
+// The skill's `metadata.version` tracks the server's: package.json owns it, and a
+// rebuild writes it back to SKILL.md so the source folder shows it too.
 function stampVersion(md) {
   const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-  const stamped = md.replace(/^(metadata:\n)/m, `$1  version: "${version}"\n`);
-  if (stamped === md) throw new Error(`${SKILL_SOURCE} has no \`metadata:\` frontmatter line to stamp the version under`);
-  return stamped;
+  if (!/^ {2}version: /m.test(md)) throw new Error(`${SKILL_SOURCE} has no \`metadata.version\` line to sync`);
+  return md.replace(/^ {2}version: .*$/m, `  version: "${version}"`);
 }
 
 /** `metadata.last_updated: YYYY-MM-DD` from the frontmatter, as {year, month, day}. */
@@ -139,6 +140,8 @@ export function buildSkillZip(files) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const files = readSkillFiles();
   const zip = buildSkillZip(files);
+  writeFileSync(join(root, SKILL_SOURCE), files[0].content);
   writeFileSync(join(root, SKILL_BUNDLE), zip);
-  console.log(`${SKILL_BUNDLE} ← ${SKILL_DIR}/ (${files.length} files, ${zip.length} bytes)`);
+  writeFileSync(join(root, SKILL_BUNDLE_ZIP), zip);
+  console.log(`${SKILL_BUNDLE} + .zip copy ← ${SKILL_DIR}/ (${files.length} files, ${zip.length} bytes)`);
 }

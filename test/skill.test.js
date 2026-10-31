@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 import { inflateRawSync } from 'node:zlib';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildSkillZip, readSkillFiles, SKILL_BUNDLE, ENTRY_NAME } from '../scripts/build-skill.mjs';
+import { buildSkillZip, readSkillFiles, SKILL_BUNDLE, SKILL_BUNDLE_ZIP, ENTRY_NAME } from '../scripts/build-skill.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const files = readSkillFiles();
@@ -40,6 +40,27 @@ test('the .skill bundle is a readable zip holding the skill folder, SKILL.md fir
   assert.equal(entries[0]?.name, ENTRY_NAME,
     'a skill installs from a folder, so SKILL.md must sit at <name>/SKILL.md');
   assert.deepEqual(entries, files);
+});
+
+test('the .skill.zip is a byte-identical copy of the .skill', () => {
+  assert.deepEqual(readFileSync(join(ROOT, SKILL_BUNDLE_ZIP)), bundle,
+    `${SKILL_BUNDLE_ZIP} is stale — run \`npm run build:skill\` and commit the result`);
+});
+
+test('SKILL.md carries package.json\'s version in its source and bundle', () => {
+  const { version } = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
+  const source = readFileSync(join(ROOT, 'skill', 'odeuropa-eokg', 'SKILL.md'), 'utf8');
+  assert.match(source, new RegExp(`^ {2}version: "${version.replaceAll('.', '\\.')}"$`, 'm'),
+    'run `npm run build:skill` and commit the result');
+  assert.equal(files.find((f) => f.name === ENTRY_NAME).content, source);
+});
+
+// Their values are per-server choices, so only presence and the spec's cap are checked.
+test('SKILL.md declares a license and a compatibility of at most 500 characters', () => {
+  const md = files.find((f) => f.name === ENTRY_NAME).content;
+  assert.match(md, /^license: \S/m);
+  const compatibility = /^compatibility: (.+)$/m.exec(md)?.[1] ?? '';
+  assert.ok(compatibility.length >= 1 && compatibility.length <= 500, `compatibility is ${compatibility.length} characters`);
 });
 
 // --- a minimal zip reader (central-directory first, as a real unzip does) -----
