@@ -10,7 +10,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { inflateRawSync } from 'node:zlib';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,6 +20,9 @@ import { buildSkillZip, readSkillFiles, SKILL_BUNDLE, SKILL_BUNDLE_ZIP, ENTRY_NA
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const files = readSkillFiles();
 const bundle = readFileSync(join(ROOT, SKILL_BUNDLE));
+const skillMd = files.find((f) => f.name === ENTRY_NAME).content;
+// Field checks read only this: the same text in the body must not satisfy them.
+const frontmatter = skillMd.slice(0, skillMd.indexOf('\n---\n'));
 
 test('the .skill bundle is a rebuild of the current skill folder', () => {
   // The builder is deterministic across machines (entry timestamp from the
@@ -57,10 +61,28 @@ test('SKILL.md carries package.json\'s version in its source and bundle', () => 
 
 // Their values are per-server choices, so only presence and the spec's cap are checked.
 test('SKILL.md declares a license and a compatibility of at most 500 characters', () => {
-  const md = files.find((f) => f.name === ENTRY_NAME).content;
-  assert.match(md, /^license: \S/m);
-  const compatibility = /^compatibility: (.+)$/m.exec(md)?.[1] ?? '';
+  assert.match(frontmatter, /^license: \S/m);
+  const compatibility = /^compatibility: (.+)$/m.exec(frontmatter)?.[1] ?? '';
   assert.ok(compatibility.length >= 1 && compatibility.length <= 500, `compatibility is ${compatibility.length} characters`);
+});
+
+test('a look-alike line in the SKILL.md body never stands in for a frontmatter field', (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'skill-'));
+  t.after(() => rmSync(dir, { recursive: true }));
+  const read = (md) => {
+    writeFileSync(join(dir, 'SKILL.md'), md);
+    return readSkillFiles(dir);
+  };
+  const body = '\n  version: "9.9.9"\n  last_updated: "1999-01-01"\n';
+
+  const stamped = read(`---\nname: x\nmetadata:\n  version: "0"\n  last_updated: "2026-01-01"\n---${body}`);
+  assert.ok(stamped[0].content.endsWith(`---${body}`), 'the body must survive a stamp unchanged');
+  assert.ok(!stamped[0].content.includes('version: "0"'), 'the frontmatter version must be the one stamped');
+  assert.equal(readZip(buildSkillZip(stamped))[0].content, stamped[0].content);
+
+  assert.throws(() => read(`---\nname: x\n---${body}`), /metadata\.version/);
+  const undated = read(`---\nname: x\nmetadata:\n  version: "0"\n---${body}`);
+  assert.throws(() => buildSkillZip(undated), /metadata\.last_updated/);
 });
 
 // --- a minimal zip reader (central-directory first, as a real unzip does) -----
@@ -126,10 +148,8 @@ test('SKILL.md\'s folded description is at most 1,000 characters', () => {
 // Hosts reject a skill whose frontmatter has any other top-level key; extra
 // fields (version, last_updated) belong under `metadata:` as strings.
 test('the bundled SKILL.md frontmatter uses only keys hosts accept', () => {
-  const md = files.find((f) => f.name === ENTRY_NAME).content;
-  const lines = md.split('\n');
-  const front = lines.slice(1, lines.indexOf('---', 1));
-  const allowed = ['name', 'description', 'license', 'allowed-tools', 'metadata', 'compatibility'];
+  const front = frontmatter.split('\n').slice(1);
+  const allowed =['name', 'description', 'license', 'allowed-tools', 'metadata', 'compatibility'];
   for (const l of front.filter((x) => /^[^\s#]/.test(x))) {
     const key = l.slice(0, l.indexOf(':'));
     assert.ok(allowed.includes(key), `frontmatter key "${key}" is not one of ${allowed.join(', ')}`);

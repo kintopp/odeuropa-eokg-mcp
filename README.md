@@ -125,14 +125,14 @@ npm run lint             # ESLint (flat config, Node 24)
 npm test                 # offline suite
 npm run test:live        # also run the live tests (= EOKG_LIVE=1 npm test)
 npm run build:docs       # regenerate docs/tools.md's generated blocks from the server
-npm run build:skill      # repack skill/odeuropa-eokg/ into the committed .skill zip
+npm run build:skill      # sync SKILL.md's version, repack skill/odeuropa-eokg/ into the committed .skill zip + .skill.zip copy
 npm run build:viewer     # rebuild the committed viewer page after editing apps/image-viewer/
 npm run dev:viewer       # preview the image viewer in a browser
 npm run build:iconclass  # rebuild the Iconclass table
 npm run inspector        # open the MCP Inspector against the server
 ```
 
-`npm test` fails if `docs/tools.md`, the `.skill` bundle or the viewer page is stale. Rerun the matching build command and commit the result.
+`npm test` fails if `docs/tools.md`, `SKILL.md`'s version, the `.skill` bundle, its `.skill.zip` copy or the viewer page is stale. Rerun the matching build command and commit the result.
 
 ## Citation
 

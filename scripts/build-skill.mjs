@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Repack the skill/<name>/ folder (SKILL.md + references/) into the installable
-// skill/<name>.skill zip.
+// skill/<name>.skill zip and its .skill.zip copy, syncing SKILL.md's version first.
 //
 // The .skill file is a COMMITTED artifact, not a dist/ build output — it is what
 // someone downloads from the repo to install the skill — so a rebuild that
@@ -14,7 +14,7 @@
 // Node's bundled one compress the same input to different byte counts, which is
 // exactly a CI-vs-laptop mismatch. Content in, bytes out.
 //
-// Usage: npm run build:skill   →   skill/odeuropa-eokg.skill
+// Usage: npm run build:skill   →   skill/odeuropa-eokg.skill + .skill.zip
 
 import { crc32 } from 'node:zlib';
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
@@ -50,19 +50,28 @@ export function readSkillFiles(dir = join(root, SKILL_DIR)) {
   });
 }
 
+// Stamping writes back to the source, so a look-alike line in the body must never
+// stand in for a frontmatter field.
+function frontmatter(md) {
+  const m = /^---\n[\s\S]*?\n---\n/.exec(md);
+  if (!m) throw new Error(`${SKILL_SOURCE} has no frontmatter block`);
+  return m[0];
+}
+
 // The skill's `metadata.version` tracks the server's: package.json owns it, and a
 // rebuild writes it back to SKILL.md so the source folder shows it too.
 function stampVersion(md) {
   const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-  if (!/^ {2}version: /m.test(md)) throw new Error(`${SKILL_SOURCE} has no \`metadata.version\` line to sync`);
-  return md.replace(/^ {2}version: .*$/m, `  version: "${version}"`);
+  const front = frontmatter(md);
+  if (!/^ {2}version: /m.test(front)) throw new Error(`${SKILL_SOURCE} has no \`metadata.version\` line to sync`);
+  return front.replace(/^ {2}version: .*$/m, `  version: "${version}"`) + md.slice(front.length);
 }
 
 /** `metadata.last_updated: YYYY-MM-DD` from the frontmatter, as {year, month, day}. */
 function frontmatterDate(md) {
-  const m = md.match(/^[ \t]+last_updated:\s*"?(\d{4})-(\d{2})-(\d{2})"?\s*$/m);
+  const m = frontmatter(md).match(/^ {2}last_updated: "(\d{4})-(\d{2})-(\d{2})"$/m);
   if (!m) {
-    throw new Error(`${SKILL_SOURCE} has no \`metadata.last_updated: YYYY-MM-DD\` frontmatter field to date the archive with`);
+    throw new Error(`${SKILL_SOURCE} has no \`metadata.last_updated: "YYYY-MM-DD"\` frontmatter field to date the archive with`);
   }
   return { year: Number(m[1]), month: Number(m[2]), day: Number(m[3]) };
 }
