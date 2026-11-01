@@ -24,7 +24,7 @@ https://odeuropa-eokg-mcp-production.up.railway.app/mcp
 
 Anthropic's [instructions](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp) give more detail. The image viewer (`eokg_view_image`) is an [MCP App](https://github.com/modelcontextprotocol/ext-apps) and opens inline in both.
 
-Many other clients also support remotely hosted MCP servers, such as ChatGPT, Mistral's Vibe and open-source applications; please consult their documentation. In particular, the free version of [Mistral's Vibe](https://chat.mistral.ai) already has excellent support for MCP servers and skills (see below). In contrast, ChatGPT can currently (October, 2026) only support the full functionality of this server (in particular, viewing and interacting with images in the chat timeline) in conjunction with a paid Business or Enterprise subscription. Here the viewer is replaced by plain links.
+Many other clients also support remotely hosted MCP servers, such as ChatGPT, Mistral's Vibe and open-source applications; please consult their documentation. In particular, the free version of [Mistral's Vibe](https://chat.mistral.ai) already has excellent support for MCP servers and skills (see below). In contrast, ChatGPT can currently (October, 2026) only support the full functionality of this server (in particular, viewing and interacting with images in the chat timeline) in conjunction with a paid Business or Enterprise subscription. In addition, the free version of ChatGPT still makes it difficult to add a skill file. So at the moment the best way to use the hosted MCP server for free is either with Claude or with Mistral. See below for instructions on how to install the server locally.
 
 ### Local (stdio)
 
@@ -53,7 +53,7 @@ The MCP client starts the server itself once it is registered. Point the client 
 - **Claude Code:** `claude mcp add odeuropa-eokg -- node /absolute/path/to/odeuropa-eokg-mcp/src/index.js`
 - **ChatGPT desktop app and Codex:** add a `[mcp_servers.odeuropa-eokg]` table with `command = "…"` and `args = […]` to `~/.codex/config.toml`. The format is TOML, not JSON.
 
-To check the install without a client, run `npm test`.
+To check the install without a client, run `npm test`. Note that currently (October, 2026) Mistral Vibe can't use a locally hosted MCP server.
 
 ### Skill
 
