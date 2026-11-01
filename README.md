@@ -24,7 +24,7 @@ https://odeuropa-eokg-mcp-production.up.railway.app/mcp
 
 Anthropic's [instructions](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp) give more detail. The image viewer (`eokg_view_image`) is an [MCP App](https://github.com/modelcontextprotocol/ext-apps) and opens inline in both.
 
-Many other clients also support remotely hosted MCP servers, such as ChatGPT, Mistral's Le Chat and open-source applications; please consult their documentation. In clients without MCP Apps support, the viewer is replaced by plain links. Clients that drop image results from MCP tools, among them the Anthropic API's MCP connector, can't see the pictures `eokg_inspect_image` returns; the assistant then has only titles and box labels.
+Many other clients also support remotely hosted MCP servers, such as ChatGPT, Mistral's Vibe and open-source applications; please consult their documentation. In particular, the free version of [Mistral's Vibe](https://chat.mistral.ai) already has excellent support for MCP servers and skills (see below). In contrast, ChatGPT can currently (October, 2026) only support the full functionality of this server (in particular, viewing and interacting with images in the chat timeline) in conjunction with a paid Business or Enterprise subscription. Here the viewer is replaced by plain links.
 
 ### Local (stdio)
 
