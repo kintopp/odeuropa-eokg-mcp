@@ -15,7 +15,7 @@ import { tmpdir } from 'node:os';
 import { inflateRawSync } from 'node:zlib';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildSkillZip, readSkillFiles, SKILL_BUNDLE, SKILL_BUNDLE_ZIP, ENTRY_NAME } from '../scripts/build-skill.mjs';
+import { buildSkillZip, readSkillFiles, SKILL_BUNDLE, ENTRY_NAME } from '../scripts/build-skill.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const files = readSkillFiles();
@@ -46,9 +46,10 @@ test('the .skill bundle is a readable zip holding the skill folder, SKILL.md fir
   assert.deepEqual(entries, files);
 });
 
-test('the .skill.zip is a byte-identical copy of the .skill', () => {
-  assert.deepEqual(readFileSync(join(ROOT, SKILL_BUNDLE_ZIP)), bundle,
-    `${SKILL_BUNDLE_ZIP} is stale — run \`npm run build:skill\` and commit the result`);
+test('skill/odeuropa-eokg.zip is a byte-identical copy of the .skill', () => {
+  // The path is spelled out because the README links to it.
+  assert.deepEqual(readFileSync(join(ROOT, 'skill', 'odeuropa-eokg.zip')), bundle,
+    'skill/odeuropa-eokg.zip is stale — run `npm run build:skill` and commit the result');
 });
 
 test('SKILL.md carries package.json\'s version in its source and bundle', () => {

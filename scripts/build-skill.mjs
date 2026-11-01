@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Repack the skill/<name>/ folder (SKILL.md + references/) into the installable
-// skill/<name>.skill zip and its .skill.zip copy, syncing SKILL.md's version first.
+// skill/<name>.skill zip and its <name>.zip copy, syncing SKILL.md's version first.
 //
 // The .skill file is a COMMITTED artifact, not a dist/ build output — it is what
 // someone downloads from the repo to install the skill — so a rebuild that
@@ -14,7 +14,7 @@
 // Node's bundled one compress the same input to different byte counts, which is
 // exactly a CI-vs-laptop mismatch. Content in, bytes out.
 //
-// Usage: npm run build:skill   →   skill/odeuropa-eokg.skill + .skill.zip
+// Usage: npm run build:skill   →   skill/odeuropa-eokg.skill + odeuropa-eokg.zip
 
 import { crc32 } from 'node:zlib';
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
@@ -27,8 +27,8 @@ export const SKILL_NAME = 'odeuropa-eokg';
 export const SKILL_DIR = join('skill', SKILL_NAME);
 export const SKILL_SOURCE = join(SKILL_DIR, 'SKILL.md');
 export const SKILL_BUNDLE = join('skill', `${SKILL_NAME}.skill`);
-// Some clients and browsers only accept a .zip extension.
-export const SKILL_BUNDLE_ZIP = `${SKILL_BUNDLE}.zip`;
+// Some clients, such as Mistral Vibe, reject the .skill extension. The README links to this file.
+export const SKILL_BUNDLE_ZIP = join('skill', `${SKILL_NAME}.zip`);
 // Paths INSIDE the archive. Claude installs a skill from a folder, so every
 // entry must carry that folder level — a bare SKILL.md at the root will not load.
 export const ENTRY_NAME = `${SKILL_NAME}/SKILL.md`;
@@ -152,5 +152,5 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   writeFileSync(join(root, SKILL_SOURCE), files[0].content);
   writeFileSync(join(root, SKILL_BUNDLE), zip);
   writeFileSync(join(root, SKILL_BUNDLE_ZIP), zip);
-  console.log(`${SKILL_BUNDLE} + .zip copy ← ${SKILL_DIR}/ (${files.length} files, ${zip.length} bytes)`);
+  console.log(`${SKILL_BUNDLE} + ${SKILL_BUNDLE_ZIP} ← ${SKILL_DIR}/ (${files.length} files, ${zip.length} bytes)`);
 }

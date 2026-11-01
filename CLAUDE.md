@@ -44,7 +44,7 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 - `src/lib/`: shared helpers (tool wrapper, errors, budgets, caching, CSV, ids, warnings).
 - `apps/image-viewer/`: MCP App source; `npm run build:viewer` writes the committed `src/apps/image-viewer.html`.
 - `src/data/iconclass.json`: curated Iconclass sidecar, built by `npm run build:iconclass`.
-- `scripts/`: build and measurement scripts. `docs/tools.md`, `skill/odeuropa-eokg.skill` and its `.skill.zip` copy are generated or checked artefacts; `build:skill` also writes `package.json`'s version into `SKILL.md`.
+- `scripts/`: build and measurement scripts. `docs/tools.md`, `skill/odeuropa-eokg.skill` and its `skill/odeuropa-eokg.zip` copy are generated or checked artefacts; `build:skill` also writes `package.json`'s version into `SKILL.md`.
 
 ## Adding a tool touches these places
 
