@@ -172,9 +172,9 @@ picture, and report what you see against each label, whatever its origin.
 **Slow calls.** `include_narrower` on a broad concept (Flower, Flora) takes 15–30
 seconds per facet and some facets may fall into `failed_facets`; ask for few
 facets, or profile the specific concept. A facet can land there without
-`include_narrower` too, and its warning says what to do: a facet that only ran out of
-the budget it shares with others can be requested on its own, but a query that timed
-out by itself is likely to do so again, so make it smaller instead of repeating it.
+`include_narrower` too. Request each failed facet once more, on its own and one call
+at a time; if it fails again, don't repeat it: drop `include_narrower` or the
+filters, or profile a narrower concept, as the warning lists.
 
 ## Research patterns
 

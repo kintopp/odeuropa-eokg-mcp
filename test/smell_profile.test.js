@@ -170,9 +170,9 @@ test('a 504 on one facet degrades to failed_facets with a warning; the others ar
   assert.equal(labels().filter((l) => l === 'profile_qualities').length, 1, '504 is never retried');
 });
 
-// Failure modes: a 504 is advised to be re-sent as is; the advice names an option the call did not use,
-// or leaves out the one that made the query heavier.
-test('a facet timeout names only the options this call can drop', async () => {
+// Failure modes: the advice names an option the call did not use, or leaves out the one that made the query heavier;
+// a failed facet is told to repeat without limit.
+test('a failed facet is advised one repeat, then only the options this call can drop', async () => {
   const timedOut = async (args) => {
     await start(baseRoutes({ profile_languages: () => ({ status: 504, body: '<html>Gateway Time-out</html>' }) }));
     const s = valid(await profile({ facets: ['languages'], ...args }));
@@ -182,20 +182,26 @@ test('a facet timeout names only the options this call can drop', async () => {
     assert.deepEqual(s.failed_facets, ['languages']);
     return s.warnings;
   };
-  const prefix = 'The languages facet timed out; the same request may time out again, so try';
-  assert.ok((await timedOut({ include_narrower: true })).includes(`${prefix} without include_narrower or with a narrower concept.`));
-  assert.ok((await timedOut({ language: 'fr' })).includes(`${prefix} without the language filter or with a narrower concept.`));
-  assert.ok((await timedOut({ year_from: 1800 })).includes(`${prefix} without the year filter or with a narrower concept.`));
-  assert.ok((await timedOut({ language: 'fr', year_to: 1900 })).includes(`${prefix} without the language or year filter or with a narrower concept.`));
-  assert.ok((await timedOut({ include_narrower: true, year_to: 1900 })).includes(`${prefix} without include_narrower, without the year filter, or with a narrower concept.`));
+  const advice = (rest) => [
+    'The languages facet timed out.',
+    `Request each failed facet once more, on its own and one call at a time; if it times out again, try ${rest}`,
+  ];
+  assert.deepEqual(await timedOut({ include_narrower: true }), advice('without include_narrower or with a narrower concept.'));
+  assert.deepEqual(await timedOut({ language: 'fr' }), advice('without the language filter or with a narrower concept.'));
+  assert.deepEqual(await timedOut({ year_from: 1800 }), advice('without the year filter or with a narrower concept.'));
+  assert.deepEqual(await timedOut({ language: 'fr', year_to: 1900 }), advice('without the language or year filter or with a narrower concept.'));
+  assert.deepEqual(await timedOut({ include_narrower: true, year_to: 1900 }), advice('without include_narrower, without the year filter, or with a narrower concept.'));
+  assert.deepEqual(await timedOut({}), advice('with a narrower concept.'));
 });
 
-// Failure modes: a facet is told to repeat a slow query though nothing else was running when it failed; a timeout that
-// happened under our own load is written off; several failed facets are repeated all at once.
-test('a timeout is worth one repeat only if another facet was still running when it failed', async () => {
+// Failure mode: the advice guesses a cause from timing (whether other facets were still running), which the
+// facet's start time and other callers' load decide as much as the query's own cost.
+test('a facet timeout gets the same advice whatever else was running', async () => {
   const gateway504 = () => ({ status: 504, body: '<html>Gateway Time-out</html>' });
-  const REPEAT = 'The languages facet timed out while other facets were running; request it on its own once, one call at a time, and if it times out again, try with a narrower concept.';
-  const NO_REPEAT = 'The languages facet timed out; the same request may time out again, so try with a narrower concept.';
+  const ADVICE = [
+    'The languages facet timed out.',
+    'Request each failed facet once more, on its own and one call at a time; if it times out again, try with a narrower concept.',
+  ];
   const gated = () => {
     let open;
     const gate = new Promise((r) => { open = r; });
@@ -213,7 +219,7 @@ test('a timeout is worth one repeat only if another facet was still running when
     profile_datasets: async () => { await g.wait; return { body: bindings([]) }; },
   }));
   const overlapped = valid(await profile({ facets: ['languages', 'datasets'] }));
-  assert.deepEqual(overlapped.warnings, [REPEAT]);
+  assert.deepEqual(overlapped.warnings, ADVICE);
   await again();
 
   g = gated();
@@ -222,21 +228,27 @@ test('a timeout is worth one repeat only if another facet was still running when
     profile_datasets: () => { g.openSoon(); return { body: bindings([]) }; },
   }));
   const outlasted = valid(await profile({ facets: ['languages', 'datasets'] }));
-  assert.deepEqual(outlasted.warnings, [NO_REPEAT]);
-  await again();
-
-  await start(baseRoutes({ profile_languages: () => ({ status: 504, body: '<html>Gateway Time-out</html>' }) }));
-  const serial = valid(await profile({ facets: ['languages', 'datasets'], include_narrower: true }));
-  assert.deepEqual(serial.warnings, ['The languages facet timed out; the same request may time out again, so try without include_narrower or with a narrower concept.']);
+  assert.deepEqual(outlasted.warnings, ADVICE);
 });
 
-// Failure mode: a timed-out total gets the generic hint, which never names the option that made it slow.
-test('a total that times out names the options this call can drop', async () => {
+// Failure modes: a timed-out total gets the generic hint, which never names the option that made it slow;
+// its advice differs from the facets' policy.
+test('a total that times out is advised one repeat, then the options this call can drop', async () => {
   await start(baseRoutes({ profile_total: () => ({ status: 504, body: '<html>Gateway Time-out</html>' }) }));
   const res = await profile({ include_narrower: true, year_from: 1800 });
   assert.equal(res.isError, true);
-  assert.ok(res.content[0].text.includes('so try without include_narrower, without the year filter, or with a narrower concept.'));
+  assert.ok(res.content[0].text.includes('Try once more; if it times out again, try without include_narrower, without the year filter, or with a narrower concept.'));
   assert.ok(!res.content[0].text.includes('year range'));
+});
+
+// Failure mode: each failed facet repeats the advice, so a model following it sends every repeat at once.
+test('several failed facets get one line of advice', async () => {
+  const gateway504 = () => ({ status: 504, body: '<html>Gateway Time-out</html>' });
+  await start(baseRoutes({ profile_languages: gateway504, profile_qualities: gateway504, profile_emotions: gateway504 }));
+  const s = valid(await profile());
+  assert.deepEqual(s.failed_facets, ['languages', 'qualities', 'emotions']);
+  assert.equal(s.warnings.filter((w) => w.startsWith('Request each failed facet once more')).length, 1);
+  for (const f of s.failed_facets) assert.ok(s.warnings.includes(`The ${f} facet timed out.`));
 });
 
 test('a facet whose 200 body stalls past its timeout degrades to failed_facets, sent once', async () => {
@@ -327,7 +339,11 @@ test('deadline: a facet that would start with under 5 s left is skipped, not sen
   assert.ok(s.timeline);
   assert.deepEqual(s.failed_facets, ['languages', 'datasets']);
   assert.deepEqual(facetLabels(), ['profile_timeline']);
-  assert.ok(s.warnings.includes('The languages facet was skipped (time budget); request it on its own, one call at a time.'));
+  assert.deepEqual(s.warnings, [
+    'The languages facet was skipped: too little of the call\'s time budget was left.',
+    'The datasets facet was skipped: too little of the call\'s time budget was left.',
+    'Request each failed facet once more, on its own and one call at a time; if it times out again, try without include_narrower or with a narrower concept.',
+  ]);
   assert.ok(res.content[0].text.includes('time budget'));
 });
 
@@ -406,11 +422,12 @@ test('deadline: facets starved of a slot land in failed_facets at 50 s; total an
     assert.equal(s.concept.label, 'Rose');
     assert.deepEqual([...s.failed_facets].sort(), ['datasets', 'emotions', 'fragrant_spaces', 'languages', 'qualities', 'timeline']);
     assert.deepEqual(facetLabels(), [], 'a facet was sent after the deadline');
-    assert.ok(s.warnings.includes('The qualities facet ran out of the time budget it shares with the other facets; request it on its own, one call at a time.'));
+    assert.ok(s.warnings.includes('The qualities facet was not finished when the call\'s time budget ran out.'));
   });
 });
 
-test('deadline: a facet requested alone is never told to request it on its own', async () => {
+// Failure mode: a facet that ran out of the call's budget is reported as a timeout of its own.
+test('deadline: a facet requested alone that runs out of the budget is reported as such', async () => {
   await saturated(async ({ holdRoute, hold, settle }) => {
     await start(baseRoutes({
       hold: holdRoute,
@@ -423,11 +440,11 @@ test('deadline: a facet requested alone is never told to request it on its own',
     assert.notEqual(res, 'pending', 'still running past its 50 s deadline');
     const s = valid(res);
     assert.deepEqual(s.failed_facets, ['qualities']);
-    assert.deepEqual(s.warnings, ['The qualities facet ran out of the time budget; the endpoint may be busy, so try again later or with a narrower concept.']);
+    assert.deepEqual(s.warnings, ['The qualities facet was not finished when the call\'s time budget ran out.', 'Request each failed facet once more, on its own and one call at a time; if it times out again, try with a narrower concept.']);
   });
 });
 
-test('deadline: a lone facet skipped for lack of budget is told to try later', async () => {
+test('deadline: a lone facet skipped for lack of budget is reported as skipped', async () => {
   let clock = 1_000_000;
   mock.method(Date, 'now', () => clock);
   await start(baseRoutes({
@@ -435,7 +452,7 @@ test('deadline: a lone facet skipped for lack of budget is told to try later', a
   }));
   const s = valid(await profile({ facets: ['languages'] }));
   assert.deepEqual(s.failed_facets, ['languages']);
-  assert.deepEqual(s.warnings, ['The languages facet was skipped (time budget); the endpoint may be busy, so try again later or with a narrower concept.']);
+  assert.deepEqual(s.warnings, ['The languages facet was skipped: too little of the call\'s time budget was left.', 'Request each failed facet once more, on its own and one call at a time; if it times out again, try with a narrower concept.']);
 });
 
 test('input rules fail before any query', async () => {
@@ -518,7 +535,7 @@ test('the description carries the language-facet and emission-date caveats', asy
   const t = (await client.listTools()).tools.find((x) => x.name === 'eokg_smell_profile');
   assert.match(t.description, /languages facet counts text smells only; image smells are in the total and the timeline but have no language/);
   assert.match(t.description, /in almost every record equals the document date, so emission_timeline rarely differs from timeline/);
-  assert.match(t.description, /listed in failed_facets, also without include_narrower; a warning for each says what to try next/);
+  assert.match(t.description, /listed in failed_facets, also without include_narrower; request each once more on its own, and if it fails again, make the query smaller/);
   assert.match(t.inputSchema.properties.bucket_years.description, /Timeline bucket width: 10, 20 or 50 years\./);
 });
 

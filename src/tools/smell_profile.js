@@ -86,7 +86,7 @@ const description =
   'Gesture smells come from texts (Perfuming, mostly French) or from images (Holding one\'s nose); check the datasets facet. ' +
   'year_from and year_to restrict the profile to a period by document date; undated sources drop out, and images can be a large share of a period\'s smells. ' +
   'include_narrower adds sub-concepts (e.g. all flowers) but takes 15–30 s per facet. ' +
-  'Facets that time out or do not fit the time budget are listed in failed_facets, also without include_narrower; a warning for each says what to try next.';
+  'Facets that time out or do not fit the time budget are listed in failed_facets, also without include_narrower; request each once more on its own, and if it fails again, make the query smaller as the warning says.';
 
 const fmt = (n) => n.toLocaleString('en-US');
 const shortId = (uri) => uri.slice(VOCAB_PREFIX.length);
@@ -98,20 +98,15 @@ const smallerQuery = ({ narrower, filters }) => new Intl.ListFormat('en', { type
   'with a narrower concept',
 ]);
 
-const budgetAdvice = (scope) => (scope.alone
-  ? `the endpoint may be busy, so try again later or ${smallerQuery(scope)}.`
-  : 'request it on its own, one call at a time.');
+// Which limit ended a query depends on when it started and on other callers' load, not only on its cost,
+// so the advice is one policy and never a guess at the cause.
+const retryAdvice = (scope) => `if it times out again, try ${smallerQuery(scope)}.`;
+const facetAdvice = (scope) => `Request each failed facet once more, on its own and one call at a time; ${retryAdvice(scope)}`;
 
-const skipWarning = (f, scope) => `The ${f} facet was skipped (time budget); ${budgetAdvice(scope)}`;
-
-// A query that hit its own limit (a 504 or the per-attempt timeout) may hit it again, so only one
-// that was still sharing the endpoint with other facets is worth repeating, and only once: the load may have been ours.
-function timeoutWarning(f, err, scope, othersRunning) {
-  if (err.budget) return `The ${f} facet ran out of the time budget${scope.alone ? '' : ' it shares with the other facets'}; ${budgetAdvice(scope)}`;
-  return othersRunning
-    ? `The ${f} facet timed out while other facets were running; request it on its own once, one call at a time, and if it times out again, try ${smallerQuery(scope)}.`
-    : `The ${f} facet timed out; the same request may time out again, so try ${smallerQuery(scope)}.`;
-}
+const skipWarning = (f) => `The ${f} facet was skipped: too little of the call's time budget was left.`;
+const timeoutWarning = (f, err) => (err.budget
+  ? `The ${f} facet was not finished when the call's time budget ran out.`
+  : `The ${f} facet timed out.`);
 
 function shapeTimeline(rows, basis, bucketYears) {
   const buckets = [];
@@ -240,14 +235,14 @@ export function registerSmellProfileTool(server) {
       const exclude = vocab.anchor === 'source' ? concept : undefined;
 
       const filters = [...(language ? ['language'] : []), ...(yearFrom != null || yearTo != null ? ['year'] : [])];
-      const scope = { narrower, filters, alone: facets.length === 1 };
+      const scope = { narrower, filters };
 
       const [totalRows, labelRows] = await Promise.all([
         sparqlSelect('profile_total', profileTotalQuery(anchor), { signal, deadline }),
         sparqlSelect('concept_label', conceptLabelQuery(concept, vocab.name), { signal, deadline }),
       ]).catch((err) => {
         if (err?.timeout !== true) throw err;
-        throw new ToolError(err.message, `The same request may time out again, so try ${smallerQuery(scope)}.`);
+        throw new ToolError(err.message, `Try once more; ${retryAdvice(scope)}`);
       });
       const totalSmells = totalRows.length ? count(totalRows[0]) : 0;
       const label = pickLabel(labelRows.map((r) => r.l));
@@ -269,13 +264,11 @@ export function registerSmellProfileTool(server) {
       } else {
         const report = progressReporter(ctx);
         let done = 0;
-        let running = 0;
         await mapPool(facets, narrower ? 1 : SPARQL_MAX_CONCURRENCY, async (facet) => {
           if (deadline - Date.now() < PROFILE_MIN_FACET_BUDGET_MS) {
             failed.add(facet);
-            warnings.push(skipWarning(facet, scope));
+            warnings.push(skipWarning(facet));
           } else {
-            running++;
             try {
               const rows = await sparqlSelect(`profile_${facet}`, profileFacetQuery(facet, anchor, { bucketYears, top, exclude }), {
                 signal, deadline,
@@ -284,14 +277,13 @@ export function registerSmellProfileTool(server) {
             } catch (err) {
               if (err?.timeout !== true) throw err;
               failed.add(facet);
-              warnings.push(timeoutWarning(facet, err, scope, running > 1));
-            } finally {
-              running--;
+              warnings.push(timeoutWarning(facet, err));
             }
           }
           done++;
           report(done, facets.length, `Facet ${done}/${facets.length}: ${facet}`);
         });
+        if (failed.size) warnings.push(facetAdvice(scope));
       }
       const imageRows = (out.datasets ?? []).filter((d) => IMAGE_DATASETS.includes(d.label));
       const images = imageRows.reduce((n, d) => n + d.count, 0);
