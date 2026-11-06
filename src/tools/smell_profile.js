@@ -100,7 +100,7 @@ const smallerQuery = ({ narrower, filters }) => new Intl.ListFormat('en', { type
 
 // Which limit ended a query depends on when it started and on other callers' load, not only on its cost,
 // so the advice is one policy and never a guess at the cause.
-const retryAdvice = (scope) => `if it times out again, try ${smallerQuery(scope)}.`;
+const retryAdvice = (scope) => `if it fails again, try ${smallerQuery(scope)}.`;
 const facetAdvice = (scope) => `Request each failed facet once more, on its own and one call at a time; ${retryAdvice(scope)}`;
 
 const skipWarning = (f) => `The ${f} facet was skipped: too little of the call's time budget was left.`;

@@ -184,7 +184,7 @@ test('a failed facet is advised one repeat, then only the options this call can 
   };
   const advice = (rest) => [
     'The languages facet timed out.',
-    `Request each failed facet once more, on its own and one call at a time; if it times out again, try ${rest}`,
+    `Request each failed facet once more, on its own and one call at a time; if it fails again, try ${rest}`,
   ];
   assert.deepEqual(await timedOut({ include_narrower: true }), advice('without include_narrower or with a narrower concept.'));
   assert.deepEqual(await timedOut({ language: 'fr' }), advice('without the language filter or with a narrower concept.'));
@@ -200,7 +200,7 @@ test('a facet timeout gets the same advice whatever else was running', async () 
   const gateway504 = () => ({ status: 504, body: '<html>Gateway Time-out</html>' });
   const ADVICE = [
     'The languages facet timed out.',
-    'Request each failed facet once more, on its own and one call at a time; if it times out again, try with a narrower concept.',
+    'Request each failed facet once more, on its own and one call at a time; if it fails again, try with a narrower concept.',
   ];
   const gated = () => {
     let open;
@@ -237,7 +237,7 @@ test('a total that times out is advised one repeat, then the options this call c
   await start(baseRoutes({ profile_total: () => ({ status: 504, body: '<html>Gateway Time-out</html>' }) }));
   const res = await profile({ include_narrower: true, year_from: 1800 });
   assert.equal(res.isError, true);
-  assert.ok(res.content[0].text.includes('Try once more; if it times out again, try without include_narrower, without the year filter, or with a narrower concept.'));
+  assert.ok(res.content[0].text.includes('Try once more; if it fails again, try without include_narrower, without the year filter, or with a narrower concept.'));
   assert.ok(!res.content[0].text.includes('year range'));
 });
 
@@ -342,7 +342,7 @@ test('deadline: a facet that would start with under 5 s left is skipped, not sen
   assert.deepEqual(s.warnings, [
     'The languages facet was skipped: too little of the call\'s time budget was left.',
     'The datasets facet was skipped: too little of the call\'s time budget was left.',
-    'Request each failed facet once more, on its own and one call at a time; if it times out again, try without include_narrower or with a narrower concept.',
+    'Request each failed facet once more, on its own and one call at a time; if it fails again, try without include_narrower or with a narrower concept.',
   ]);
   assert.ok(res.content[0].text.includes('time budget'));
 });
@@ -440,7 +440,7 @@ test('deadline: a facet requested alone that runs out of the budget is reported 
     assert.notEqual(res, 'pending', 'still running past its 50 s deadline');
     const s = valid(res);
     assert.deepEqual(s.failed_facets, ['qualities']);
-    assert.deepEqual(s.warnings, ['The qualities facet was not finished when the call\'s time budget ran out.', 'Request each failed facet once more, on its own and one call at a time; if it times out again, try with a narrower concept.']);
+    assert.deepEqual(s.warnings, ['The qualities facet was not finished when the call\'s time budget ran out.', 'Request each failed facet once more, on its own and one call at a time; if it fails again, try with a narrower concept.']);
   });
 });
 
@@ -452,7 +452,7 @@ test('deadline: a lone facet skipped for lack of budget is reported as skipped',
   }));
   const s = valid(await profile({ facets: ['languages'] }));
   assert.deepEqual(s.failed_facets, ['languages']);
-  assert.deepEqual(s.warnings, ['The languages facet was skipped: too little of the call\'s time budget was left.', 'Request each failed facet once more, on its own and one call at a time; if it times out again, try with a narrower concept.']);
+  assert.deepEqual(s.warnings, ['The languages facet was skipped: too little of the call\'s time budget was left.', 'Request each failed facet once more, on its own and one call at a time; if it fails again, try with a narrower concept.']);
 });
 
 test('input rules fail before any query', async () => {
