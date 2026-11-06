@@ -32,6 +32,16 @@ An MCP server over the European Olfactory Knowledge Graph (EOKG, Odeuropa): a pu
 - **A push to `main` that touches `src/`, `package.json` or `package-lock.json` redeploys the public Railway service.** Push only when the user asks.
 - Test rules are in `test/CLAUDE.md`. Never delete or weaken a failing test.
 
+## Review findings
+
+Fixes of latent review findings bring in defects of their own, which the next review finds. So:
+
+- **Fix now only what is wrong today:** a wrong result or crash on the live endpoint, or a false model-facing message, when the fix is local. Confirm it with one anchored call, not a sweep.
+- **Log latent findings; don't fix them.** A finding that today's data or load doesn't trigger goes to the local review log (gitignored), and is fixed in the next commit that touches its code.
+- **A fix commit changes what its findings name, with their tests, and nothing more.** A finding that needs a new helper, flag, option, output field or schema change is a redesign: ask first, then make it a feature commit with its own review.
+- **Review a fix commit once, at its own size:** `/code-review` of its diff, not of the branch again. A fix that changes only wording, tests or docs needs no further review.
+- **Advice states facts and one fixed policy.** A hint that guesses a cause the code can't observe (load, which limit mattered) is wrong in cases no offline test catches.
+
 ## Architecture
 
 - `src/index.js`, `src/server.js`: stdio entry point and tool registration.
