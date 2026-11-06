@@ -236,7 +236,7 @@ test('content-length above the limit is refused without reading the body', async
   );
   const res = await inspect();
   assert.equal(res.isError, true);
-  assert.ok(res.content[0].text.includes('over the 4.5 MB'));
+  assert.ok(res.content[0].text.includes('over the 3.7 MB'));
   assert.ok(res.content[0].text.includes(`Open ${IMAGE_URL} in a browser`));
   assert.equal(pulled, false);
 });
@@ -247,7 +247,7 @@ test('a chunked body over the limit (no content-length) is refused', async () =>
   });
   const res = await inspect();
   assert.equal(res.isError, true);
-  assert.ok(res.content[0].text.includes('over the 4.5 MB'));
+  assert.ok(res.content[0].text.includes('over the 3.7 MB'));
 });
 
 test('a refused redirect / network failure reads as an unexpected redirect', async () => {

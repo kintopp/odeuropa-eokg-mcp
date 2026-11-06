@@ -137,7 +137,7 @@ export const SNIPPET_CHARS = 300;
 
 // Images: IMAGE_URL_RE is a security boundary (the only host the server ever fetches binaries from).
 export const IMAGE_URL_RE = /^https:\/\/data\.odeuropa\.eu\/image\/[A-Za-z0-9._~%-]+$/;
-export const MAX_IMAGE_BYTES = 4_500_000; // smallest per-image budget across hosts (Bedrock/Vertex 5 MB)
+export const MAX_IMAGE_BYTES = 3_700_000; // Bedrock/Vertex allow 5 MB per image after base64 (4/3 larger)
 export const VISION_MAX_EDGE = 1988; // long edge a vision encoder accepts without downscaling
 export const IMAGE_CACHE_MAX = 16;
 export const SOURCE_DEFAULT_LIMIT = 20;
