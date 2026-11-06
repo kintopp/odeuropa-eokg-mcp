@@ -228,7 +228,7 @@ filters, or profile a narrower concept, as the warning lists.
    artist and date. Hundreds of hand-drawn images can precede the first detector-only one.
    Images with only low-confidence boxes are hidden and counted; `min_score: 0` brings them back.
 2. `eokg_inspect_image({ id })` → look at the picture; compare boxes with what you see.
-   The user does not see this picture. To show it, call `eokg_view_image({ id })`,
+   This picture is for your own analysis. To show it to the user, call `eokg_view_image({ id })`,
    which opens a viewer; never embed the image as a Markdown image. Boxes start
    hidden and the user can switch them with the viewer's Boxes button; pass
    `show_boxes: true` only when the user asks to see them. Some clients drop MCP image

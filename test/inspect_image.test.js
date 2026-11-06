@@ -95,7 +95,7 @@ test('percent boxes are 100 * px / dimensions rounded to 2 decimals, in score or
 // Failure modes:
 // - the record page or original image is dropped from the text the model reads;
 // - a link line appears with `undefined` when the source has no record page;
-// - the "user cannot see it" note is missing from the text channel;
+// - the "for your own analysis" note is missing from the text channel, or it claims what the user does or does not see;
 // - structured output omits url/original_image_url, or emits them empty;
 // - the text result still invites embedding the image (no plain-link instruction).
 test('links: record page, hosted image and original appear in text and structured output', async () => {
@@ -107,7 +107,8 @@ test('links: record page, hosted image and original appear in text and structure
   assert.ok(text.includes('Record: https://rkd.nl/explore/images/56354'));
   assert.ok(text.includes(`Image: ${IMAGE_URL}`));
   assert.ok(text.includes(`Original: ${RKD_URL}`));
-  assert.ok(text.includes('the user does not see it'));
+  assert.ok(text.includes('for your own analysis'));
+  assert.doesNotMatch(text, /user (does not|doesn't|cannot|can't|will not) see|user sees|returned to you only/i);
   assert.ok(text.includes('call eokg_view_image'));
   assert.ok(text.includes('never embed these links as Markdown images'));
 });
@@ -137,13 +138,16 @@ test('content[0] is the image; structuredContent carries no image bytes', async 
 
 // Failure modes:
 // - the description still says "may not render", which lets the model try an embed;
-// - the Markdown-image prohibition or the pointer to eokg_view_image is missing from the description.
+// - the Markdown-image prohibition or the pointer to eokg_view_image is missing from the description;
+// - the description names no purpose for the picture, or claims what the user does or does not see.
 test('the description forbids Markdown image embeds and points to eokg_view_image', async () => {
   const { tools } = await client.listTools();
   const d = tools.find((x) => x.name === 'eokg_inspect_image').description;
   assert.ok(d.includes('never embed an image URL as a Markdown image'));
   assert.ok(d.includes('call eokg_view_image'));
   assert.ok(!d.includes('may not render'));
+  assert.ok(d.includes('for your own analysis'));
+  assert.doesNotMatch(d, /user (does not|doesn't|cannot|can't|will not) see|user sees|returned to you only/i);
 });
 
 test('min_score 0.94 keeps the three top boxes and counts the rest as hidden', async () => {

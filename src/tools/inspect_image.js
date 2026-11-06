@@ -32,7 +32,7 @@ const description =
   'Look at an image source, with the smell-related objects detected in it. ' +
   'Returns the picture itself plus each annotated object (vocabulary concept, bounding box as % of width/height from the top-left, and origin: manual boxes were drawn by the Odeuropa team, detector boxes come from an object detector with a confidence score). ' +
   'Detector boxes can be wrong; compare them with what you see. Use these boxes rather than estimating coordinates yourself. ' +
-  'The picture is returned to you only. To show it to the user, call eokg_view_image; never embed an image URL as a Markdown image (![](…)). ' +
+  'The picture is for your own analysis; to show it to the user, call eokg_view_image, and never embed an image URL as a Markdown image (![](…)). ' +
   'Takes a source id from eokg_get_source, eokg_get_smell (source.id) or eokg_find_visual_smells.';
 
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -53,7 +53,7 @@ function renderText(s) {
   const size = s.width ? `${s.width}×${s.height} px, ` : '';
   const lines = [`"${s.title ?? '(untitled)'}"${who}${when}, ${size}${Math.round(s.byte_size / 1000)} KB.`];
   lines.push(...imageLinkLines(s));
-  lines.push('The picture above is for your own analysis; the user does not see it. To show it, call eokg_view_image; never embed these links as Markdown images, which display blank.');
+  lines.push('The picture above is for your own analysis; to show it to the user, call eokg_view_image; never embed these links as Markdown images, which display blank.');
   const framing = s.width ? 'boxes as % x,y,w,h from top-left' : 'boxes in pixels x,y,w,h from top-left';
   lines.push(`Detected objects (score ≥ ${s.min_score}; ${framing}):`);
   for (const o of s.objects) {

@@ -185,7 +185,7 @@ Fetches the picture of an image source together with its annotated objects: conc
 ### Tool description
 
 <!-- generated:eokg_inspect_image:description -->
-> Look at an image source, with the smell-related objects detected in it. Returns the picture itself plus each annotated object (vocabulary concept, bounding box as % of width/height from the top-left, and origin: manual boxes were drawn by the Odeuropa team, detector boxes come from an object detector with a confidence score). Detector boxes can be wrong; compare them with what you see. Use these boxes rather than estimating coordinates yourself. The picture is returned to you only. To show it to the user, call eokg_view_image; never embed an image URL as a Markdown image (![](…)). Takes a source id from eokg_get_source, eokg_get_smell (source.id) or eokg_find_visual_smells.
+> Look at an image source, with the smell-related objects detected in it. Returns the picture itself plus each annotated object (vocabulary concept, bounding box as % of width/height from the top-left, and origin: manual boxes were drawn by the Odeuropa team, detector boxes come from an object detector with a confidence score). Detector boxes can be wrong; compare them with what you see. Use these boxes rather than estimating coordinates yourself. The picture is for your own analysis; to show it to the user, call eokg_view_image, and never embed an image URL as a Markdown image (![](…)). Takes a source id from eokg_get_source, eokg_get_smell (source.id) or eokg_find_visual_smells.
 <!-- /generated -->
 
 ### Parameters
