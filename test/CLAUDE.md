@@ -36,4 +36,4 @@ it guards. Order checks assert presence too: `indexOf(a) >= 0 && indexOf(a) < in
 - Time: stub `Date.now` with `mock.method` and let a stub route advance the fake clock (`smell_profile.test.js`). Don't add
   a config knob for tests.
 - Call `clearSparqlCache()` / `clearImageCache()` between tests that reuse a query.
-- Live tests run sequentially and never retry a 504: the gateway's 60 s cut repeats, and each retry costs another minute.
+- Tests within a live file run in order, but `npm run test:live` runs the files in parallel. Never retry a 504: the gateway's 60 s cut repeats, and each retry costs another minute.

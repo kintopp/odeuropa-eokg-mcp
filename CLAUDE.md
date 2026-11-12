@@ -89,7 +89,7 @@ Fixes of latent review findings bring in defects of their own, which the next re
 - **Never retry a SPARQL 504:** the gateway's 60 s cut is deterministic for a given query; retrying costs another minute and fails the same way. Profile facets usually hit `REQUEST_TIMEOUT_MS` or `PROFILE_CALL_DEADLINE_MS` first, which depend on load, so `eokg_smell_profile` advises one repeat of a failed facet; keep that advice a fixed policy.
 - **luc:snippets over a window:** snippets are computed for every hit in luc:limit; only request them when the window is the page (24 s at 5k hits).
 - **Skosmos 200 + HTML:** an unknown vocab id returns a PHP fatal-error page with status 200; the VOCABS enum prevents it.
-- **railway.json is not read:** Railway's Config as Code is deprecated (new services cannot use it; existing ones stop on 2026-12-01). Service config lives in .railway/railway.ts and is applied with railway config apply; code is deployed separately.
+- **railway.json is not read:** Railway's Config as Code is deprecated. Service config lives in .railway/railway.ts and is applied with railway config apply; code is deployed separately.
 - **`svg.hidden = true` does nothing:** `hidden` is an HTML element property; on an SVGElement it is a plain JS expando. Hide SVG with a class and `display: none`.
 - **closeMatch is corrupt:** never read skos:closeMatch for Iconclass; use src/data/iconclass.json.
 - **`SAMPLE(?label)` picks up sameAs twin labels:** inference copies GeoNames and Wikidata labels onto vocabulary concepts; bind labels inside the vocabulary's named graph.

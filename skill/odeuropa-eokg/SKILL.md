@@ -242,8 +242,6 @@ filters, or profile a narrower concept, as the warning lists.
 
 ### 5. Show or describe a named artwork
 
-Aim for two tool calls.
-
 1. `eokg_search_smells({ text: "\"smoking equipment\"", in: "title" })` with distinctive
    words from the title. Titles carry no artist names, and the artist is not searchable.
    Each hit is one smell, so the same work can appear several times; group hits by
