@@ -14,7 +14,7 @@ const PREVIEW = typeof window !== 'undefined' && window.parent === window;
 const root = document.getElementById('root');
 
 const app = PREVIEW ? null : new App(
-  { name: 'odeuropa-image-viewer', version: '0.7.0' },
+  { name: 'odeuropa-image-viewer', version: '0.7.1' },
   { availableDisplayModes: ['inline', 'fullscreen'] },
   { autoResize: true },
 );

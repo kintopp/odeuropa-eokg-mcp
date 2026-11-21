@@ -1,7 +1,7 @@
 {
   "name": "odeuropa-eokg",
   "displayName": "Odeuropa EOKG",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Search the European Olfactory Knowledge Graph (Odeuropa): about 2.4 million smell references from European texts and artworks, mostly 1600–1920, with a research guidance skill.",
   "author": {
     "name": "University of Basel",

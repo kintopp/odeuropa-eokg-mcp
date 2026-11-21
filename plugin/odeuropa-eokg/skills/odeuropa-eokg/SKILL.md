@@ -4,8 +4,8 @@ description: Research guidance for the Odeuropa European Olfactory Knowledge Gra
 license: MIT
 compatibility: Requires the odeuropa-eokg-mcp MCP server and network access.
 metadata:
-  version: "0.7.0"
-  last_updated: "2026-10-31"
+  version: "0.7.1"
+  last_updated: "2026-11-21"
 ---
 
 # European Olfactory Knowledge Graph (EOKG)
