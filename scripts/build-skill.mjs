@@ -14,10 +14,14 @@
 // Node's bundled one compress the same input to different byte counts, which is
 // exactly a CI-vs-laptop mismatch. Content in, bytes out.
 //
-// Usage: npm run build:skill   →   skill/odeuropa-eokg.skill + odeuropa-eokg.zip
+// It also writes the same files into the plugin folder's skills/<name>/ and the
+// version into both plugin manifests, because a marketplace installs the plugin
+// from a git subdirectory, so the skill must sit inside that folder as real files.
+//
+// Usage: npm run build:skill   →   skill/odeuropa-eokg.skill + odeuropa-eokg.zip + plugin/odeuropa-eokg/
 
 import { crc32 } from 'node:zlib';
-import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -32,6 +36,9 @@ export const SKILL_BUNDLE_ZIP = join('skill', `${SKILL_NAME}.zip`);
 // Paths INSIDE the archive. Claude installs a skill from a folder, so every
 // entry must carry that folder level — a bare SKILL.md at the root will not load.
 export const ENTRY_NAME = `${SKILL_NAME}/SKILL.md`;
+export const PLUGIN_DIR = join('plugin', SKILL_NAME);
+// Claude reads .claude-plugin/plugin.json; ChatGPT and Codex read the root plugin.json.
+export const PLUGIN_MANIFESTS = [join(PLUGIN_DIR, '.claude-plugin', 'plugin.json'), join(PLUGIN_DIR, 'plugin.json')];
 
 /**
  * Every file in the skill folder as [{ name, content }], `name` being its
@@ -152,5 +159,18 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   writeFileSync(join(root, SKILL_SOURCE), files[0].content);
   writeFileSync(join(root, SKILL_BUNDLE), zip);
   writeFileSync(join(root, SKILL_BUNDLE_ZIP), zip);
-  console.log(`${SKILL_BUNDLE} + ${SKILL_BUNDLE_ZIP} ← ${SKILL_DIR}/ (${files.length} files, ${zip.length} bytes)`);
+
+  const pluginSkills = join(root, PLUGIN_DIR, 'skills');
+  rmSync(pluginSkills, { recursive: true, force: true });
+  for (const { name, content } of files) {
+    const dest = join(pluginSkills, name);
+    mkdirSync(dirname(dest), { recursive: true });
+    writeFileSync(dest, content);
+  }
+  const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  for (const rel of PLUGIN_MANIFESTS) {
+    const manifest = JSON.parse(readFileSync(join(root, rel), 'utf8'));
+    writeFileSync(join(root, rel), `${JSON.stringify({ ...manifest, version }, null, 2)}\n`);
+  }
+  console.log(`${SKILL_BUNDLE} + ${SKILL_BUNDLE_ZIP} + ${PLUGIN_DIR}/ ← ${SKILL_DIR}/ (${files.length} files, ${zip.length} bytes)`);
 }

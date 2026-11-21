@@ -1,0 +1,31 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "odeuropa-eokg",
+  "version": "0.7.0",
+  "description": "Search the European Olfactory Knowledge Graph (Odeuropa): about 2.4 million smell references from European texts and artworks, mostly 1600–1920, with a research guidance skill.",
+  "author": {
+    "name": "University of Basel",
+    "url": "https://rise.unibas.ch/en/"
+  },
+  "homepage": "https://github.com/kintopp/odeuropa-eokg-mcp",
+  "repository": "https://github.com/kintopp/odeuropa-eokg-mcp",
+  "license": "MIT",
+  "keywords": [
+    "odeuropa",
+    "smell",
+    "olfactory",
+    "history",
+    "digital-humanities"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Odeuropa EOKG",
+        "shortDescription": "Search historical smell references in European texts and artworks",
+        "developerName": "University of Basel",
+        "category": "Productivity",
+        "websiteURL": "https://github.com/kintopp/odeuropa-eokg-mcp"
+      }
+    }
+  }
+}

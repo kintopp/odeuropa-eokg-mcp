@@ -10,10 +10,10 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { inflateRawSync } from 'node:zlib';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildSkillZip, readSkillFiles, SKILL_BUNDLE, ENTRY_NAME } from '../scripts/build-skill.mjs';
 
@@ -169,4 +169,54 @@ test('the place-type recipe requests the smell_sources facet its answer needs', 
   const call = /eokg_smell_profile\(\{[^}]*facets: \[([^\]]*)\][^}]*\}\)/.exec(section);
   assert.ok(call, 'the recipe has no eokg_smell_profile call with facets');
   assert.ok(call[1].includes('"smell_sources"'), `facets are [${call[1]}]`);
+});
+
+// --- plugin/odeuropa-eokg/: what a marketplace installs on Claude and ChatGPT ---
+// A git-subdir install sees only this folder, so the skill there is a real copy.
+
+const PLUGIN = join(ROOT, 'plugin', 'odeuropa-eokg');
+const readJson = (...p) => JSON.parse(readFileSync(join(PLUGIN, ...p), 'utf8'));
+
+function listFiles(dir) {
+  return readdirSync(dir, { recursive: true })
+    .map(String)
+    .filter((rel) => !rel.split(sep).some((seg) => seg.startsWith('.')))
+    .filter((rel) => statSync(join(dir, rel)).isFile())
+    .sort()
+    .map((rel) => [rel.split(sep).join('/'), readFileSync(join(dir, rel), 'utf8')]);
+}
+
+test('the plugin carries an exact copy of the skill folder', () => {
+  assert.deepEqual(
+    listFiles(join(PLUGIN, 'skills', 'odeuropa-eokg')),
+    listFiles(join(ROOT, 'skill', 'odeuropa-eokg')),
+    'plugin/odeuropa-eokg/skills/ is stale — run `npm run build:skill` and commit the result',
+  );
+});
+
+test('both plugin manifests name the plugin and carry package.json\'s version', () => {
+  const { version } = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
+  const claude = readJson('.claude-plugin', 'plugin.json');
+  const portable = readJson('plugin.json');
+  for (const m of [claude, portable]) {
+    assert.equal(m.name, 'odeuropa-eokg');
+    assert.equal(m.version, version, 'run `npm run build:skill` and commit the result');
+  }
+  assert.equal(claude.displayName, 'Odeuropa EOKG');
+  assert.equal(portable.extensions?.['com.openai']?.interface?.displayName, 'Odeuropa EOKG');
+  assert.equal(portable.$schema, 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json');
+});
+
+// Claude reads .mcp.json with type "http"; the Agent Plugins schema behind mcp.json
+// calls the same transport "streamable-http" and allows no other server keys.
+test('both MCP configs point at the hosted server', () => {
+  const url = 'https://odeuropa-eokg-mcp-production.up.railway.app/mcp';
+  assert.deepEqual(readJson('.mcp.json').mcpServers, { odeuropa: { type: 'http', url } });
+  const portable = readJson('mcp.json');
+  assert.equal(portable.$schema, 'https://agent-plugins.org/schemas/1.0.0/mcp.schema.json');
+  assert.deepEqual(portable.mcpServers, { odeuropa: { type: 'streamable-http', url } });
+});
+
+test('the plugin has no top-level bin/ directory, which claude.ai refuses', () => {
+  assert.ok(!existsSync(join(PLUGIN, 'bin')));
 });

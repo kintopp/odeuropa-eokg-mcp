@@ -1,0 +1,102 @@
+# Extraction: how reliable are the labels
+
+Condensed from Odeuropa deliverables (CC-BY 4.0), https://odeuropa.eu/deliverables/, and the Odeuropa knowledge-graph repository (Apache-2.0), commit 4c188f7, https://github.com/Odeuropa/knowledge-graph, cited as "KG repo" with a file path. Also from Zenodo records cited by DOI and "Odeuropa project records", the consortium's internal working documents; "verified live" means checked against the live graph on the date given. Figures describe the pipeline as reported at the time.
+
+Read this before judging how reliable a count, an emotion or an image label is. Deliverables cited: D3.2 (benchmark), D3.3 to D3.5 (text), D2.4 and D2.5 (images), D4.1 to D4.3 (graph and vocabularies), D4.4 (linking in the current graph). Page numbers are the printed ones.
+
+## Text extraction
+
+Hand-annotated benchmark passages (1620–1920, ten domains, annotated in INCEpTION) trained the token classifiers, so the graph's smells are model predictions (D3.2 p. 11; D3.5 p. 8). The released version labels the smell word and nine roles in one multi-task model built on BERT-type language models. English, French and Slovenian use a monolingual model; Italian, German and Dutch use a model trained on all languages together (D3.5 pp. 9–11). Latin is in the benchmark but is not one of the graph's languages.
+
+Scores are F1 for exact span matches, averaged over ten test folds of the benchmark (D3.5 p. 11). Benchmark passages were chosen for their density of smell words (D3.2 p. 4), and the deliverables report no scores on the full corpus.
+
+| Language | Benchmark smell words | Smell word | Source | Quality | Carrier | Evoked odorant | Place | Perceiver | Time | Circumstances | Effect |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| English | 1,530 | 0.87 | 0.57 | 0.76 | 0.48 | 0.57 | 0.54 | 0.51 | 0.43 | 0.46 | 0.41 |
+| Italian | 1,254 | 0.89 | 0.58 | 0.80 | 0.38 | 0.63 | 0.30 | 0.24 | 0.64 | 0.31 | 0.20 |
+| French | 845 | 0.84 | 0.46 | 0.57 | 0.44 | 0.54 | 0.37 | 0.38 | 0.48 | 0.28 | 0.24 |
+| Dutch | 1,788 | 0.79 | 0.41 | 0.64 | 0.21 | 0.47 | 0.24 | 0.31 | 0.34 | 0.15 | 0.19 |
+| German | 2,659 | 0.81 | 0.47 | 0.68 | 0.22 | 0.49 | 0.29 | 0.35 | 0.26 | 0.27 | 0.25 |
+| Slovenian | 1,973 | 0.71 | 0.50 | 0.53 | 0.32 | 0.51 | 0.40 | 0.36 | 0.28 | 0.15 | 0.15 |
+
+Sources: benchmark counts D3.5 p. 8; scores D3.5 p. 11, Table 3, rows for the released model of each language.
+
+What the figures say:
+
+- Smell words are found best, then qualities, then sources. A source can be any word in the sentence, so it is the hardest of the three core roles (D3.3 p. 11).
+- Place, perceiver, time, circumstances and effect rest on few training examples, and most of their errors are span boundaries, such as "flowers" against "of flowers" (D3.5 p. 10).
+- A model trained on older English or Dutch text beat the modern one for those two languages. No gain was seen for German or Italian, and the French comparison failed (D3.4 pp. 14, 16). For Slovenian, OCR often reads the long s as f, and OCR before 1850 is often too poor to use (D3.4 p. 8).
+- Version 1 covered only smell word, source and quality. D3.5 added the other roles and is the later release, so it is used here (D3.3 p. 6; D3.5 p. 8).
+- The benchmark counts changed between releases (German smell words 1,493 in D3.2 p. 13, 2,659 in D3.5 p. 8). The later figure is used here.
+
+Meaning for an answer: on benchmark text, source F1 runs from 0.41 to 0.58 and quality F1 from 0.53 to 0.80. Quote the passage, not the label, and treat the rarer roles (perceiver, time, effect) as hints.
+
+## Linking to concepts
+
+In the first graph load, benchmark labels were matched to the vocabularies by string matching: 32 labels were linked, and the authors suggested lemmatising terms first (D4.2 p. 10). The same load linked 41 of 158 places to GeoNames (D4.2 p. 10). For the full graph, D4.3 says only that the converter has a module that interlinks entities with the controlled vocabularies and another that links places to GeoNames (D4.3 p. 9). It does not describe how a text mention is matched to a concept. The string matching it does describe (YAM++, a Levenshtein score of at least 0.7, 606 `skos:exactMatch` links) joins vocabularies to each other, not mentions to concepts (D4.3 p. 8).
+
+The conversion code shows the method (KG repo, populate/entities/SmellSource.py, populate/entities/vocabularies/VocabularyManager.py and lemma.py, populate/config.yaml). Each source or carrier word is matched first against olfactory-objects, then against fragrant-spaces. Words shorter than three characters are skipped. For English, French, Dutch, German and Italian a spaCy language model first drops leading articles and determiners, reduces nouns to their dictionary form, and skips a lone pronoun; Slovenian gets none of this. The word is then scored against every label of every concept by Levenshtein ratio, a measure of shared spelling. A label in another language counts at 0.7 of its score, an alternative label at 0.9, and a label whose first letters differ at 0.9. A link needs at least 0.8, or 0.7 for words longer than seven characters. A word that links to nothing stays a Material Substantial labelled with its own text: a `smell_source.mention` with no `concept`.
+
+In the graph of June 2023, of 1,048,284 Material Substantial instances 483,342 were linked to a vocabulary (46 per cent). Of 53,512 places, 8,215 were linked to a vocabulary and 1,181 to an external source such as GeoNames (15 and 2 per cent). Of 83,601 persons, 8,709 were linked externally (10 per cent). All 483 gestures and all 74 animals were linked (D4.3 p. 10, Table 5). Places linked to GeoNames share one instance, and persons with the same name and surname are merged (D4.3 p. 9).
+
+D4.4 (December 2023) describes today's graph: 448,294,839 triples and 2,420,145 smells (D4.4 p. 6). Mentions linked to a vocabulary, by role: odour sources 678,249 (Olfactory Objects), qualities 509,886 (smell classifications, hedonic tone, intensity), emotions 158,005 (Plutchik plus an Odeuropa extension), carriers 86,707 (Olfactory Objects), places 79,106 (Fragrant Spaces), evoked odorants 64,671 (Olfactory Objects), agents 8,868 (Noses), gestures 3,066 (Olfactory Gestures) (D4.4 p. 7, Table 1).
+
+German explanation: in D4.3, 239 of the 574 olfactory-objects concepts have a German label, against 567 English, 550 French, 540 Italian and 542 Dutch. Only 10 of 115 fragrant spaces and none of the 35 gestures have one (D4.3 p. 8, Table 2). D4.1 had reported 172 of 417 (D4.1 p. 12). Many German words had no concept to match. The 0.7 weight makes this worse: a German word scored against a label in another language never reaches 0.8, and reaches 0.7 only when it is spelled identically and is longer than seven characters (KG repo, populate/entities/vocabularies/lemma.py and VocabularyManager.py).
+
+Slovenian has labels (568 for objects in the same table) but its words are not lemmatised, so an inflected form must match a label as it stands (KG repo, populate/entities/vocabularies/VocabularyManager.py). This is the likely reason few Slovenian smells are linked, read from the code rather than measured.
+
+Some concepts mix roles. A concept such as smoke can be a source or a carrier, so the vocabulary keeps one list with a preferred role (D4.1 p. 11).
+
+Meaning for an answer: a German count from a concept profile is a floor, not an estimate. Search the German words in the text.
+
+## Emotions
+
+Emotions come from a separate classifier with 38 labels plus neutral (admiration, nostalgia, gratitude, disgust and so on). It was trained on 160,000 English sentences from Project Gutenberg that were labelled by an entailment model and then by pseudo-labelling, not by people (D3.5 pp. 16–18, 24). Italian, French and Dutch versions were trained on machine translations of those sentences (D3.5 pp. 17, 22).
+
+The reported score is macro F1 0.59 on 727 sentences labelled by one person (the first author), taken from the same Gutenberg data and not from smell passages (D3.5 pp. 21–22, 25). The multilingual model scored 0.57 on English, 0.54 on Italian and French and 0.53 on Dutch (D3.5 p. 26, Table 12). No score is given for German or Slovenian.
+
+Per-label precision on the gold set varies widely (D3.5 p. 25, Table 8, hard labels):
+
+| Label | Precision | Recall |
+|---|---|---|
+| disgust | 0.84 | 0.38 |
+| joy | 0.84 | 0.43 |
+| desire | 0.82 | 0.79 |
+| nostalgia | 0.29 | 0.97 |
+| gratitude | 0.28 | 0.79 |
+| grief | 0.27 | 0.86 |
+| envy | 0.28 | 0.86 |
+
+A hand-annotated benchmark with 12 emotion labels also exists for English, Italian, French and Dutch. Most of its cells hold fewer than 30 examples, the largest being 169 (English disgust), and it was not used for the graph labels (D3.5 pp. 13–14, Table 4).
+
+Whole datasets have no emotions at all: `medical-heritage`, `royal-society-corpus`, `old-bailey-corpus`, `dlib`, `dta` and `text-annotation` (verified live, October 2026, from samples of 300 smells per dataset and 900 for `medical-heritage`). The classifier was not run on the first three (Odeuropa project records). D3.5 names classifier versions for English, Italian, French and Dutch only (pp. 17, 22), which explains `dta` (German) and `dlib` (Slovenian). The benchmark's own emotion labels, described above, were not loaded as smell emotions.
+
+Meaning for an answer: on the gold set about seven in ten nostalgia, gratitude, grief and envy predictions were wrong, so large counts for them include many false alarms. Say "tagged with", compare concepts rather than quoting totals, and be more careful still with German and Slovenian, which have no reported score. An emotion profile for an English concept leaves out every `medical-heritage` smell, and German and Slovenian concepts have almost no emotions to profile.
+
+## Images
+
+Objects were found by a detector trained on the Odeuropa Dataset of Smell-Related Objects. Version 2 has 4,696 annotated images, 36,663 boxes and 169 categories (Zenodo 10.5281/zenodo.7125961; D2.4 abstract); the graph's hand-drawn boxes are the later v3 (see `datasets.md`). Annotators drew the boxes by hand in CVAT; flower species were also labelled by crowd workers on Mechanical Turk (D2.5 p. 9; D2.4 p. 4). Pre-annotating with a detector was planned and not used, because detection was not accurate enough (D2.4 p. 12).
+
+Smell gestures are scarce in the training data (D2.4 p. 9, Table 4):
+
+| Gesture | Examples |
+|---|---|
+| Holding the nose | 368 |
+| Sniffing | 68 |
+| Cleaning a baby | 10 |
+| Vomiting | 5 |
+| Defecating | 5 |
+
+Detector accuracy is reported only for the ODOR challenge, which used 87 categories and a hidden test set (D2.5 pp. 5, 9, 13). The winning system reached COCO mAP 11.49 per cent (18.93 per cent at the looser IoU 0.5), the baseline 3.99 per cent. By object size the winner scored 4.19 per cent for small, 11.71 for medium and 25.24 for large boxes. It scored AP 0.44 for smoke and 0.33 for fire (D2.5 pp. 13–14). On one heap of fruit the winner matched 6 of 139 apples, no pears and no peaches, and it did not confuse the three fruits (D2.5 p. 14, Table 8). These are scores for the challenge, not for the detector behind the graph; the deliverables here give no precision for the graph's detector.
+
+Detector boxes scoring below 0.4 were not loaded, and an image with hand-drawn object boxes keeps only those (KG repo, populate/convert_img.py). The detector's provenance in the graph is labelled D2.3 and names a Detrex fork for the ODOR dataset, https://github.com/mathiaszinnen/detrex (KG repo, populate/convert_img.py).
+
+Meaning for an answer: a detector box is a candidate. Small objects, heaps and fruit varieties are the weakest. Look at the picture with `eokg_inspect_image` before stating what a painting shows, and do not count boxes as objects.
+
+## Dates
+
+The corpus metadata carries author, publication date and source (D3.2 p. 4). For Italian Project Gutenberg books the metadata date is that of the last publication, not the first (D3.2 p. 9). Dates parsed from Italian LiberLiber and Wikisource text were error-prone, with ranges such as "between 1628 and 1650" reduced to a midpoint (D3.4 p. 12); that describes the language-model training data, and the deliverables do not say it applies to the graph.
+
+Time expressions annotated in the benchmark (for example "at first handling") were parsed with regular expressions, and durations and vague words such as "sometimes" were left open (D4.2 p. 10). The benchmark has only 49 to 131 Time annotations per language (D3.5 p. 8). The converter has a module for parsing time (D4.3 p. 9), and the graph holds 21,744 `time:TemporalEntity` instances against 718,375 smells (D4.3 p. 10, Table 5); the deliverable does not say how these relate to the document and emission dates. The conversion code sets the dates (KG repo, populate/convert_text.py; populate/entities/SourceDoc.py). The document's creation date (`schema:dateCreated`) is the metadata `year`, and a `pub_date` that differs from it is kept as `schema:datePublished`. The emission and the experience take the passage's Time role; when there is none, or it cannot be parsed as a date, they take the document's creation date, and an unparsed Time is kept as text beside it.
+
+Meaning for an answer: date an event from the passage itself. An emission date equal to the document date is usually the fallback, not a date found in the text (KG repo, populate/convert_text.py). The document date is the metadata `year`, often the date of writing or of the first edition, but for some collections, such as Italian Gutenberg, a late edition; a separate printing date, where the metadata has one, is kept as the publication date (KG repo, populate/convert_text.py; D3.2 p. 9).
