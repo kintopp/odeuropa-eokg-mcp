@@ -11,6 +11,8 @@ export const SERVER_NAME = 'odeuropa-eokg-mcp';
 // drops the eokg_* tools out of the tool-search index entirely. The stable
 // machine `name` gives a clean slug.
 export const SERVER_VERSION = pkg.version;
+export const SERVER_DESCRIPTION =
+  'Search the European Olfactory Knowledge Graph (Odeuropa): about 2.4 million smell references from European texts and artworks, mostly 1600–1920, with a research guidance skill.';
 
 // Outbound User-Agent, so the endpoint operators can attribute this server's
 // traffic. EOKG_ENTRY_POINT is set by a launcher when one exists; the server

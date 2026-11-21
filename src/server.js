@@ -4,7 +4,7 @@
 // at module scope in the modules that own it, not here.
 
 import { McpServer } from '@modelcontextprotocol/server';
-import { SERVER_NAME, SERVER_VERSION, SERVER_INSTRUCTIONS, CACHE_HINTS } from './config.js';
+import { SERVER_NAME, SERVER_VERSION, SERVER_DESCRIPTION, SERVER_INSTRUCTIONS, CACHE_HINTS } from './config.js';
 import { registerListDatasetsTool } from './tools/list_datasets.js';
 import { registerGetSmellTool } from './tools/get_smell.js';
 import { registerFindConceptsTool } from './tools/find_concepts.js';
@@ -25,7 +25,7 @@ export function createServer() {
   // CACHE_HINTS is the only freshness signal here, and must be the only one
   // advertised.
   const server = new McpServer(
-    { name: SERVER_NAME, version: SERVER_VERSION },
+    { name: SERVER_NAME, version: SERVER_VERSION, description: SERVER_DESCRIPTION },
     {
       capabilities: { tools: { listChanged: false }, resources: { listChanged: false } },
       instructions: SERVER_INSTRUCTIONS,

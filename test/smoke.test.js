@@ -140,6 +140,7 @@ test('serverInfo carries the machine name and no human-readable title', async ()
     const info = client.getServerVersion();
     assert.equal(info.name, 'odeuropa-eokg-mcp');
     assert.equal(info.title, undefined);
+    assert.equal(info.description, 'Search the European Olfactory Knowledge Graph (Odeuropa): about 2.4 million smell references from European texts and artworks, mostly 1600–1920, with a research guidance skill.');
   });
 });
 
