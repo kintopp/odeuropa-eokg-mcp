@@ -228,3 +228,16 @@ test('the skill gives ChatGPT the display name "Odeuropa EOKG"', () => {
   const yaml = readFileSync(join(ROOT, 'skill', 'odeuropa-eokg', 'agents', 'openai.yaml'), 'utf8');
   assert.match(yaml, /^interface:\n {2}display_name: "Odeuropa EOKG"$/m);
 });
+
+// ChatGPT's skill page keeps line breaks inside a paragraph; Claude joins them.
+test('every paragraph and list item of the skill\'s Markdown is one line', () => {
+  for (const { name, content } of files.filter((f) => f.name.endsWith('.md'))) {
+    const body = name === ENTRY_NAME ? content.slice(content.indexOf('\n---\n', 4) + 5) : content;
+    const lines = body.split('\n');
+    lines.forEach((line, i) => {
+      if (i === 0 || !line.trim() || !lines[i - 1].trim()) return;
+      if (/^(#|\||[-*] |\d+\. )/.test(line)) return;
+      assert.fail(`${name} wraps a line, run unwrapped: ${line.slice(0, 60)}`);
+    });
+  }
+});

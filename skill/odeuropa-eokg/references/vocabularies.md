@@ -1,11 +1,8 @@
 # Vocabularies
 
-The Skosmos service at vocab.odeuropa.eu serves 20 vocabularies. `eokg_find_concepts`
-searches the first three by default; `vocab: "all"` adds the rest.
+The Skosmos service at vocab.odeuropa.eu serves 20 vocabularies. `eokg_find_concepts` searches the first three by default; `vocab: "all"` adds the rest.
 
-D4.3 (p. 8) and D4.6 (December 2023, p. 10) list 17 vocabularies; the three
-`expert-taxonomy` vocabularies are the later additions, named in neither deliverable
-(https://vocab.odeuropa.eu/rest/v1/vocabularies?lang=en).
+D4.3 (p. 8) and D4.6 (December 2023, p. 10) list 17 vocabularies; the three `expert-taxonomy` vocabularies are the later additions, named in neither deliverable (https://vocab.odeuropa.eu/rest/v1/vocabularies?lang=en).
 
 | Vocabulary | What it is | Linked to smells |
 |---|---|---|
@@ -20,10 +17,6 @@ D4.3 (p. 8) and D4.6 (December 2023, p. 10) list 17 vocabularies; the three
 
 How to use them:
 
-- `olfactory-objects` and `olfactory-gestures` ids work with `eokg_smell_profile` and
-  `eokg_find_visual_smells`; `fragrant-spaces` ids work with `eokg_smell_profile` only.
-- A descriptive-vocabulary concept (e.g. the expert-taxonomy "rose") is useful for
-  its labels and definitions, never for counts: nothing is linked to it.
-- Iconclass notations are attached to some olfactory-objects and fragrant-spaces
-  concepts from Odeuropa's curated tables (about 196 and 102 respectively). 52 of
-  the olfactory-objects codes end in `(...)`.
+- `olfactory-objects` and `olfactory-gestures` ids work with `eokg_smell_profile` and `eokg_find_visual_smells`; `fragrant-spaces` ids work with `eokg_smell_profile` only.
+- A descriptive-vocabulary concept (e.g. the expert-taxonomy "rose") is useful for its labels and definitions, never for counts: nothing is linked to it.
+- Iconclass notations are attached to some olfactory-objects and fragrant-spaces concepts from Odeuropa's curated tables (about 196 and 102 respectively). 52 of the olfactory-objects codes end in `(...)`.
