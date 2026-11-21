@@ -220,3 +220,9 @@ test('both MCP configs point at the hosted server', () => {
 test('the plugin has no top-level bin/ directory, which claude.ai refuses', () => {
   assert.ok(!existsSync(join(PLUGIN, 'bin')));
 });
+
+// ChatGPT otherwise title-cases the skill's name into "Odeuropa Eokg".
+test('the skill gives ChatGPT the display name "Odeuropa EOKG"', () => {
+  const yaml = readFileSync(join(ROOT, 'skill', 'odeuropa-eokg', 'agents', 'openai.yaml'), 'utf8');
+  assert.match(yaml, /^interface:\n {2}display_name: "Odeuropa EOKG"$/m);
+});
