@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "odeuropa": {
+    "Odeuropa-EOKG": {
       "type": "http",
       "url": "https://odeuropa-eokg-mcp-production.up.railway.app/mcp"
     }

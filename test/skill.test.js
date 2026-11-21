@@ -209,12 +209,14 @@ test('both plugin manifests name the plugin and carry package.json\'s version', 
 
 // Claude reads .mcp.json with type "http"; the Agent Plugins schema behind mcp.json
 // calls the same transport "streamable-http" and allows no other server keys.
+// The key is the connector's label: Claude shows it as written and ChatGPT capitalises
+// its first letter, and neither allows a space, so "Odeuropa-EOKG" reads the same on both.
 test('both MCP configs point at the hosted server', () => {
   const url = 'https://odeuropa-eokg-mcp-production.up.railway.app/mcp';
-  assert.deepEqual(readJson('.mcp.json').mcpServers, { odeuropa: { type: 'http', url } });
+  assert.deepEqual(readJson('.mcp.json').mcpServers, { 'Odeuropa-EOKG': { type: 'http', url } });
   const portable = readJson('mcp.json');
   assert.equal(portable.$schema, 'https://agent-plugins.org/schemas/1.0.0/mcp.schema.json');
-  assert.deepEqual(portable.mcpServers, { odeuropa: { type: 'streamable-http', url } });
+  assert.deepEqual(portable.mcpServers, { 'Odeuropa-EOKG': { type: 'streamable-http', url } });
 });
 
 test('the plugin has no top-level bin/ directory, which claude.ai refuses', () => {
