@@ -6,7 +6,7 @@ A [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server for the
 
 The MCP server allows a researcher to search passages in natural language, resolve vocabulary concepts, profile a smell source over time, and show artworks with their detected smell-related objects. Because the graph [models a smell as an event](docs/knowledge-graph-queries.md), it can [answer questions](https://claude.ai/artifact/SzxMnGF8HC1yFhj1sqqDbW) that a full-text search can address only partially or not at all.
 
-This MCP server was developed by the [Research and Infrastructure Support](https://rise.unibas.ch/en/) (RISE) group at the University of Basel. We are particularly interested in exploring the research opportunities, methodological risks, and technical challenges posed by retrieving and analysing data with LLMs. If you are interested in collaborating with us in this area, please [get in touch](mailto:rise@unibas.ch).
+> This MCP server was developed by the [Research and Infrastructure Support](https://rise.unibas.ch/en/) (RISE) group at the University of Basel. We are particularly interested in exploring the research opportunities, methodological risks, and technical challenges posed by retrieving and analysing data with LLMs. If you are interested in collaborating with us in this area, please [get in touch](mailto:rise@unibas.ch).
 
 ## Install
 
