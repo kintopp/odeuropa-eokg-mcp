@@ -4,8 +4,8 @@
   "version": "0.7.1",
   "description": "Search the European Olfactory Knowledge Graph (Odeuropa): about 2.4 million smell references from European texts and artworks, mostly 1600–1920, with a research guidance skill.",
   "author": {
-    "name": "University of Basel",
-    "url": "https://rise.unibas.ch/en/"
+    "name": "RISE (University of Basel)",
+    "url": "https://rise.unibas.ch"
   },
   "homepage": "https://github.com/kintopp/odeuropa-eokg-mcp",
   "repository": "https://github.com/kintopp/odeuropa-eokg-mcp",
