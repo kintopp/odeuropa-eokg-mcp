@@ -55,7 +55,7 @@ Fixes of latent review findings bring in defects of their own, which the next re
 - `apps/image-viewer/`: MCP App source; `npm run build:viewer` writes the committed `src/apps/image-viewer.html`.
 - `src/data/iconclass.json`: curated Iconclass sidecar, built by `npm run build:iconclass`.
 - `scripts/`: build and measurement scripts. `docs/tools.md`, `skill/odeuropa-eokg.skill` and its `skill/odeuropa-eokg.zip` copy are generated or checked artefacts; `build:skill` also writes `package.json`'s version into `SKILL.md`.
-- `plugin/odeuropa-eokg/`: the plugin that the public `kintopp/kintopp-plugins` marketplace installs on Claude and ChatGPT through `git-subdir`. It holds Claude files (`.claude-plugin/plugin.json`, `.mcp.json`) and Agent Plugins files (`plugin.json`, `mcp.json`) side by side. `build:skill` writes its `skills/` copy and both manifest versions; never edit those by hand.
+- `plugin/odeuropa-eokg/`: the plugin that the public `kintopp/kintopp-plugins` marketplace installs on Claude and ChatGPT through `git-subdir`. It holds Claude files (`.claude-plugin/plugin.json`, `.mcp.json`) and Agent Plugins files (`plugin.json`, `mcp.json`) side by side. `build:skill` writes its `skills/` copy, both manifest versions and the two upload zips beside it (`plugin/odeuropa-eokg-claude.zip`, `plugin/odeuropa-eokg-chatgpt.zip`, one platform's files each); never edit those by hand.
 
 ## Adding a tool touches these places
 

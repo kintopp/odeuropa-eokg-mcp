@@ -17,8 +17,11 @@
 // It also writes the same files into the plugin folder's skills/<name>/ and the
 // version into both plugin manifests, because a marketplace installs the plugin
 // from a git subdirectory, so the skill must sit inside that folder as real files.
+// Last, it packs one upload zip per platform beside that folder, each holding only
+// that platform's files at its root: Claude refuses an archive with two plugin.json.
 //
 // Usage: npm run build:skill   →   skill/odeuropa-eokg.skill + odeuropa-eokg.zip + plugin/odeuropa-eokg/
+//                                  + plugin/odeuropa-eokg-claude.zip + plugin/odeuropa-eokg-chatgpt.zip
 
 import { crc32 } from 'node:zlib';
 import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -39,6 +42,10 @@ export const ENTRY_NAME = `${SKILL_NAME}/SKILL.md`;
 export const PLUGIN_DIR = join('plugin', SKILL_NAME);
 // Claude reads .claude-plugin/plugin.json; ChatGPT and Codex read the root plugin.json.
 export const PLUGIN_MANIFESTS = [join(PLUGIN_DIR, '.claude-plugin', 'plugin.json'), join(PLUGIN_DIR, 'plugin.json')];
+export const PLUGIN_UPLOADS = {
+  claude: join('plugin', `${SKILL_NAME}-claude.zip`),
+  chatgpt: join('plugin', `${SKILL_NAME}-chatgpt.zip`),
+};
 
 /**
  * Every file in the skill folder as [{ name, content }], `name` being its
@@ -88,7 +95,36 @@ function frontmatterDate(md) {
  * SKILL.md's frontmatter — the first file.
  */
 export function buildSkillZip(files) {
-  const { year, month, day } = frontmatterDate(files[0].content);
+  return buildZip(files, files[0].content);
+}
+
+/** A plugin manifest with package.json's version written in. */
+function stampedManifest(rel) {
+  const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  return `${JSON.stringify({ ...JSON.parse(readFileSync(join(root, rel), 'utf8')), version }, null, 2)}\n`;
+}
+
+/** The two upload zips for `files` (from readSkillFiles), keyed as PLUGIN_UPLOADS. */
+export function buildPluginZips(files) {
+  const config = (rel) => readFileSync(join(root, PLUGIN_DIR, rel), 'utf8');
+  const skills = files.map(({ name, content }) => ({ name: `skills/${name}`, content }));
+  return {
+    claude: buildZip([
+      { name: '.claude-plugin/plugin.json', content: stampedManifest(PLUGIN_MANIFESTS[0]) },
+      { name: '.mcp.json', content: config('.mcp.json') },
+      // agents/openai.yaml is ChatGPT's skill label; Claude ignores it.
+      ...skills.filter(({ name }) => !name.startsWith(`skills/${SKILL_NAME}/agents/`)),
+    ], files[0].content),
+    chatgpt: buildZip([
+      { name: 'plugin.json', content: stampedManifest(PLUGIN_MANIFESTS[1]) },
+      { name: 'mcp.json', content: config('mcp.json') },
+      ...skills,
+    ], files[0].content),
+  };
+}
+
+function buildZip(files, skillMd) {
+  const { year, month, day } = frontmatterDate(skillMd);
   // MS-DOS date/time, the only timestamp a base zip entry has. Midnight, since
   // the frontmatter carries no time of day.
   const dosDate = ((year - 1980) << 9) | (month << 5) | day;
@@ -167,10 +203,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     mkdirSync(dirname(dest), { recursive: true });
     writeFileSync(dest, content);
   }
-  const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-  for (const rel of PLUGIN_MANIFESTS) {
-    const manifest = JSON.parse(readFileSync(join(root, rel), 'utf8'));
-    writeFileSync(join(root, rel), `${JSON.stringify({ ...manifest, version }, null, 2)}\n`);
-  }
-  console.log(`${SKILL_BUNDLE} + ${SKILL_BUNDLE_ZIP} + ${PLUGIN_DIR}/ ← ${SKILL_DIR}/ (${files.length} files, ${zip.length} bytes)`);
+  for (const rel of PLUGIN_MANIFESTS) writeFileSync(join(root, rel), stampedManifest(rel));
+  const uploads = buildPluginZips(files);
+  for (const [platform, rel] of Object.entries(PLUGIN_UPLOADS)) writeFileSync(join(root, rel), uploads[platform]);
+  console.log(`${SKILL_BUNDLE} + ${SKILL_BUNDLE_ZIP} + ${PLUGIN_DIR}/ + two upload zips ← ${SKILL_DIR}/ (${files.length} files, ${zip.length} bytes)`);
 }

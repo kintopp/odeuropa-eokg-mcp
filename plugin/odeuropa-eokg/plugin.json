@@ -21,7 +21,7 @@
     "com.openai": {
       "interface": {
         "displayName": "Odeuropa EOKG",
-        "shortDescription": "Search historical smell references in European texts and artworks",
+        "shortDescription": "Search historical smell references in texts and art",
         "developerName": "RISE (University of Basel)",
         "category": "Productivity",
         "websiteURL": "https://github.com/kintopp/odeuropa-eokg-mcp"

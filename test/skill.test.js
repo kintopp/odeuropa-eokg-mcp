@@ -15,7 +15,7 @@ import { tmpdir } from 'node:os';
 import { inflateRawSync } from 'node:zlib';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildSkillZip, readSkillFiles, SKILL_BUNDLE, ENTRY_NAME } from '../scripts/build-skill.mjs';
+import { buildPluginZips, buildSkillZip, readSkillFiles, SKILL_BUNDLE, ENTRY_NAME } from '../scripts/build-skill.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const files = readSkillFiles();
@@ -222,6 +222,40 @@ test('both MCP configs point at the hosted server', () => {
 test('the plugin has no top-level bin/ directory, which claude.ai refuses', () => {
   assert.ok(!existsSync(join(PLUGIN, 'bin')));
 });
+
+// ChatGPT cuts it off after 57 characters and shows the rest only on hover.
+test('the ChatGPT short description is at most 57 characters', () => {
+  const short = readJson('plugin.json').extensions?.['com.openai']?.interface?.shortDescription ?? '';
+  assert.ok(short.length >= 1 && [...short].length <= 57, `"${short}" is ${[...short].length} characters`);
+});
+
+// One upload zip per platform, its files at the root: Claude refuses an archive
+// holding more than one plugin.json, and a nested folder hides the manifest.
+const UPLOADS = {
+  claude: ['.claude-plugin/plugin.json', '.mcp.json'],
+  chatgpt: ['plugin.json', 'mcp.json'],
+};
+for (const [platform, configs] of Object.entries(UPLOADS)) {
+  const zipPath = join(ROOT, 'plugin', `odeuropa-eokg-${platform}.zip`);
+
+  test(`the ${platform} upload zip is a rebuild of the plugin folder`, () => {
+    assert.ok(existsSync(zipPath), `${zipPath} is missing — run \`npm run build:skill\``);
+    assert.deepEqual(readFileSync(zipPath), buildPluginZips(files)[platform],
+      `plugin/odeuropa-eokg-${platform}.zip is stale — run \`npm run build:skill\` and commit the result`);
+  });
+
+  test(`the ${platform} upload zip holds only its platform's files, matching the plugin folder`, () => {
+    const entries = readZip(readFileSync(zipPath));
+    const skill = listFiles(join(ROOT, 'skill', 'odeuropa-eokg'))
+      .map(([rel]) => `skills/odeuropa-eokg/${rel}`)
+      // Claude ignores agents/openai.yaml, ChatGPT's skill label.
+      .filter((rel) => platform === 'chatgpt' || !rel.includes('/agents/'));
+    assert.deepEqual(entries.map((e) => e.name).sort(), [...configs, ...skill].sort());
+    for (const { name, content } of entries) {
+      assert.equal(content, readFileSync(join(PLUGIN, name), 'utf8'), `${name} differs from plugin/odeuropa-eokg/${name}`);
+    }
+  });
+}
 
 // ChatGPT otherwise title-cases the skill's name into "Odeuropa Eokg".
 test('the skill gives ChatGPT the display name "Odeuropa EOKG"', () => {
