@@ -8,25 +8,37 @@ The MCP server allows a researcher to search passages in natural language, resol
 
 > This MCP server was developed by the [Research and Infrastructure Support](https://rise.unibas.ch/en/) (RISE) group at the University of Basel. We are particularly interested in exploring the research opportunities, methodological risks, and technical challenges posed by retrieving and analysing data with LLMs. If you are interested in collaborating with us in this area, please [get in touch](mailto:rise@unibas.ch).
 
-## Install
+## Installation
 
 ### Hosted
 
-The best way to get started is with [Claude Desktop](https://claude.com/download) or [claude.ai](https://claude.ai). Add the server to Claude as a remotely hosted [custom connector](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp) with this URL:
+The easiest way to start is to install the Odeuropa EOKG plugin. It adds the hosted version of the server as a connector (shown as "Odeuropa-EOKG"), together with the [skill](#research-skill) that tells the AI assistant how to use it. The server needs no account or sign-in information.
+
+**Claude** ([claude.ai](https://claude.ai), or the Claude [desktop app](https://claude.com/download)): *// recommended*
+
+1. Download [`odeuropa-eokg-claude.zip`](https://github.com/kintopp/odeuropa-eokg-mcp/raw/refs/heads/main/plugin/odeuropa-eokg-claude.zip).
+2. In Claude, go to _Settings_ → _Plugins_ → _Browse plugins_ (scroll down to the bottom) → _Add_ → _Upload plugin_ and choose the file.
+3. Open the plugin, go to its _Connectors_ tab, and add the "Odeuropa-EOKG" connector.
+4. If you like, set the permissions for its tools in _Customize_ → _Connectors_, for example to "Always allow".
+
+**N.B.** A free Claude account allows only one custom connector. To make room for it, you will need to remove (not just disable) any existing custom connector in _Customize_ → _Connectors_ first. Anthropic's [plugin instructions](https://claude.com/docs/plugins/overview#install-a-plugin) provide more details.
+
+**ChatGPT** ([desktop app](https://chatgpt.com/download/) – not chatgpt.com):
+
+1. Download [`odeuropa-eokg-chatgpt.zip`](https://github.com/kintopp/odeuropa-eokg-mcp/raw/refs/heads/main/plugin/odeuropa-eokg-chatgpt.zip).
+2. In the ChatGPT desktop app, go to _Settings_ → _Plugins_ → _Add_ and _Upload plugin archive_. Select and _Add_ the plugin.
+3. Next select _Install plugin_. After this the plugin is available.
+4. To use it, create a new chat, switch to 'Work' mode, and select the plugin via the + symbol. Else, type "@Odeuropa EOKG" at the start of the prompt. **N.B.** You can only use a custom plugin from the 'Work' mode in ChatGPT or in Codex.
+
+**Other AI clients:** add the hosted server as a remote MCP server (often called a "custom connector") with this URL, and leave the authentication settings empty:
 
 ```
 https://odeuropa-eokg-mcp-production.up.railway.app/mcp
 ```
 
-1. Go to _Customize_ → _Connectors_ → _Add custom connector_.
-2. Name the connector as you like and paste the URL into the _Remote MCP Server URL_ field. You can ignore the Authentication section.
-3. Optionally, set the permissions for its tools (for example, "Always allow").
+For example, the free version of [Mistral's Vibe](https://chat.mistral.ai) has excellent support for MCP servers, including components like the interactive image viewer. **N.B.** A connector added this way has no skill; install the skill file separately (see [below](#research-skill)).
 
-Anthropic's [instructions](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp) provide more details.
-
-Many other clients also support remotely hosted MCP servers, such as ChatGPT, Mistral's Vibe and open-source applications; please consult their documentation. In particular, the free version of [Mistral's Vibe](https://chat.mistral.ai) already has excellent support for MCP servers and skills (see below). In contrast, ChatGPT can currently (October, 2026) only support the full functionality of this server (in particular, viewing and interacting with images in the chat timeline) in conjunction with a paid Business or Enterprise subscription. So at the moment the best way to use the hosted MCP server for free is either with Claude or with Mistral. See below for instructions on how to install the server locally.
-
-### Local (stdio)
+### Local
 
 Requirements: Node.js ≥ 24.22.1 < 25 (no native dependencies).
 
@@ -55,11 +67,13 @@ The MCP client starts the server itself once it is registered. Point the client 
 
 To check the install without a client, run `npm test`. Note that currently (October, 2026) Mistral Vibe can't use a locally hosted MCP server.
 
-### Skill
+### Research Skill
 
-The skill file [skill/odeuropa-eokg.skill](skill/odeuropa-eokg.skill) gives the AI assistant guidance in natural language on how to use this server well: which tool to choose for a given question, how to combine them, and the traps in this data. [Skills](https://support.claude.com/en/articles/12512176-what-are-skills) were developed by Anthropic and are now an [open standard](https://agentskills.io/home) and widely supported. To install it in Claude, follow [these instructions](https://claude.com/resources/tutorials/teach-claude-your-way-of-working-using-skills) else consult the documentation of your own LLM client.
+A skill gives an AI assistant detailed guidance in natural language on how to use a resource such as an MCP server effectively: which tool (see [Tools](#tools)) to choose for a given question type, how to combine searches, important metadata distinctions (e.g. a smell source's vocabulary `concept` vs its `mention`, the words used in the text), and known limitations. Skills were [originally developed by Anthropic](https://claude.com/resources/tutorials/teach-claude-your-way-of-working-using-skills) for their Claude products but have since become a widely-supported [open standard](https://agentskills.io/home).
 
-Currently (October, 2026) ChatGPT's free tier makes uploading skill files cumbersome. Instead, use [Mistral Vibe](https://mistral.ai/products/vibe/) and install the skill via the 'folder' option, first downloading and unpacking [`odeuropa-eokg.zip`](https://github.com/kintopp/odeuropa-eokg-mcp/raw/main/skill/odeuropa-eokg.zip).
+The plugin (see [Installation](#installation) above) already includes the skill. You only need the Odeuropa EOKG skill file if you add the server as a custom connector, install it locally, or use a client without plugin support. To access the skill file, download and unzip: [`odeuropa-eokg.zip`](https://github.com/kintopp/odeuropa-eokg-mcp/raw/refs/heads/main/skill/odeuropa-eokg.zip). If you use [Mistral Vibe](https://mistral.ai/products/vibe/), install the skill via the 'folder' option.
+
+To add your own instructions, such as how to cite results, don't edit the installed copy. Instead, put them in a separate skill or in your project's instructions, so that an update of the plugin doesn't overwrite them.
 
 ## Tools
 
